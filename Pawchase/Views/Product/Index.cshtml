@@ -1,0 +1,120 @@
+@model List<Pawchase.Models.Product>
+@{
+    ViewBag.Title = "Products";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section styles {
+    <link href="@Url.Content("~/Content/css/product.css")" rel="stylesheet"/>
+}
+
+<div class="page-hero"><h1>Our Products</h1><p>Everything your dog needs, all in one place</p></div>
+
+<div class="filter-overlay" id="filterOverlay" onclick="toggleFilter()"></div>
+
+<div class="product-toolbar-top">
+    <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleFilter()">
+        <i class="fa-solid fa-sliders"></i> Filters
+        @if (ViewBag.Category != null || ViewBag.Size != null || ViewBag.Search != null)
+        {
+            <span id="filter-dot" style="background:#e05555;color:#fff;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;">!</span>
+        }
+    </button>
+    <div class="toolbar-right">
+        <span><strong>@Model.Count</strong> product@(Model.Count != 1 ? "s" : "") found
+            @if (ViewBag.Category != null) { <text> in <strong>@ViewBag.Category</strong></text> }
+            @if (ViewBag.Size != null) { <text> &middot; <strong>@ViewBag.Size</strong></text> }
+        </span>
+        @if (ViewBag.Category != null || ViewBag.Size != null || ViewBag.Search != null)
+        {
+            <a href="@Url.Action("Index","Product")" class="clear-filters"><i class="fa-solid fa-times"></i> Clear</a>
+        }
+    </div>
+</div>
+
+<div class="products-wrapper">
+    <aside class="filters" id="filterPanel">
+        <h3><i class="fa-solid fa-sliders"></i> Filters</h3>
+        <form method="get" action="@Url.Action("Index","Product")" class="filter-form">
+            <div class="filter-group">
+                <label>Search</label>
+                <div class="search-input-wrap">
+                    <input type="text" name="search" id="searchInput" placeholder="Search products..."
+                           value="@ViewBag.Search" autocomplete="off"
+                           oninput="liveSearch(this)"/>
+                    <button type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label>Breed Size</label>
+                <div class="filter-options">
+                    <a href="@Url.Action("Index","Product", new{category=ViewBag.Category,search=ViewBag.Search})" class="filter-btn @(ViewBag.Size==null?"active":"")">All</a>
+                    <a href="@Url.Action("Index","Product", new{size="Small",  category=ViewBag.Category,search=ViewBag.Search})" class="filter-btn @(ViewBag.Size=="Small" ?"active":"")">Small</a>
+                    <a href="@Url.Action("Index","Product", new{size="Medium", category=ViewBag.Category,search=ViewBag.Search})" class="filter-btn @(ViewBag.Size=="Medium"?"active":"")">Medium</a>
+                    <a href="@Url.Action("Index","Product", new{size="Large",  category=ViewBag.Category,search=ViewBag.Search})" class="filter-btn @(ViewBag.Size=="Large" ?"active":"")">Large</a>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label>Category</label>
+                <div class="filter-options vertical">
+                    @foreach (var cat in new[]{"Treats","Toys","Accessories","Health","Others"})
+                    {
+                        <a href="@Url.Action("Index","Product", new{category=cat,size=ViewBag.Size,search=ViewBag.Search})" class="filter-btn @(ViewBag.Category==cat?"active":"")">@cat</a>
+                    }
+                    <a href="@Url.Action("Index","Product", new{size=ViewBag.Size,search=ViewBag.Search})" class="filter-btn @(ViewBag.Category==null?"active":"")">All Categories</a>
+                </div>
+            </div>
+        </form>
+    </aside>
+
+    <div class="product-main">
+        @if (!Model.Any())
+        {
+            <div class="no-products">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <h3>No products found</h3>
+                <p>Try adjusting your filters.</p>
+                <a href="@Url.Action("Index","Product")" class="btn-primary" style="margin-top:.5rem">View All</a>
+            </div>
+        }
+        else
+        {
+            <div class="products-grid" id="productsGrid">
+                @foreach (var p in Model)
+                {
+                    var isOnSale = p.IsOnSale;
+                    var disc = isOnSale ? (int)(((p.OriginalPrice.Value - p.Price) / p.OriginalPrice.Value) * 100) : 0;
+                    <div class="product-card" onclick="window.location='@Url.Action("Details","Product",new{id=p.Id})'">
+                        @if (isOnSale) { <span class="sale-badge">SALE</span> }
+                        <div class="product-img">
+                            <img src="@p.ImageUrl" alt="@p.Name" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"/>
+                            <div class="img-fallback" style="display:none;"><i class="fa-solid fa-bone"></i></div>
+                        </div>
+                        <div class="product-info">
+                            <span class="product-category">@p.Category &middot; @p.BreedSize</span>
+                            <h3>@p.Name</h3>
+                            <div class="product-price">
+                                <span class="price">&#8369;@p.Price.ToString("N2")</span>
+                                @if (isOnSale) {
+                                    <span class="original-price">&#8369;@p.OriginalPrice.Value.ToString("N2")</span>
+                                    <span class="discount-pct">-@disc%</span>
+                                }
+                            </div>
+                            <div class="product-actions">
+                                <a href="@Url.Action("Details","Product",new{id=p.Id})" class="btn-outline-sm" onclick="event.stopPropagation()">
+                                    <i class="fa-regular fa-eye"></i> Details
+                                </a>
+                                <a href="@Url.Action("Add","Cart",new{id=p.Id,returnUrl=Request.Url.PathAndQuery})" class="btn-primary-sm" onclick="event.stopPropagation()">
+                                    <i class="fa-solid fa-cart-plus"></i> Add
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@section scripts {
+    <script src="@Url.Content("~/Scripts/product.js")"></script>
+}

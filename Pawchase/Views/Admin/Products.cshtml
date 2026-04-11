@@ -1,0 +1,36 @@
+@model List<Pawchase.Models.Product>
+@{
+    ViewBag.Title = "Manage Products";
+    Layout = "~/Views/Admin/_AdminLayout.cshtml";
+}
+
+<div class="admin-page-header">
+    <h1>Products</h1>
+    <a href="@Url.Action("AddProduct","Admin")" class="btn-primary" style="padding:9px 18px;font-size:12px;">
+        <i class="fa-solid fa-plus"></i> Add Product
+    </a>
+</div>
+
+<div class="admin-table-card">
+    <table class="admin-table">
+        <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Size</th><th>Price</th><th>Stock</th><th>Sale?</th><th>Actions</th></tr></thead>
+        <tbody>
+            @foreach (var p in Model)
+            {
+                <tr>
+                    <td>@p.Id</td>
+                    <td><strong>@p.Name</strong></td>
+                    <td>@p.Category</td>
+                    <td>@p.BreedSize</td>
+                    <td>&#8369;@p.Price.ToString("N2")</td>
+                    <td><span class="@(p.Stock<=5?"stock-low":"stock-ok")">@p.Stock</span></td>
+                    <td>@if(p.IsOnSale){<span class="sale-pill">SALE</span>}else{<span style="color:#aaa;">&mdash;</span>}</td>
+                    <td class="action-col">
+                        <a href="@Url.Action("EditProduct","Admin",new{id=p.Id})" class="tbl-btn edit"><i class="fa-solid fa-pen"></i> Edit</a>
+                        <a href="@Url.Action("DeleteProduct","Admin",new{id=p.Id})" class="tbl-btn delete" onclick="return confirm('Delete this product?')"><i class="fa-regular fa-trash-can"></i> Delete</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

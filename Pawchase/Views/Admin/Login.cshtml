@@ -1,0 +1,64 @@
+@{
+    ViewBag.Title = "Admin Login";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>PawChase Admin</title>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet"/>
+    <link href="@Url.Content("~/Content/css/site.css")" rel="stylesheet"/>
+    <link href="@Url.Content("~/Content/css/admin.css")" rel="stylesheet"/>
+</head>
+<body class="admin-login-page">
+    <div class="admin-login-card">
+        <div class="admin-login-logo">
+            <i class="fa-solid fa-paw"></i>
+            <h1>PawChase</h1>
+            <p>Admin Portal</p>
+        </div>
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="admin-error"><i class="fa-solid fa-triangle-exclamation"></i> @ViewBag.Error</div>
+        }
+
+        <form method="post" action="@Url.Action("Login","Admin")">
+            @Html.AntiForgeryToken()
+            <div class="form-group">
+                <label><i class="fa-regular fa-envelope"></i> Admin Email</label>
+                <input type="email" name="email" placeholder="admin@pawchase.com" required/>
+            </div>
+            <div class="form-group">
+                <label><i class="fa-solid fa-lock"></i> Password</label>
+                <div class="password-wrap">
+                    <input type="password" id="apw" name="password" placeholder="Admin password" required/>
+                    <button type="button" class="toggle-pw" onclick="togglePw('apw','apw-icon')">
+                        <i class="fa-regular fa-eye" id="apw-icon"></i>
+                    </button>
+                </div>
+            </div>
+            <button type="submit" class="btn-admin-login">
+                <i class="fa-solid fa-shield-halved"></i> Access Admin Panel
+            </button>
+        </form>
+
+        <div class="admin-hint">
+            <strong>Credentials:</strong><br/>
+            admin@pawchase.com / PawChase@Admin2024
+        </div>
+        <div class="admin-back"><a href="@Url.Action("Index","Home")">← Back to Store</a></div>
+    </div>
+    <script>
+    function togglePw(id, iconId) {
+        var el = document.getElementById(id);
+        var ic = document.getElementById(iconId);
+        el.type = el.type === 'password' ? 'text' : 'password';
+        ic.className = el.type === 'password' ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash';
+    }
+    </script>
+</body>
+</html>

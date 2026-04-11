@@ -1,0 +1,45 @@
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">
+            <h2><i class="fa-solid fa-paw"></i> PawChase</h2>
+            <p>Your one-stop shop for premium dog products. Quality items for every breed and every size.</p>
+            <div class="footer-socials">
+                <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
+                <a href="#"><i class="fa-brands fa-instagram"></i></a>
+                <a href="#"><i class="fa-brands fa-tiktok"></i></a>
+                <a href="#"><i class="fa-brands fa-x-twitter"></i></a>
+            </div>
+        </div>
+        <div class="footer-col">
+            <h4>Quick Links</h4>
+            <ul>
+                <li><a href="@Url.Action("Index",   "Home")">Home</a></li>
+                <li><a href="@Url.Action("Index",   "Product")">Products</a></li>
+                <li><a href="@Url.Action("About",   "Home")">About Us</a></li>
+                <li><a href="@Url.Action("Contact", "Home")">Contact</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Categories</h4>
+            <ul>
+                <li><a href="@Url.Action("Index","Product", new{category="Treats"})">Treats</a></li>
+                <li><a href="@Url.Action("Index","Product", new{category="Toys"})">Toys</a></li>
+                <li><a href="@Url.Action("Index","Product", new{category="Accessories"})">Accessories</a></li>
+                <li><a href="@Url.Action("Index","Product", new{category="Health"})">Health &amp; Care</a></li>
+                <li><a href="@Url.Action("Index","Product", new{category="Others"})">Others</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Support</h4>
+            <ul>
+                <li><a href="@Url.Action("Track","Order")">Track My Order</a></li>
+                <li><a href="@Url.Action("Contact","Home")">Help Center</a></li>
+                <li><a href="#">Shipping Policy</a></li>
+                <li><a href="#">Returns &amp; Refunds</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <p>&copy; @DateTime.Now.Year PawChase. All rights reserved. Made with <i class="fa-solid fa-paw"></i> for dog lovers.</p>
+    </div>
+</footer>

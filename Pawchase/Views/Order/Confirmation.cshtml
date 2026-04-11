@@ -1,0 +1,68 @@
+@model Pawchase.Models.Order
+@{
+    ViewBag.Title = "Order Confirmed!";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section styles {
+    <link href="@Url.Content("~/Content/css/order.css")" rel="stylesheet"/>
+}
+
+<section class="confirmation-section">
+    <div class="confirmation-card">
+        <i class="fa-solid fa-circle-check confirm-icon"></i>
+        <h1>Order Placed!</h1>
+        <p class="confirm-sub">
+            Thank you, <strong>@Model.CustomerName</strong>!<br/>
+            Your order has been received and is now being prepared.
+        </p>
+
+        <div class="confirm-ref">
+            <label>Your Reference Number</label>
+            <div class="ref-number" id="refNum" title="Click to copy">@Model.ReferenceNumber</div>
+            <small>Save this number to track your order anytime.</small>
+        </div>
+
+        <div class="confirm-details">
+            <div class="cd-row">
+                <span><i class="fa-regular fa-envelope"></i> Confirmation sent to</span>
+                <strong>@Model.Email</strong>
+            </div>
+            <div class="cd-row">
+                <span><i class="fa-solid fa-location-dot"></i> Delivering to</span>
+                <strong>@Model.Address</strong>
+            </div>
+            <div class="cd-row">
+                <span><i class="fa-solid fa-money-bill-wave"></i> Payment</span>
+                <strong>Cash on Delivery</strong>
+            </div>
+            <div class="cd-row">
+                <span><i class="fa-solid fa-receipt"></i> Order Total</span>
+                <strong>&#8369;@Model.Total.ToString("N2")</strong>
+            </div>
+        </div>
+
+        <div class="confirm-items">
+            <h3>Items in This Order</h3>
+            @foreach (var item in Model.Items)
+            {
+                <div class="confirm-item">
+                    <span>@item.Product.Name &times; @item.Quantity</span>
+                    <span>&#8369;@item.Subtotal.ToString("N2")</span>
+                </div>
+            }
+        </div>
+
+        <div class="confirm-actions">
+            <a href="@Url.Action("Track","Order")" class="btn-primary">
+                <i class="fa-regular fa-box"></i> Track My Order
+            </a>
+            <a href="@Url.Action("Index","Product")" class="btn-outline">
+                <i class="fa-solid fa-bag-shopping"></i> Continue Shopping
+            </a>
+        </div>
+    </div>
+</section>
+
+@section scripts {
+    <script src="@Url.Content("~/Scripts/order.js")"></script>
+}

@@ -1,0 +1,66 @@
+@model List<Pawchase.Models.Order>
+@{
+    ViewBag.Title = "Manage Orders";
+    Layout = "~/Views/Admin/_AdminLayout.cshtml";
+    var statuses = new[] { "To Ship", "In Transit", "Out for Delivery", "Delivered" };
+}
+
+<div class="admin-page-header">
+    <h1>Orders</h1>
+    <span class="order-count">@Model.Count total orders</span>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="admin-table-card"><div class="no-data-msg"><i class="fa-solid fa-receipt"></i><p>No orders yet.</p></div></div>
+}
+else
+{
+    <div class="admin-table-card">
+        <table class="admin-table">
+            <thead><tr><th>Reference</th><th>Customer</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th><th>Update Status</th></tr></thead>
+            <tbody>
+                @foreach (var o in Model)
+                {
+                    <tr @(o.HasRefundRequest ? "style='background:rgba(224,85,85,.03);'" : "")>
+                        <td>
+                            <strong>@o.ReferenceNumber</strong>
+                            @if (o.HasRefundRequest)
+                            {
+                                <span class="flag-badge" style="margin-left:4px;"><i class="fa-solid fa-circle-exclamation"></i> REFUND</span>
+                            }
+                        </td>
+                        <td>@o.CustomerName<small>@o.Email</small></td>
+                        <td>@o.OrderDate.ToString("MMM dd, yyyy")</td>
+                        <td>@o.Items.Sum(i => i.Quantity) item(s)</td>
+                        <td>&#8369;@o.Total.ToString("N2")</td>
+                        <td><span class="status-pill status-@o.Status.ToLower().Replace(" ","-")">@o.Status</span></td>
+                        <td>
+                            @if (o.HasRefundRequest)
+                            {
+                                <div class="status-btns">
+                                    <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status="Refund Approved"})" class="approve-btn" onclick="return confirm('Approve refund?')"><i class="fa-solid fa-check"></i> Approve</a>
+                                    <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status="Delivered"})"    class="decline-btn" onclick="return confirm('Decline refund?')"><i class="fa-solid fa-times"></i> Decline</a>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="status-btns">
+                                    @foreach (var s in statuses)
+                                    {
+                                        if (s != o.Status)
+                                        {
+                                            <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status=s})"
+                                               class="status-update-btn"
+                                               onclick="return confirm('Set status to \'@s\'?')">@s</a>
+                                        }
+                                    }
+                                </div>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

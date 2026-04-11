@@ -1,0 +1,41 @@
+@{
+    ViewBag.Title = "About Us";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section styles {
+    <link href="@Url.Content("~/Content/css/home.css")" rel="stylesheet"/>
+}
+
+<div class="page-hero">
+    <h1>About PawChase</h1>
+    <p>A store made by dog lovers, for dog lovers.</p>
+</div>
+
+<section class="about-section">
+    <div class="about-inner">
+        <div class="about-text">
+            <h2>Our Story</h2>
+            <p>PawChase was built out of a simple love for dogs. We noticed how hard it was to find quality, trusted products for dogs in one place &mdash; so we built it ourselves.</p>
+            <p>We carry only products we'd use on our own dogs. Every item is carefully selected for quality, safety, and value &mdash; whether you have a tiny Chihuahua or a massive German Shepherd.</p>
+            <h2 style="margin-top:2rem;">Our Mission</h2>
+            <p>To make dog care simpler, more affordable, and more enjoyable for every Filipino dog owner.</p>
+        </div>
+        <div class="about-highlights">
+            <div class="highlight-card">
+                <i class="fa-solid fa-dog"></i>
+                <h3>Dogs Only</h3>
+                <p>Specialized exclusively for man's best friend &mdash; every product is dog-specific.</p>
+            </div>
+            <div class="highlight-card">
+                <i class="fa-solid fa-shield-halved"></i>
+                <h3>Quality Assured</h3>
+                <p>Every product is vet-approved or trusted by breeders before we list it.</p>
+            </div>
+            <div class="highlight-card">
+                <i class="fa-solid fa-truck-fast"></i>
+                <h3>Fast Delivery</h3>
+                <p>Get your orders delivered across the Philippines &mdash; fast and reliable.</p>
+            </div>
+        </div>
+    </div>
+</section>

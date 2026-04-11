@@ -1,0 +1,44 @@
+@{
+    ViewBag.Title = "Track Order";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section styles {
+    <link href="@Url.Content("~/Content/css/order.css")" rel="stylesheet"/>
+}
+
+<div class="page-hero">
+    <h1>Track Your Order</h1>
+    <p>Enter your reference number to check your order status</p>
+</div>
+
+<section class="track-section">
+    <div class="track-card">
+        <i class="fa-regular fa-box track-icon"></i>
+        <h2>Order Tracking</h2>
+        <p>Your reference number was sent to your email after placing an order.<br/>It looks like: <strong>PWC-000001</strong></p>
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="track-error"><i class="fa-solid fa-triangle-exclamation"></i> @ViewBag.Error</div>
+        }
+
+        <form method="post" action="@Url.Action("Track","Order")" class="track-form">
+            @Html.AntiForgeryToken()
+            <div class="track-input-wrap">
+                <input type="text" name="referenceNumber" placeholder="e.g. PWC-000001" maxlength="20" required/>
+                <button type="submit" class="btn-primary">
+                    <i class="fa-solid fa-magnifying-glass"></i> Track
+                </button>
+            </div>
+        </form>
+
+        <div class="track-hint">
+            <i class="fa-regular fa-lightbulb"></i>
+            <strong>Test reference numbers:</strong> PWC-000001 &middot; PWC-000002
+        </div>
+    </div>
+</section>
+
+@section scripts {
+    <script src="@Url.Content("~/Scripts/order.js")"></script>
+}

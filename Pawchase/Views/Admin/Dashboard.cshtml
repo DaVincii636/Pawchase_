@@ -1,0 +1,54 @@
+@* Dashboard *@
+@{
+    ViewBag.Title = "Dashboard";
+    Layout = "~/Views/Admin/_AdminLayout.cshtml";
+    var recentOrders = ViewBag.RecentOrders as List<Pawchase.Models.Order>;
+}
+
+<div class="admin-page-header">
+    <h1>Dashboard</h1>
+    <p>Welcome back, <strong>@Session["AdminName"]</strong> 👋</p>
+</div>
+
+<div class="stat-cards">
+    <div class="stat-card"><div class="sc-icon" style="background:rgba(129,166,198,.15);color:var(--blue);"><i class="fa-solid fa-boxes-stacked"></i></div><div class="sc-info"><span>Total Products</span><strong>@ViewBag.TotalProducts</strong></div></div>
+    <div class="stat-card"><div class="sc-icon" style="background:rgba(52,152,219,.15);color:#2471a3;"><i class="fa-solid fa-receipt"></i></div><div class="sc-info"><span>Total Orders</span><strong>@ViewBag.TotalOrders</strong></div></div>
+    <div class="stat-card"><div class="sc-icon" style="background:rgba(224,85,85,.15);color:#e05555;"><i class="fa-regular fa-clock"></i></div><div class="sc-info"><span>Pending (To Ship)</span><strong>@ViewBag.PendingOrders</strong></div></div>
+    <div class="stat-card"><div class="sc-icon" style="background:rgba(46,204,113,.15);color:#1e8449;"><i class="fa-solid fa-peso-sign"></i></div><div class="sc-info"><span>Total Revenue</span><strong>&#8369;@((ViewBag.TotalRevenue as decimal? ?? 0).ToString("N2"))</strong></div></div>
+    <div class="stat-card"><div class="sc-icon" style="background:rgba(155,89,182,.15);color:#8e44ad;"><i class="fa-solid fa-users"></i></div><div class="sc-info"><span>Registered Users</span><strong>@ViewBag.TotalUsers</strong></div></div>
+</div>
+
+@if ((int)ViewBag.RefundCount > 0)
+{
+    <div style="background:rgba(224,85,85,.08);border:1px solid rgba(224,85,85,.25);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:1.5rem;display:flex;align-items:center;gap:10px;font-size:13px;color:#c0392b;">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>You have <strong>@ViewBag.RefundCount</strong> pending refund request(s). <a href="@Url.Action("Orders","Admin")" style="color:#c0392b;font-weight:700;text-decoration:underline;">Review now →</a></span>
+    </div>
+}
+
+<div class="admin-table-card">
+    <div class="atc-header">
+        <h3>Recent Orders</h3>
+        <a href="@Url.Action("Orders","Admin")" style="font-size:12px;color:var(--blue-dark);font-weight:600;">View All →</a>
+    </div>
+    <table class="admin-table">
+        <thead><tr><th>Reference</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>
+            @if (recentOrders != null && recentOrders.Any())
+            {
+                foreach (var o in recentOrders)
+                {
+                    <tr>
+                        <td><strong>@o.ReferenceNumber</strong>@if(o.HasRefundRequest){<text> <span class="flag-badge"><i class="fa-solid fa-circle-exclamation"></i> REFUND</span></text>}</td>
+                        <td>@o.CustomerName</td>
+                        <td>@o.OrderDate.ToString("MMM dd, yyyy")</td>
+                        <td>&#8369;@o.Total.ToString("N2")</td>
+                        <td><span class="status-pill status-@o.Status.ToLower().Replace(" ","-")">@o.Status</span></td>
+                        <td><a href="@Url.Action("Orders","Admin")" class="tbl-link">Manage</a></td>
+                    </tr>
+                }
+            }
+            else { <tr><td colspan="6" class="no-data">No orders yet.</td></tr> }
+        </tbody>
+    </table>
+</div>

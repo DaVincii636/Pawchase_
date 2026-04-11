@@ -1,0 +1,74 @@
+@{
+    ViewBag.Title = "Contact Us";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section styles {
+    <link href="@Url.Content("~/Content/css/home.css")" rel="stylesheet"/>
+}
+
+<div class="page-hero">
+    <h1>Contact Us</h1>
+    <p>We'd love to hear from you &mdash; reach out anytime!</p>
+</div>
+
+<section class="contact-section">
+    <div class="contact-inner">
+        <div class="contact-info-card">
+            <h2>Get in Touch</h2>
+            <div class="info-item">
+                <div class="ci-icon"><i class="fa-regular fa-envelope"></i></div>
+                <div><strong>Email</strong><p>support@pawchase.com</p></div>
+            </div>
+            <div class="info-item">
+                <div class="ci-icon"><i class="fa-solid fa-phone"></i></div>
+                <div><strong>Phone</strong><p>+63 912 345 6789</p></div>
+            </div>
+            <div class="info-item">
+                <div class="ci-icon"><i class="fa-solid fa-location-dot"></i></div>
+                <div><strong>Address</strong><p>Quezon City, Metro Manila, Philippines</p></div>
+            </div>
+            <div class="info-item">
+                <div class="ci-icon"><i class="fa-regular fa-clock"></i></div>
+                <div><strong>Support Hours</strong><p>Monday &ndash; Saturday, 8AM &ndash; 6PM</p></div>
+            </div>
+        </div>
+
+        <div class="contact-form-wrap">
+            <h2>Send a Message</h2>
+            <form class="contact-form" onsubmit="handleContact(event)">
+                <div class="form-group">
+                    <label><i class="fa-regular fa-user"></i> Your Name</label>
+                    <input type="text" placeholder="Juan dela Cruz" required/>
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-regular fa-envelope"></i> Email Address</label>
+                    <input type="email" placeholder="juan@email.com" required/>
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-tag"></i> Subject</label>
+                    <input type="text" placeholder="Order inquiry, product question..." required/>
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-regular fa-message"></i> Message</label>
+                    <textarea rows="5" placeholder="Type your message here..." required></textarea>
+                </div>
+                <button type="submit" class="btn-primary" style="width:100%;justify-content:center;">
+                    <i class="fa-solid fa-paper-plane"></i> Send Message
+                </button>
+                <p id="contact-success" style="display:none;color:#1e8449;text-align:center;margin-top:.75rem;font-weight:600;">
+                    <i class="fa-solid fa-circle-check"></i> Message sent! We'll get back to you shortly.
+                </p>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section scripts {
+<script>
+function handleContact(e) {
+    e.preventDefault();
+    document.getElementById('contact-success').style.display = 'block';
+    e.target.reset();
+}
+</script>
+}

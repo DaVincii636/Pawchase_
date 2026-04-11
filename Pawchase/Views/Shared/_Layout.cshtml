@@ -1,0 +1,27 @@
+<meta charset="utf-8" />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>@ViewBag.Title - PawChase</title>
+    <link rel="icon" href="@Url.Content("~/Content/images/favicon.png")"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet"/>
+    <link href="@Url.Content("~/Content/css/site.css")" rel="stylesheet"/>
+    <link href="@Url.Content("~/Content/css/navbar.css")" rel="stylesheet"/>
+    <link href="@Url.Content("~/Content/css/mobile.css")" rel="stylesheet"/>
+    @RenderSection("styles", required: false)
+</head>
+<body>
+
+@Html.Partial("_Navbar")
+
+<main>@RenderBody()</main>
+
+@Html.Partial("_Footer")
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+<script src="@Url.Content("~/Scripts/pawchase.js")"></script>
+@RenderSection("scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,85 @@
+@model Pawchase.Models.Order
+@{
+    ViewBag.Title = "Order Status";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var statuses   = new[] { "To Ship", "In Transit", "Out for Delivery", "Delivered" };
+    var icons      = new[] { "fa-box", "fa-truck", "fa-location-dot", "fa-circle-check" };
+    var displayStatus = Model.Status == "To Rate" || Model.Status == "Completed" ? "Delivered" : Model.Status;
+    var currentIdx = Array.IndexOf(statuses, displayStatus);
+}
+@section styles {
+    <link href="@Url.Content("~/Content/css/order.css")" rel="stylesheet"/>
+}
+
+<div class="page-hero">
+    <h1>Order Status</h1>
+    <p>Reference: <strong>@Model.ReferenceNumber</strong></p>
+</div>
+
+<section class="track-section" style="gap:1.5rem;">
+    <div class="track-result" style="display:block;">
+        <!-- TIMELINE -->
+        <div class="status-timeline">
+            @for (int i = 0; i < statuses.Length; i++)
+            {
+                string cls = i < currentIdx ? "done" : (i == currentIdx ? "current" : "");
+                <div class="timeline-step @cls">
+                    <div class="step-circle">
+                        <i class="fa-solid @icons[i]"></i>
+                    </div>
+                    <div class="step-label">@statuses[i]</div>
+                    @if (i < statuses.Length - 1)
+                    {
+                        <div class="step-line @(i < currentIdx ? "done" : "")"></div>
+                    }
+                </div>
+            }
+        </div>
+
+        <div style="text-align:center;margin-bottom:1.2rem;">
+            <span class="status-badge-large status-@Model.Status.ToLower().Replace(" ","-")">
+                @Model.Status
+            </span>
+        </div>
+
+        <div class="order-detail-card">
+            <div class="order-meta">
+                <div class="meta-block"><label>Reference Number</label><strong>@Model.ReferenceNumber</strong></div>
+                <div class="meta-block"><label>Order Date</label><strong>@Model.OrderDate.ToString("MMMM dd, yyyy")</strong></div>
+                <div class="meta-block"><label>Customer</label><strong>@Model.CustomerName</strong></div>
+                <div class="meta-block"><label>Delivery Address</label><strong>@Model.Address</strong></div>
+            </div>
+            <div class="order-items-detail">
+                <h3>Items Ordered</h3>
+                @foreach (var item in Model.Items)
+                {
+                    <div class="order-item-row">
+                        <div class="oi-thumb"><i class="fa-solid fa-bone"></i></div>
+                        <div class="oi-info">
+                            <strong>@item.Product.Name</strong>
+                            <span>Qty: @item.Quantity</span>
+                        </div>
+                        <div class="oi-price">&#8369;@item.Subtotal.ToString("N2")</div>
+                    </div>
+                }
+                <div class="order-total-row">
+                    <span>Total Paid</span>
+                    <strong>&#8369;@Model.Total.ToString("N2")</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="track-back">
+        <a href="@Url.Action("Track","Order")" class="btn-outline">
+            <i class="fa-solid fa-arrow-left"></i> Track Another Order
+        </a>
+        <a href="@Url.Action("Index","Product")" class="btn-primary">
+            <i class="fa-solid fa-bag-shopping"></i> Continue Shopping
+        </a>
+    </div>
+</section>
+
+@section scripts {
+    <script src="@Url.Content("~/Scripts/order.js")"></script>
+}
