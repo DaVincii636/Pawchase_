@@ -1,9 +1,9 @@
 @{
     var isLoggedIn = Session["UserId"] != null;
-    var userName   = Session["UserName"] as string;
-    var cart       = Session["Cart"] as List<Pawchase.Models.CartItem>;
-    var cartCount  = cart != null ? cart.Sum(c => c.Quantity) : 0;
-    var path       = Request.Url.AbsolutePath.ToLower();
+    var userName = Session["UserName"] as string;
+    var cart = Session["Cart"] as List<Pawchase.Models.CartItem>;
+    var cartCount = cart != null ? cart.Sum(c => c.Quantity) : 0;
+    var path = Request.Url.AbsolutePath.ToLower();
 }
 
 <div class="announcement-bar">
@@ -24,7 +24,7 @@
     <div class="nav-logo">
         <a href="@Url.Action("Index","Home")">
             <img src="@Url.Content("~/Content/images/Pawchase_logo.png")" alt="PawChase"
-                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"/>
+                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
             <span class="logo-text-fallback" style="display:none;">
                 <i class="fa-solid fa-paw"></i> PawChase
             </span>
@@ -38,7 +38,7 @@
         <li class="@(path.Contains("/product") ? "active" : "")">
             @Html.ActionLink("Products", "Index", "Product")
         </li>
-        <li class="@(path.Contains("/reviews") ? "active" : "")">
+        <li class="@((path == "/reviews" || path.Contains("/reviews/index")) ? "active" : "")">
             @Html.ActionLink("Reviews", "Index", "Reviews")
         </li>
         <li class="@(path.Contains("/home/about") ? "active" : "")">
@@ -53,7 +53,8 @@
         <a href="@Url.Action("Index","Cart")" class="nav-cart">
             <i class="fa-solid fa-cart-shopping"></i>
             <span>Cart</span>
-            @if (cartCount > 0) { <span class="cart-badge">@cartCount</span> }
+            @if (cartCount > 0)
+            {<span class="cart-badge">@cartCount</span>}
         </a>
 
         <a href="@Url.Action("Track","Order")" class="nav-link-icon">
@@ -68,7 +69,7 @@
                 <span>@(userName != null && userName.Length > 10 ? userName.Substring(0, 10) + "&hellip;" : userName)</span>
                 <div class="account-dropdown">
                     <a href="@Url.Action("Orders","Account")"><i class="fa-solid fa-list-check"></i> My Orders</a>
-                    <a href="@Url.Action("Index","Reviews")"><i class="fa-solid fa-paw"></i> Reviews</a>
+                    <a href="@Url.Action("MyReviews","Reviews")" class="@(path.Contains("/reviews/myreviews") ? "active" : "")"><i class="fa-solid fa-bookmark"></i> My Reviews</a>
                     <a href="@Url.Action("Logout","Account")" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
                 </div>
             </div>

@@ -1,0 +1,289 @@
+@using Pawchase.Models
+@model List<Pawchase.Models.Review>
+@{
+    ViewBag.Title = "My Reviews";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var likedReviews = ViewBag.LikedReviews as List<Pawchase.Models.Review> ?? new List<Pawchase.Models.Review>();
+    var likedIds = ViewBag.LikedReviewIds as List<int> ?? new List<int>();
+    var displayName = (ViewBag.DisplayUserName as string) ?? "alex";
+    var colors = new[] { "#ffe8d6", "#ddeaf3", "#f3e3d0", "#d4eadd", "#ecddd0", "#d4e4f0" };
+    var icons = new[] { "fa-dog", "fa-paw", "fa-bone", "fa-dog", "fa-paw", "fa-bone" };
+
+    var myReviewsJson = Newtonsoft.Json.JsonConvert.SerializeObject(
+        Model.Select((r, i) => new
+        {
+            id = r.Id,
+            stars = r.Stars,
+            comment = r.Comment,
+            likes = r.Likes,
+            date = r.DatePosted.ToString("MMM dd, yyyy"),
+            isEdited = r.IsEdited,
+            editedAt = r.LastEditedAt.HasValue ? r.LastEditedAt.Value.ToString("o") : null,
+            isTextOnly = r.IsTextOnly,
+            photoUrl = r.PhotoUrl,
+            color = colors[i % colors.Length],
+            icon = icons[i % icons.Length],
+            comments = (r.Comments ?? new List<Pawchase.Models.ReviewComment>()).Select(c => new
+            {
+                userName = c.UserName,
+                text = c.Text,
+                date = c.DatePosted.ToString("MMM dd, yyyy hh:mm tt")
+            }).ToList()
+        }).ToList());
+
+    var likedReviewsJson = Newtonsoft.Json.JsonConvert.SerializeObject(
+        likedReviews.Select(r => new
+        {
+            id = r.Id,
+            name = r.CustomerName,
+            stars = r.Stars,
+            comment = r.Comment,
+            likes = r.Likes,
+            date = r.DatePosted.ToString("MMM dd, yyyy")
+        }).ToList());
+}
+
+@section styles {
+    <link rel="stylesheet" href="~/Content/myreviews.css" />
+}
+
+<div class="my-reviews-header">
+    <h1><i class="fa-solid fa-bookmark" style="color:#FFD77A;margin-right:8px"></i>My Reviews</h1>
+    <p>Personal collection of your posted reviews</p>
+
+    @if (Model.Any())
+    {
+        <div class="my-reviews-stats">
+            <div class="stat-item"><strong>@Model.Count</strong><span>Total Reviews</span></div>
+            <div class="stat-item"><strong>@Model.Average(r => r.Stars).ToString("0.0")</strong><span>Avg Rating</span></div>
+            <div class="stat-item clickable" onclick="openLikedModal()"><strong>@likedReviews.Count</strong><span>Reviews You've Liked</span></div>
+        </div>
+    }
+</div>
+
+@if (TempData["ReviewUpdated"] != null)
+{
+    <div class="toast-small" id="updated-toast"><i class="fa-solid fa-circle-check"></i> Review updated successfully</div>
+}
+@if (TempData["ReviewDeleted"] != null)
+{
+    <div class="toast-small" id="deleted-toast"><i class="fa-solid fa-circle-check"></i> Review deleted successfully</div>
+}
+
+<div class="my-reviews-container">
+    @if (!Model.Any())
+    {
+        <div style="text-align:center;padding:4rem;color:var(--text-light)">
+            <i class="fa-solid fa-paw" style="font-size:3rem;margin-bottom:1rem;display:block;color:var(--blue);opacity:.4"></i>
+            <p>No reviews yet. Start sharing your feedback.</p>
+        </div>
+    }
+    else
+    {
+        var withPhotos = Model.Where(r => !r.IsTextOnly).OrderByDescending(r => r.DatePosted).ToList();
+        var withoutPhotos = Model.Where(r => r.IsTextOnly).OrderByDescending(r => r.DatePosted).ToList();
+
+        if (withPhotos.Any())
+        {
+            <div class="my-reviews-grid">
+                @for (int i = 0; i < withPhotos.Count; i++)
+                {
+                    var r = withPhotos[i];
+                    var modelIndex = Model.FindIndex(x => x.Id == r.Id);
+                    var color = colors[i % colors.Length];
+                    var icon = icons[i % icons.Length];
+                    <div class="my-review-card @(r.IsTextOnly ? "without-photo" : "with-photo")" onclick="openMyModal(@modelIndex)">
+                        @if (!r.IsTextOnly)
+                        {
+                            <div class="my-review-photo" style="background:@color;">
+                                <i class="fa-solid @icon" style="font-size:2.6rem;color:rgba(0,0,0,.12)"></i>
+                            </div>
+                        }
+                        <div class="my-review-body">
+                            <div class="my-review-head">
+                                <div class="my-review-avatar">a</div>
+                                <div>
+                                    <div class="my-review-name">@displayName</div>
+                                    <div class="my-review-date">
+                                        @r.DatePosted.ToString("MMM dd, yyyy")
+                                        @if (r.IsEdited)
+                                        {
+                                            <span class="my-review-edited" data-edited-at="@r.LastEditedAt.Value.ToString("o")">Edited</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="my-review-stars">
+                                @for (int s = 1; s <= 5; s++)
+                                {
+                                    <i class="@(s <= r.Stars ? "fa-solid" : "fa-regular") fa-star"></i>
+                                }
+                            </div>
+
+                            <p class="my-review-text">@r.Comment</p>
+
+                            <div class="my-review-actions">
+                                <button class="card-action @(likedIds.Contains(r.Id) ? "liked" : "")" onclick="event.stopPropagation();toggleMyLike(@r.Id, this, @modelIndex)"><i class="@(likedIds.Contains(r.Id) ? "fa-solid" : "fa-regular") fa-heart"></i> <span>@r.Likes</span></button>
+                                <button class="card-action" onclick="event.stopPropagation();openMyModalComments(@modelIndex)"><i class="fa-regular fa-comment"></i> <span>@(r.Comments?.Count ?? 0)</span></button>
+                            </div>
+
+                            <div class="edit-delete-row">
+                                <button class="btn-mini" onclick="event.stopPropagation();openEditModal(@r.Id,@r.Stars,'@Html.Raw(r.Comment.Replace("'","\'"))')">Edit</button>
+                                @using (Html.BeginForm("Delete", "Reviews", FormMethod.Post, new { onsubmit = "event.stopPropagation(); return confirm('Are you sure you want to delete this review?');", style = "display:flex;flex:1;" }))
+                                {
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@r.Id" />
+                                    <button type="submit" class="btn-mini delete">Delete</button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        if (withPhotos.Any() && withoutPhotos.Any())
+        {
+            <div class="reviews-divider"></div>
+        }
+
+        if (withoutPhotos.Any())
+        {
+            <div class="my-reviews-grid">
+                @for (int i = 0; i < withoutPhotos.Count; i++)
+                {
+                    var r = withoutPhotos[i];
+                    var modelIndex = Model.FindIndex(x => x.Id == r.Id);
+                    var color = colors[(i + withPhotos.Count) % colors.Length];
+                    var icon = icons[(i + withPhotos.Count) % icons.Length];
+                    <div class="my-review-card @(r.IsTextOnly ? "without-photo" : "with-photo")" onclick="openMyModal(@modelIndex)">
+                        <div class="my-review-body">
+                            <div class="my-review-head">
+                                <div class="my-review-avatar">a</div>
+                                <div>
+                                    <div class="my-review-name">@displayName</div>
+                                    <div class="my-review-date">
+                                        @r.DatePosted.ToString("MMM dd, yyyy")
+                                        @if (r.IsEdited)
+                                        {
+                                            <span class="my-review-edited" data-edited-at="@r.LastEditedAt.Value.ToString("o")">Edited</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="my-review-stars">
+                                @for (int s = 1; s <= 5; s++)
+                                {
+                                    <i class="@(s <= r.Stars ? "fa-solid" : "fa-regular") fa-star"></i>
+                                }
+                            </div>
+
+                            <p class="my-review-text">@r.Comment</p>
+
+                            <div class="my-review-actions">
+                                <button class="card-action @(likedIds.Contains(r.Id) ? "liked" : "")" onclick="event.stopPropagation();toggleMyLike(@r.Id, this, @modelIndex)"><i class="@(likedIds.Contains(r.Id) ? "fa-solid" : "fa-regular") fa-heart"></i> <span>@r.Likes</span></button>
+                                <button class="card-action" onclick="event.stopPropagation();openMyModalComments(@modelIndex)"><i class="fa-regular fa-comment"></i> <span>@(r.Comments?.Count ?? 0)</span></button>
+                            </div>
+
+                            <div class="edit-delete-row">
+                                <button class="btn-mini" onclick="event.stopPropagation();openEditModal(@r.Id,@r.Stars,'@Html.Raw(r.Comment.Replace("'","\'"))')">Edit</button>
+                                @using (Html.BeginForm("Delete", "Reviews", FormMethod.Post, new { onsubmit = "event.stopPropagation(); return confirm('Are you sure you want to delete this review?');", style = "display:flex;flex:1;" }))
+                                {
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@r.Id" />
+                                    <button type="submit" class="btn-mini delete">Delete</button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+<div class="modal-overlay" id="my-review-modal-overlay" onclick="if(event.target===this)closeMyModal()">
+    <div class="review-modal" id="my-review-modal">
+        <div class="modal-photo-wrap"><div class="modal-photo" id="my-modal-photo"></div></div>
+        <div class="modal-info">
+            <div class="modal-header">
+                <div class="modal-avatar">a</div>
+                <div>
+                    <div style="font-size:14px;font-weight:700;">@displayName</div>
+                    <div style="font-size:11px;color:var(--text-light);" id="my-modal-date"></div>
+                    <div id="my-modal-edited" class="modal-edited" style="display:none;"></div>
+                </div>
+                <button class="modal-close" onclick="closeMyModal()"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-stars" id="my-modal-stars"></div>
+                <p class="modal-caption" id="my-modal-caption"></p>
+            </div>
+            <div class="modal-actions">
+                <button class="review-action" id="my-modal-like-btn" onclick="toggleMyLike(activeMyReview.id, this, activeMyReviewIndex)"><i class="fa-regular fa-heart"></i> <span id="my-modal-likes"></span></button>
+                <button class="review-action" onclick="toggleMyComments()"><i class="fa-regular fa-comment"></i> <span id="my-modal-comments-count"></span></button>
+            </div>
+            <div class="modal-comments" id="my-modal-comments-panel">
+                <div class="modal-comments-list" id="my-modal-comments-list"></div>
+                @using (Html.BeginForm("AddComment", "Reviews", FormMethod.Post, new { @class = "comment-form", id = "my-modal-comment-form" }))
+                {
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="reviewId" id="my-comment-review-id" />
+                    <input type="hidden" name="returnUrl" value="@Request.RawUrl" />
+                    <input type="text" class="comment-input" name="commentText" maxlength="180" placeholder="Write a comment..." required />
+                    <button type="submit" class="comment-submit">Send</button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="liked-modal-overlay" onclick="if(event.target===this)closeLikedModal()">
+    <div class="liked-modal">
+        <div class="liked-modal-head">
+            <strong style="font-size:14px;">Reviews You've Liked</strong>
+            <button class="modal-close" onclick="closeLikedModal()"><i class="fa-solid fa-times"></i></button>
+        </div>
+        <div class="liked-modal-list" id="liked-modal-list"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="edit-modal-overlay" onclick="if(event.target===this)closeEditModal()">
+    <div class="liked-modal" style="max-width:500px;">
+        <div class="liked-modal-head">
+            <strong style="font-size:14px;">Edit Review</strong>
+            <button class="modal-close" onclick="closeEditModal()"><i class="fa-solid fa-times"></i></button>
+        </div>
+        <div style="padding:14px 16px;">
+            @using (Html.BeginForm("Edit", "Reviews", FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="edit-id" name="id" />
+                <input type="hidden" id="edit-stars" name="stars" value="5" />
+
+                <div style="display:flex;gap:6px;margin-bottom:10px;" id="edit-stars-ui">
+                    <i class="fa-solid fa-star" onclick="setEditStar(1)"></i>
+                    <i class="fa-solid fa-star" onclick="setEditStar(2)"></i>
+                    <i class="fa-solid fa-star" onclick="setEditStar(3)"></i>
+                    <i class="fa-solid fa-star" onclick="setEditStar(4)"></i>
+                    <i class="fa-solid fa-star" onclick="setEditStar(5)"></i>
+                </div>
+                <textarea id="edit-comment" name="comment" rows="4" required style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px;font-family:'Poppins',sans-serif;"></textarea>
+                <button type="submit" class="comment-submit" style="margin-top:10px;">Save Changes</button>
+            }
+        </div>
+    </div>
+</div>
+
+@section scripts {
+<textarea id="my-reviews-json" hidden>@myReviewsJson</textarea>
+<textarea id="my-liked-reviews-json" hidden>@likedReviewsJson</textarea>
+    <div id="my-reviews-config"
+         data-like-url="@Url.Action("Like","Reviews")"
+         data-index-url="@Url.Action("Index","Reviews")"
+         data-display-name="@displayName"
+         hidden></div>
+    <script src="~/Scripts/myreviews.js"></script>
+}

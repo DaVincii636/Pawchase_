@@ -53,10 +53,28 @@ namespace Pawchase.Models
     {
         public int Id { get; set; }
         public int ProductId { get; set; }
+        public int UserId { get; set; }
         public string CustomerName { get; set; }
         public int Stars { get; set; }
         public string Comment { get; set; }
         public string PhotoUrl { get; set; }
+        public DateTime DatePosted { get; set; }
+        public DateTime? LastEditedAt { get; set; }
+        public int Likes { get; set; }
+        public int ReportCount { get; set; }
+        public string Category { get; set; }
+        public bool IsTextOnly => string.IsNullOrEmpty(PhotoUrl);
+        public bool IsEdited => LastEditedAt.HasValue && LastEditedAt.Value > DatePosted;
+        public List<ReviewComment> Comments { get; set; } = new List<ReviewComment>();
+    }
+
+    public class ReviewComment
+    {
+        public int Id { get; set; }
+        public int ReviewId { get; set; }
+        public int UserId { get; set; }
+        public string UserName { get; set; }
+        public string Text { get; set; }
         public DateTime DatePosted { get; set; }
     }
 }
