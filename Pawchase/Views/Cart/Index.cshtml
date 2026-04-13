@@ -1,127 +1,176 @@
 @model List<Pawchase.Models.CartItem>
-@{
-    ViewBag.Title = "My Cart";
-    Layout = "~/Views/Shared/_Layout.cshtml";
-    var total = Model.Sum(c => c.Subtotal);
-    var shipping = total >= 500 ? 0 : 80;
-}
-@section styles {
-    <link href="@Url.Content("~/Content/css/cart.css")" rel="stylesheet"/>
-    <style>
-    .cart-header { grid-template-columns: 36px 2fr 1fr 1fr 1fr 48px !important; }
-    .cart-row    { grid-template-columns: 36px 2fr 1fr 1fr 1fr 48px !important; }
-    .item-check  { width:16px;height:16px;cursor:pointer;accent-color:var(--blue); }
-    #sum-tip     { display:none;background:rgba(58,170,106,0.1);color:#2a8a56;border:1px solid rgba(58,170,106,0.2);font-size:12px;font-weight:600;padding:8px 12px;border-radius:var(--radius-sm);margin:8px 0;align-items:center;gap:6px; }
-    </style>
-}
-
-<div class="page-hero"><h1>My Cart</h1><p>Review your items before checkout</p></div>
-
-<section class="cart-section">
-    @if (!Model.Any())
-    {
-        <div class="cart-empty">
-            <i class="fa-solid fa-cart-shopping"></i>
-            <h2>Your cart is empty</h2>
-            <p>Looks like you haven't added anything yet.</p>
-            <a href="@Url.Action("Index","Product")" class="btn-primary" style="margin-top:.5rem">Browse Products</a>
-        </div>
+    @{
+        ViewBag.Title = "My Cart";
+        Layout = "~/Views/Shared/_Layout.cshtml";
+        var total = Model.Sum(c => c.Subtotal);
+        var shipping = total >= 500 ? 0 : 80;
     }
-    else
-    {
-        <div class="cart-inner">
-            <div>
-                <div class="cart-items">
-                    <div class="cart-header">
-                        <span><input type="checkbox" id="check-all" checked onchange="toggleAll(this)" style="cursor:pointer;accent-color:var(--blue);width:16px;height:16px"/></span>
-                        <span>Product</span><span>Price</span><span>Quantity</span><span>Subtotal</span><span></span>
-                    </div>
-                    @foreach (var item in Model)
-                    {
-                        <div class="cart-row">
-                            <div style="display:flex;align-items:center">
-                                <input type="checkbox" class="item-check" checked
-                                       data-subtotal="@item.Subtotal" data-qty="@item.Quantity"
-                                       onchange="updateSummary()"/>
-                            </div>
-                            <div class="cart-product">
-                                <div class="cart-img">
-                                    <img src="@item.Product.ImageUrl" alt="@item.Product.Name" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"/>
-                                    <div class="img-fallback-sm" style="display:none;"><i class="fa-solid fa-bone"></i></div>
-                                </div>
-                                <div class="cart-product-info">
-                                    <h4>@item.Product.Name</h4>
-                                    <span>@item.Product.Category &middot; @item.Product.BreedSize</span>
-                                </div>
-                            </div>
-                            <div class="cart-price">&#8369;@item.Product.Price.ToString("N2")</div>
-                            <div class="cart-qty">
-                                <form method="post" action="@Url.Action("UpdateQuantity","Cart")">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@item.Product.Id"/>
-                                    <div class="qty-form">
-                                        <button type="submit" name="quantity" value="@(item.Quantity-1)" class="qty-btn">&#8722;</button>
-                                        <span class="qty-count">@item.Quantity</span>
-                                        <button type="submit" name="quantity" value="@(item.Quantity+1)" class="qty-btn">+</button>
-                                    </div>
-                                </form>
-                            </div>
-                            <div class="cart-subtotal">&#8369;@item.Subtotal.ToString("N2")</div>
-                            <div class="cart-remove">
-                                <a href="@Url.Action("Remove","Cart",new{id=item.Product.Id})" onclick="return confirmRemove()">
-                                    <i class="fa-regular fa-trash-can"></i>
-                                </a>
-                            </div>
-                        </div>
-                    }
-                </div>
-                <div style="margin-top:1.2rem;padding:0 .5rem">
-                    <a href="@Url.Action("Index","Product")" class="btn-outline" style="font-size:13px;padding:8px 20px">
-                        &larr; Continue Shopping
-                    </a>
-                </div>
-            </div>
+    @section styles {
+        <link href="@Url.Content("~/Content/css/cart.css")" rel="stylesheet" />
+        <style>
+            .cart-header {
+                grid-template-columns: 36px 2fr 1fr 1fr 1fr 48px !important;
+            }
 
-            <div class="cart-summary">
-                <h3><i class="fa-solid fa-receipt" style="color:var(--blue)"></i> Order Summary</h3>
-                <div class="summary-row">
-                    <span>Subtotal (<span id="sum-count">@Model.Sum(c=>c.Quantity) items</span>)</span>
-                    <span id="sum-subtotal">&#8369;@total.ToString("N2")</span>
-                </div>
-                <div class="summary-row">
-                    <span>Shipping</span>
-                    <span id="sum-shipping">@(shipping==0?"<span class='free-ship'><i class='fa-solid fa-truck'></i> FREE</span>":"&#8369;80.00")</span>
-                </div>
-                <div id="sum-tip" @(total < 500 ? "style='display:flex'" : "")>
-                    <i class="fa-solid fa-truck"></i>
-                    <span>Add &#8369;@((500-total).ToString("N2")) more for FREE shipping!</span>
-                </div>
-                <div class="summary-total">
-                    <span>Total</span>
-                    <span id="sum-total">&#8369;@((total+shipping).ToString("N2"))</span>
-                </div>
-                <a href="@Url.Action("Checkout","Cart")" class="btn-primary checkout-btn">
-                    <i class="fa-solid fa-lock"></i> Proceed to Checkout
-                </a>
-                <a href="@Url.Action("Index","Product")" class="btn-outline continue-btn">Browse More</a>
-            </div>
-        </div>
+            .cart-row {
+                grid-template-columns: 36px 2fr 1fr 1fr 1fr 48px !important;
+            }
+
+            .item-check {
+                width: 16px;
+                height: 16px;
+                cursor: pointer;
+                accent-color: var(--blue);
+            }
+
+            #sum-tip {
+                display: none;
+                background: rgba(58,170,106,0.1);
+                color: #2a8a56;
+                border: 1px solid rgba(58,170,106,0.2);
+                font-size: 12px;
+                font-weight: 600;
+                padding: 8px 12px;
+                border-radius: var(--radius-sm);
+                margin: 8px 0;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .variant-tag {
+                display: inline-block;
+                font-size: 10px;
+                font-weight: 600;
+                color: var(--blue-dark);
+                background: rgba(129,166,198,.15);
+                border: 1px solid rgba(129,166,198,.3);
+                border-radius: 50px;
+                padding: 2px 8px;
+                margin-top: 3px;
+            }
+        </style>
     }
-</section>
 
-@section scripts {
-    <script src="@Url.Content("~/Scripts/cart.js")"></script>
-    <script>
-    // Pre-set data attributes for Razor-rendered rows
-    document.querySelectorAll('.item-check').forEach(function(cb, i) {
-        var rows = document.querySelectorAll('.cart-row');
-        if (rows[i]) {
-            var subtotalEl = rows[i].querySelector('.cart-subtotal');
-            var qtyEl      = rows[i].querySelector('.qty-count');
-            if (subtotalEl) cb.dataset.subtotal = subtotalEl.textContent.replace('&#8369;','').replace(/,/g,'');
-            if (qtyEl)      cb.dataset.qty      = qtyEl.textContent;
+    <div class="page-hero"><h1>My Cart</h1><p>Review your items before checkout</p></div>
+
+    <section class="cart-section">
+        @if (!Model.Any())
+        {
+            <div class="cart-empty">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <h2>Your cart is empty</h2>
+                <p>Looks like you haven't added anything yet.</p>
+                <a href="@Url.Action("Index","Product")" class="btn-primary" style="margin-top:.5rem">Browse Products</a>
+            </div>
         }
-    });
-    updateSummary();
-    </script>
-}
+        else
+        {
+            <div class="cart-inner">
+                <div>
+                    <div class="cart-items">
+                        <div class="cart-header">
+                            <span><input type="checkbox" id="check-all" checked onchange="toggleAll(this)" style="cursor:pointer;accent-color:var(--blue);width:16px;height:16px" /></span>
+                            <span>Product</span><span>Price</span><span>Quantity</span><span>Subtotal</span><span></span>
+                        </div>
+                        @foreach (var item in Model)
+                        {
+                            var vLabel = item.SelectedVariant != null ? item.SelectedVariant.Label : null;
+                            <div class="cart-row">
+                                <div style="display:flex;align-items:center">
+                                    <input type="checkbox" class="item-check" checked
+                                           data-subtotal="@item.Subtotal" data-qty="@item.Quantity"
+                                           onchange="updateSummary()" />
+                                </div>
+                                <div class="cart-product">
+                                    <div class="cart-img">
+                                        @* Show variant image if available, otherwise fall back to product image *@
+                                        <img src="@(item.SelectedVariant != null && !string.IsNullOrEmpty(item.SelectedVariant.ImageUrl) ? item.SelectedVariant.ImageUrl : item.Product.ImageUrl)"
+                                             alt="@item.Product.Name"
+                                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                                        <div class="img-fallback-sm" style="display:none;"><i class="fa-solid fa-bone"></i></div>
+                                    </div>
+                                    <div class="cart-product-info">
+                                        <h4>@item.Product.Name</h4>
+                                        <span>@item.Product.Category &middot; @item.Product.BreedSize</span>
+                                        @if (!string.IsNullOrEmpty(vLabel))
+                                        {
+                                            <span class="variant-tag"><i class="fa-solid fa-palette"></i> @vLabel</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="cart-price">&#8369;@item.Product.Price.ToString("N2")</div>
+                                <div class="cart-qty">
+                                    <form method="post" action="@Url.Action("UpdateQuantity","Cart")">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.Product.Id" />
+                                        @* Pass variantLabel so the controller updates the correct line item *@
+                                        <input type="hidden" name="variantLabel" value="@vLabel" />
+                                        <div class="qty-form">
+                                            <button type="submit" name="quantity" value="@(item.Quantity-1)" class="qty-btn">&#8722;</button>
+                                            <span class="qty-count">@item.Quantity</span>
+                                            <button type="submit" name="quantity" value="@(item.Quantity+1)" class="qty-btn">+</button>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="cart-subtotal">&#8369;@item.Subtotal.ToString("N2")</div>
+                                <div class="cart-remove">
+                                    @* Pass variantLabel so the controller removes the correct line item *@
+                                    <a href="@Url.Action("Remove","Cart",new{id=item.Product.Id,variantLabel=vLabel})" onclick="return confirmRemove()">
+                                        <i class="fa-regular fa-trash-can"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div style="margin-top:1.2rem;padding:0 .5rem">
+                        <a href="@Url.Action("Index","Product")" class="btn-outline" style="font-size:13px;padding:8px 20px">
+                            &larr; Continue Shopping
+                        </a>
+                    </div>
+                </div>
+
+                <div class="cart-summary">
+                    <h3><i class="fa-solid fa-receipt" style="color:var(--blue)"></i> Order Summary</h3>
+                    <div class="summary-row">
+                        <span>Subtotal (<span id="sum-count">@Model.Sum(c => c.Quantity) items</span>)</span>
+                        <span id="sum-subtotal">&#8369;@total.ToString("N2")</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Shipping</span>
+                        <span id="sum-shipping">@(shipping==0?"<span class='free-ship'><i class='fa-solid fa-truck'></i> FREE</span>":"&#8369;80.00")</span>
+                    </div>
+                    <div id="sum-tip" @(total < 500 ? "style='display:flex'" : "")>
+                        <i class="fa-solid fa-truck"></i>
+                        <span>Add &#8369;@((500-total).ToString("N2")) more for FREE shipping!</span>
+                    </div>
+                    <div class="summary-total">
+                        <span>Total</span>
+                        <span id="sum-total">&#8369;@((total+shipping).ToString("N2"))</span>
+                    </div>
+                    <a href="@Url.Action("Checkout","Cart")" class="btn-primary checkout-btn">
+                        <i class="fa-solid fa-lock"></i> Proceed to Checkout
+                    </a>
+                    <a href="@Url.Action("Index","Product")" class="btn-outline continue-btn">Browse More</a>
+                </div>
+            </div>
+        }
+    </section>
+
+    @section scripts {
+        <script src="@Url.Content("~/Scripts/cart.js")"></script>
+        <script>
+            // Pre-set data attributes for Razor-rendered rows.
+            // NOTE: by the time JS runs, &#8369; has already been rendered by the browser
+            // as the actual ₱ character, so we strip it with the real character — not the HTML entity string.
+            document.querySelectorAll('.item-check').forEach(function (cb, i) {
+                var rows = document.querySelectorAll('.cart-row');
+                if (rows[i]) {
+                    var subtotalEl = rows[i].querySelector('.cart-subtotal');
+                    var qtyEl = rows[i].querySelector('.qty-count');
+                    if (subtotalEl) cb.dataset.subtotal = subtotalEl.textContent.replace(/[₱,\s]/g, '');
+                    if (qtyEl) cb.dataset.qty = qtyEl.textContent.trim();
+                }
+            });
+            updateSummary();
+        </script>
+    }
