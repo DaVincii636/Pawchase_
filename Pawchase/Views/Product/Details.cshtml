@@ -4,8 +4,11 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var related = ViewBag.RelatedProducts as List<Pawchase.Models.Product>;
     var reviews = ViewBag.Reviews as List<Pawchase.Models.Review>;
+    var recentlyViewed = ViewBag.RecentlyViewed as List<Pawchase.Models.Product>;
     var disc = Model.IsOnSale ? (int)(((Model.OriginalPrice.Value - Model.Price) / Model.OriginalPrice.Value) * 100) : 0;
     var hasVariants = Model.Variants != null && Model.Variants.Any();
+    double avgRating = ViewBag.AvgRating != null ? (double)ViewBag.AvgRating : 0;
+    int reviewCount = ViewBag.ReviewCount != null ? (int)ViewBag.ReviewCount : 0;
 }
 @section styles {
     <link href="@Url.Content("~/Content/css/product.css")" rel="stylesheet" />
@@ -40,6 +43,25 @@
                 <i class="fa-solid fa-dog"></i> @Model.BreedSize
             </span>
             <h1>@Model.Name</h1>
+
+            @* Average star rating *@
+            @if (reviewCount > 0)
+            {
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <div style="display:flex;gap:2px;color:#E6A520;font-size:14px;">
+                        @for (int s = 1; s <= 5; s++)
+                        {
+                            if (s <= Math.Floor(avgRating))
+                            {<i class="fa-solid fa-star"></i> }
+                            else if (s - avgRating < 1 && s - avgRating > 0)
+                            { <i class="fa-solid fa-star-half-stroke"></i> }
+                            else
+                            { <i class="fa-regular fa-star"></i>}
+                        }
+                    </div>
+                    <span style="font-size:13px;color:var(--text-mid);">@avgRating.ToString("F1") <span style="color:var(--text-light);">(@reviewCount review@(reviewCount != 1 ? "s" : ""))</span></span>
+                </div>
+            }
 
             <div class="detail-price">
                 <span class="price-lg">&#8369;@Model.Price.ToString("N2")</span>
@@ -76,14 +98,11 @@
                                     <div class="variant-thumb-placeholder"><i class="fa-solid fa-palette"></i></div>
                                 }
                                 @if (!string.IsNullOrEmpty(v.Label))
-                                {
-                                    <span>@v.Label</span>
-                                }
+                                {<span>@v.Label</span>}
                             </div>
                             vIdx++;
                         }
                     </div>
-                    @* Alert shown when user tries to add to cart without selecting a variant *@
                     <div id="variantAlert" style="display:none;margin-top:.6rem;padding:8px 12px;background:rgba(224,85,85,.1);border:1px solid rgba(224,85,85,.3);border-radius:8px;font-size:12px;color:#c94040;font-weight:600;">
                         <i class="fa-solid fa-triangle-exclamation"></i> Please select a variant before adding to cart.
                     </div>
@@ -108,25 +127,35 @@
 
             @if (Model.Stock > 0)
             {
+                @* Quantity stepper *@
+                <div class="qty-stepper">
+                    <label style="font-size:12px;font-weight:700;color:var(--text-mid);display:block;margin-bottom:6px;">Quantity</label>
+                    <div class="qty-controls">
+                        <button type="button" onclick="changeQty(-1)">-</button>
+                        <span id="qtyDisplay">1</span>
+                        <button type="button" onclick="changeQty(1)">+</button>
+                        <span style="font-size:12px;color:var(--text-light);margin-left:4px;">/ @Model.Stock available</span>
+                    </div>
+                </div>
+
                 <div class="detail-actions">
                     @if (hasVariants)
                     {
-                        @* When the product has variants, buttons pass the selected variant label via JS *@
                         <button type="button" class="btn-primary btn-lg" onclick="addToCartWithVariant('@Url.Action("Add","Cart")', @Model.Id, '@Url.Action("Index","Cart")')">
                             <i class="fa-solid fa-cart-plus"></i> Add to Cart
                         </button>
-                        <button type="button" class="btn-outline btn-lg" onclick="addToCartWithVariant('@Url.Action("Add","Cart")', @Model.Id, '@Url.Action("Checkout","Cart")')">
+                        <button type="button" class="btn-outline btn-lg" onclick="openBuyNowModal('variant')">
                             <i class="fa-solid fa-bolt"></i> Buy Now
                         </button>
                     }
                     else
                     {
-                        <a href="@Url.Action("Add","Cart",new{id=Model.Id,returnUrl=Request.Url.PathAndQuery})" class="btn-primary btn-lg">
+                        <a id="addToCartBtn" href="@Url.Action("Add","Cart",new{id=Model.Id,qty=1,returnUrl=Request.Url.PathAndQuery})" class="btn-primary btn-lg">
                             <i class="fa-solid fa-cart-plus"></i> Add to Cart
                         </a>
-                        <a href="@Url.Action("Add","Cart",new{id=Model.Id,returnUrl=Url.Action("Checkout","Cart")})" class="btn-outline btn-lg">
+                        <button type="button" id="buyNowBtn" class="btn-outline btn-lg" onclick="openBuyNowModal('plain')">
                             <i class="fa-solid fa-bolt"></i> Buy Now
-                        </a>
+                        </button>
                     }
                 </div>
             }
@@ -134,6 +163,57 @@
             {
                 <button class="btn-disabled btn-lg" disabled><i class="fa-solid fa-ban"></i> Out of Stock</button>
             }
+        </div>
+    </div>
+
+
+    <!-- BUY NOW QUANTITY MODAL -->
+    <div id="buyNowModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:var(--white);border-radius:var(--radius-lg);padding:2rem;max-width:380px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;">
+                <h3 style="font-size:1.1rem;font-weight:700;color:var(--text);margin:0;">
+                    <i class="fa-solid fa-bolt" style="color:var(--blue);margin-right:6px;"></i> Buy Now
+                </h3>
+                <button onclick="closeBuyNowModal()" style="background:none;border:none;font-size:1.2rem;color:var(--text-light);cursor:pointer;padding:2px 6px;">&times;</button>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.2rem;padding:12px;background:var(--peach);border-radius:var(--radius-sm);">
+                <img src="@Model.ImageUrl" alt="@Model.Name"
+                     style="width:52px;height:52px;object-fit:cover;border-radius:8px;border:1px solid var(--border);"
+                     onerror="this.style.display='none'" />
+                <div>
+                    <div style="font-weight:700;font-size:13px;color:var(--text);">@Model.Name</div>
+                    <div id="bnModalVariant" style="font-size:11px;color:var(--text-mid);margin-top:2px;"></div>
+                    <div style="font-size:14px;font-weight:700;color:var(--blue-dark);margin-top:3px;">&#8369;@Model.Price.ToString("N2")</div>
+                </div>
+            </div>
+
+            <label style="font-size:12px;font-weight:700;color:var(--text-mid);display:block;margin-bottom:8px;">Quantity</label>
+            <div style="display:flex;align-items:center;gap:0;border:1.5px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;width:fit-content;margin-bottom:1.4rem;">
+                <button type="button" onclick="bnChangeQty(-1)"
+                        style="width:38px;height:38px;background:var(--off-white);border:none;font-size:1.1rem;font-weight:700;cursor:pointer;color:var(--text);transition:background .15s;"
+                        onmouseover="this.style.background='#e9eef5'" onmouseout="this.style.background='var(--off-white)'">
+                    -
+                </button>
+                <span id="bnQtyDisplay" style="min-width:44px;text-align:center;font-weight:700;font-size:15px;color:var(--text);border-left:1px solid var(--border);border-right:1px solid var(--border);height:38px;display:flex;align-items:center;justify-content:center;"></span>
+                <button type="button" onclick="bnChangeQty(1)"
+                        style="width:38px;height:38px;background:var(--off-white);border:none;font-size:1.1rem;font-weight:700;cursor:pointer;color:var(--text);transition:background .15s;"
+                        onmouseover="this.style.background='#e9eef5'" onmouseout="this.style.background='var(--off-white)'">
+                    +
+                </button>
+                <span id="bnStockLabel" style="font-size:11px;color:var(--text-light);margin-left:10px;padding-right:10px;">/ @Model.Stock available</span>
+            </div>
+
+            <div id="bnVariantAlert" style="display:none;margin-bottom:1rem;padding:8px 12px;background:rgba(224,85,85,.1);border:1px solid rgba(224,85,85,.3);border-radius:8px;font-size:12px;color:#c94040;font-weight:600;">
+                <i class="fa-solid fa-triangle-exclamation"></i> Please select a variant before continuing.
+            </div>
+
+            <div style="display:flex;gap:10px;">
+                <button onclick="closeBuyNowModal()" class="btn-outline" style="flex:1;padding:10px 0;font-size:13px;text-align:center;justify-content:center;display:flex;align-items:center;">Cancel</button>
+                <button onclick="confirmBuyNow()" class="btn-primary" style="flex:2;padding:10px 0;font-size:13px;text-align:center;justify-content:center;display:flex;align-items:center;gap:6px;">
+                    <i class="fa-solid fa-bolt"></i> Proceed to Checkout
+                </button>
+            </div>
         </div>
     </div>
 
@@ -162,6 +242,44 @@
         }
     </div>
 
+    <!-- RECENTLY VIEWED -->
+    @if (recentlyViewed != null && recentlyViewed.Any())
+    {
+        <div class="related-section">
+            <h2><i class="fa-regular fa-clock" style="color:var(--blue);"></i> Recently Viewed</h2>
+            <div class="products-grid">
+                @foreach (var p in recentlyViewed)
+                {
+                    var rDisc = p.IsOnSale ? (int)(((p.OriginalPrice.Value - p.Price) / p.OriginalPrice.Value) * 100) : 0;
+                    <div class="product-card" onclick="window.location='@Url.Action("Details","Product",new{id=p.Id})'">
+                        @if (p.IsOnSale)
+                        {<span class="sale-badge">SALE</span>}
+                        @if (p.IsOnSale && rDisc > 0)
+                        {<span class="discount-pct-badge">-@rDisc%</span>}
+                        @if (p.Stock == 0)
+                        {<div class="oos-overlay"><span>Out of Stock</span></div>}
+                        <div class="product-img">
+                            <img src="@p.ImageUrl" alt="@p.Name" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                            <div class="img-fallback" style="display:none;"><i class="fa-solid fa-bone"></i></div>
+                        </div>
+                        <div class="product-info">
+                            <span class="product-category">@p.Category &middot; @p.BreedSize</span>
+                            <h3>@p.Name</h3>
+                            <div class="product-price">
+                                <span class="price">&#8369;@p.Price.ToString("N2")</span>
+                                @if (p.IsOnSale)
+                                {<span class="original-price">&#8369;@p.OriginalPrice.Value.ToString("N2")</span>}
+                            </div>
+                            <div class="product-actions">
+                                <a href="@Url.Action("Details","Product",new{id=p.Id})" class="btn-outline-sm" onclick="event.stopPropagation()"><i class="fa-regular fa-eye"></i> View</a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
     <!-- RELATED -->
     @if (related != null && related.Any())
     {
@@ -172,12 +290,14 @@
                 {
                     var rDisc = p.IsOnSale ? (int)(((p.OriginalPrice.Value - p.Price) / p.OriginalPrice.Value) * 100) : 0;
                     var rLowStock = p.Stock > 0 && p.Stock <= 5;
-                    <div class="product-card" onclick="window.location='@Url.Action("Details","Product",new{id=p.Id})'">
+                    <div class="product-card @(p.Stock==0?"oos-card":"")" onclick="@(p.Stock==0?"":"window.location='"+Url.Action("Details","Product",new{id=p.Id})+"'")">
                         @if (p.IsOnSale)
                         {<span class="sale-badge">SALE</span>}
                         @if (p.IsOnSale && rDisc > 0)
                         {<span class="discount-pct-badge">-@rDisc%</span>}
-                        @if (rLowStock)
+                        @if (p.Stock == 0)
+                        {<div class="oos-overlay"><span>Out of Stock</span></div>}
+                        else if (rLowStock)
                         {<span class="low-stock-badge"><i class="fa-solid fa-triangle-exclamation"></i> Only @p.Stock left!</span>}
                         <div class="product-img">
                             <img src="@p.ImageUrl" alt="@p.Name" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
@@ -189,14 +309,12 @@
                             <div class="product-price">
                                 <span class="price">&#8369;@p.Price.ToString("N2")</span>
                                 @if (p.IsOnSale)
-                                {
-                                    <span class="original-price">&#8369;@p.OriginalPrice.Value.ToString("N2")</span>
-                                    <span class="discount-pct">-@rDisc%</span>
-                                }
+                                {<span class="original-price">&#8369;@p.OriginalPrice.Value.ToString("N2")</span><span class="discount-pct">-@rDisc%</span>}
                             </div>
                             <div class="product-actions">
                                 <a href="@Url.Action("Details","Product",new{id=p.Id})" class="btn-outline-sm" onclick="event.stopPropagation()"><i class="fa-regular fa-eye"></i> View</a>
-                                <a href="@Url.Action("Add","Cart",new{id=p.Id})" class="btn-primary-sm" onclick="event.stopPropagation()"><i class="fa-solid fa-cart-plus"></i> Add</a>
+                                @if (p.Stock > 0)
+                                {<a href="@Url.Action("Add","Cart",new{id=p.Id})" class="btn-primary-sm" onclick="event.stopPropagation()"><i class="fa-solid fa-cart-plus"></i> Add</a>}
                             </div>
                         </div>
                     </div>
@@ -209,31 +327,41 @@
 @section scripts {
     <script src="@Url.Content("~/Scripts/product.js")"></script>
     <script>
-        // Tracks the currently selected variant label
         var selectedVariantLabel = null;
+        var currentQty = 1;
+        var maxStock = @Model.Stock;
 
+        // -- Quantity stepper (main page) --------------------------------------
+        function changeQty(delta) {
+            currentQty = Math.max(1, Math.min(maxStock, currentQty + delta));
+            document.getElementById('qtyDisplay').textContent = currentQty;
+            // sync the modal qty too if it happens to be open
+            var bnDisplay = document.getElementById('bnQtyDisplay');
+            if (bnDisplay) bnDisplay.textContent = currentQty;
+        }
+
+        // -- Variant selector -------------------------------------------------
         function selectVariant(el, imgUrl, label) {
-            // Swap main product image
             var mainImg = document.getElementById('mainProductImg');
             if (mainImg && imgUrl) {
                 mainImg.style.opacity = '0';
                 mainImg.style.transition = 'opacity .18s';
-                setTimeout(function () {
-                    mainImg.src = imgUrl;
-                    mainImg.style.opacity = '1';
-                }, 120);
+                setTimeout(function () { mainImg.src = imgUrl; mainImg.style.opacity = '1'; }, 120);
             }
-            // Update active state on thumbs
-            var thumbs = document.querySelectorAll('#variantThumbs .variant-thumb');
-            thumbs.forEach(function (t) { t.classList.remove('variant-active'); });
+            document.querySelectorAll('#variantThumbs .variant-thumb').forEach(function (t) { t.classList.remove('variant-active'); });
             el.classList.add('variant-active');
-
-            // Store selected label and hide the alert
             selectedVariantLabel = label || null;
             var alert = document.getElementById('variantAlert');
             if (alert) alert.style.display = 'none';
+
+            // persist variant in URL so browser back restores selection
+            var url = new URL(window.location.href);
+            if (label) url.searchParams.set('variant', label);
+            else url.searchParams.delete('variant');
+            history.replaceState(null, '', url.toString());
         }
 
+        // -- Add to cart (variant path) ----------------------------------------
         function addToCartWithVariant(baseUrl, productId, returnUrl) {
             if (!selectedVariantLabel) {
                 var alert = document.getElementById('variantAlert');
@@ -241,21 +369,106 @@
                 return;
             }
             var url = baseUrl + '?id=' + productId +
+                '&qty=' + currentQty +
                 '&variantLabel=' + encodeURIComponent(selectedVariantLabel) +
                 '&returnUrl=' + encodeURIComponent(returnUrl);
             window.location.href = url;
         }
 
-        // Auto-select the first variant on page load
-        document.addEventListener('DOMContentLoaded', function () {
-            var firstThumb = document.querySelector('#variantThumbs .variant-thumb');
-            if (firstThumb) {
-                var img = firstThumb.getAttribute('data-img') || '';
-                var label = firstThumb.getAttribute('data-label') || '';
-                selectedVariantLabel = label || null;
+        // -- Buy Now modal -----------------------------------------------------
+        var _buyNowMode = 'plain'; // 'plain' or 'variant'
+        var bnQty = 1;
+
+        function openBuyNowModal(mode) {
+            // Variant products: require a selection before opening modal
+            if (mode === 'variant' && !selectedVariantLabel) {
+                var alert = document.getElementById('variantAlert');
+                if (alert) alert.style.display = 'block';
+                var section = document.querySelector('.variant-section');
+                if (section) section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
             }
 
-            // If the page was redirected back with ?variantRequired=1, flash the selector
+            _buyNowMode = mode;
+            bnQty = currentQty; // pre-fill with whatever the stepper already shows
+
+            // Show selected variant in modal
+            var variantEl = document.getElementById('bnModalVariant');
+            if (variantEl) {
+                variantEl.textContent = selectedVariantLabel ? 'Variant: ' + selectedVariantLabel : '';
+            }
+
+            // Sync modal qty display
+            document.getElementById('bnQtyDisplay').textContent = bnQty;
+
+            // Hide variant alert inside modal
+            var bnAlert = document.getElementById('bnVariantAlert');
+            if (bnAlert) bnAlert.style.display = 'none';
+
+            var modal = document.getElementById('buyNowModal');
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeBuyNowModal() {
+            document.getElementById('buyNowModal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        function bnChangeQty(delta) {
+            bnQty = Math.max(1, Math.min(maxStock, bnQty + delta));
+            document.getElementById('bnQtyDisplay').textContent = bnQty;
+        }
+
+        function confirmBuyNow() {
+            var checkoutUrl = '@Url.Action("Checkout","Cart")';
+            var addUrl     = '@Url.Action("Add","Cart")';
+            var productId  = @Model.Id;
+
+            if (_buyNowMode === 'variant') {
+                if (!selectedVariantLabel) {
+                    document.getElementById('bnVariantAlert').style.display = 'block';
+                    return;
+                }
+                var url = addUrl + '?id=' + productId +
+                    '&qty=' + bnQty +
+                    '&variantLabel=' + encodeURIComponent(selectedVariantLabel) +
+                    '&returnUrl=' + encodeURIComponent(checkoutUrl);
+                window.location.href = url;
+            } else {
+                var url = addUrl + '?id=' + productId +
+                    '&qty=' + bnQty +
+                    '&returnUrl=' + encodeURIComponent(checkoutUrl);
+                window.location.href = url;
+            }
+        }
+
+        // Close modal on backdrop click
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('buyNowModal').addEventListener('click', function (e) {
+                if (e.target === this) closeBuyNowModal();
+            });
+
+            // Restore variant from URL (?variant=Red)
+            var urlParams = new URLSearchParams(window.location.search);
+            var variantFromUrl = urlParams.get('variant');
+
+            var thumbs = document.querySelectorAll('#variantThumbs .variant-thumb');
+            if (variantFromUrl && thumbs.length > 0) {
+                var matched = false;
+                thumbs.forEach(function (t) {
+                    if (t.getAttribute('data-label') === variantFromUrl) {
+                        selectVariant(t, t.getAttribute('data-img'), variantFromUrl);
+                        matched = true;
+                    }
+                });
+                if (!matched && thumbs.length > 0) {
+                    selectedVariantLabel = thumbs[0].getAttribute('data-label') || null;
+                }
+            } else if (thumbs.length > 0) {
+                selectedVariantLabel = thumbs[0].getAttribute('data-label') || null;
+            }
+
             if (window.location.search.indexOf('variantRequired=1') !== -1) {
                 var alert = document.getElementById('variantAlert');
                 if (alert) alert.style.display = 'block';
