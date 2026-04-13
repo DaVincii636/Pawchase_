@@ -4,6 +4,8 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var related = ViewBag.RelatedProducts as List<Pawchase.Models.Product>;
     var reviews = ViewBag.Reviews as List<Pawchase.Models.Review>;
+    var disc = Model.IsOnSale ? (int)(((Model.OriginalPrice.Value - Model.Price) / Model.OriginalPrice.Value) * 100) : 0;
+    var hasVariants = Model.Variants != null && Model.Variants.Any();
 }
 @section styles {
     <link href="@Url.Content("~/Content/css/product.css")" rel="stylesheet" />
@@ -27,6 +29,8 @@
             <div class="img-fallback-lg" style="display:none;"><i class="fa-solid fa-bone"></i></div>
             @if (Model.IsOnSale)
             {<span class="sale-badge-lg">SALE</span>}
+            @if (Model.IsOnSale && disc > 0)
+            {<span class="discount-badge" style="position:absolute;top:12px;right:12px;">-@disc%</span>}
         </div>
 
         <div class="detail-info">
@@ -41,7 +45,6 @@
                 <span class="price-lg">&#8369;@Model.Price.ToString("N2")</span>
                 @if (Model.IsOnSale)
                 {
-                    var disc = (int)(((Model.OriginalPrice.Value - Model.Price) / Model.OriginalPrice.Value) * 100);
                     <span class="original-price-lg">&#8369;@Model.OriginalPrice.Value.ToString("N2")</span>
                     <span class="discount-badge">-@disc%</span>
                 }
@@ -49,7 +52,7 @@
 
             <p class="detail-description">@Model.Description</p>
 
-            @if (Model.Variants != null && Model.Variants.Any())
+            @if (hasVariants)
             {
                 <div class="variant-section">
                     <span class="variant-label-title">Color / Style</span>
@@ -60,7 +63,8 @@
                             <div class="variant-thumb @(vIdx == 0 ? "variant-active" : "")"
                                  title="@v.Label"
                                  data-img="@v.ImageUrl"
-                                 onclick="selectVariant(this, '@v.ImageUrl')">
+                                 data-label="@v.Label"
+                                 onclick="selectVariant(this, '@v.ImageUrl', '@v.Label')">
                                 @if (!string.IsNullOrEmpty(v.ImageUrl))
                                 {
                                     <img src="@v.ImageUrl" alt="@(string.IsNullOrEmpty(v.Label) ? "Variant" : v.Label)"
@@ -79,6 +83,10 @@
                             vIdx++;
                         }
                     </div>
+                    @* Alert shown when user tries to add to cart without selecting a variant *@
+                    <div id="variantAlert" style="display:none;margin-top:.6rem;padding:8px 12px;background:rgba(224,85,85,.1);border:1px solid rgba(224,85,85,.3);border-radius:8px;font-size:12px;color:#c94040;font-weight:600;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Please select a variant before adding to cart.
+                    </div>
                 </div>
             }
 
@@ -86,11 +94,11 @@
                 <div class="meta-item">
                     <i class="fa-solid fa-boxes-stacked"></i>
                     @if (Model.Stock > 10)
-                    {<span><strong style="color:#1e8449;">In Stock</strong> (@Model.Stock available)</span> }
+                    {<span><strong style="color:#1e8449;">In Stock</strong> (@Model.Stock available)</span>}
                 else if (Model.Stock > 0)
-                { <span><strong style="color:#d4a017;">Low Stock</strong> (Only @Model.Stock left!)</span> }
+                {<span><strong style="color:#d4a017;">Low Stock</strong> (Only @Model.Stock left!)</span>}
             else
-            { <span><strong style="color:#e05555;">Out of Stock</strong></span>}
+            {<span><strong style="color:#e05555;">Out of Stock</strong></span>}
                 </div>
                 <div class="meta-item">
                     <i class="fa-solid fa-truck"></i>
@@ -101,12 +109,25 @@
             @if (Model.Stock > 0)
             {
                 <div class="detail-actions">
-                    <a href="@Url.Action("Add","Cart",new{id=Model.Id,returnUrl=Request.Url.PathAndQuery})" class="btn-primary btn-lg">
-                        <i class="fa-solid fa-cart-plus"></i> Add to Cart
-                    </a>
-                    <a href="@Url.Action("Add","Cart",new{id=Model.Id,returnUrl=Url.Action("Checkout","Cart")})" class="btn-outline btn-lg">
-                        <i class="fa-solid fa-bolt"></i> Buy Now
-                    </a>
+                    @if (hasVariants)
+                    {
+                        @* When the product has variants, buttons pass the selected variant label via JS *@
+                        <button type="button" class="btn-primary btn-lg" onclick="addToCartWithVariant('@Url.Action("Add","Cart")', @Model.Id, '@Url.Action("Index","Cart")')">
+                            <i class="fa-solid fa-cart-plus"></i> Add to Cart
+                        </button>
+                        <button type="button" class="btn-outline btn-lg" onclick="addToCartWithVariant('@Url.Action("Add","Cart")', @Model.Id, '@Url.Action("Checkout","Cart")')">
+                            <i class="fa-solid fa-bolt"></i> Buy Now
+                        </button>
+                    }
+                    else
+                    {
+                        <a href="@Url.Action("Add","Cart",new{id=Model.Id,returnUrl=Request.Url.PathAndQuery})" class="btn-primary btn-lg">
+                            <i class="fa-solid fa-cart-plus"></i> Add to Cart
+                        </a>
+                        <a href="@Url.Action("Add","Cart",new{id=Model.Id,returnUrl=Url.Action("Checkout","Cart")})" class="btn-outline btn-lg">
+                            <i class="fa-solid fa-bolt"></i> Buy Now
+                        </a>
+                    }
                 </div>
             }
             else
@@ -149,24 +170,33 @@
             <div class="products-grid">
                 @foreach (var p in related)
                 {
-                    <div class="product-card">
+                    var rDisc = p.IsOnSale ? (int)(((p.OriginalPrice.Value - p.Price) / p.OriginalPrice.Value) * 100) : 0;
+                    var rLowStock = p.Stock > 0 && p.Stock <= 5;
+                    <div class="product-card" onclick="window.location='@Url.Action("Details","Product",new{id=p.Id})'">
                         @if (p.IsOnSale)
                         {<span class="sale-badge">SALE</span>}
+                        @if (p.IsOnSale && rDisc > 0)
+                        {<span class="discount-pct-badge">-@rDisc%</span>}
+                        @if (rLowStock)
+                        {<span class="low-stock-badge"><i class="fa-solid fa-triangle-exclamation"></i> Only @p.Stock left!</span>}
                         <div class="product-img">
                             <img src="@p.ImageUrl" alt="@p.Name" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
                             <div class="img-fallback" style="display:none;"><i class="fa-solid fa-bone"></i></div>
                         </div>
                         <div class="product-info">
-                            <span class="product-category">@p.Category</span>
+                            <span class="product-category">@p.Category &middot; @p.BreedSize</span>
                             <h3>@p.Name</h3>
                             <div class="product-price">
                                 <span class="price">&#8369;@p.Price.ToString("N2")</span>
                                 @if (p.IsOnSale)
-                                {<span class="original-price">&#8369;@p.OriginalPrice.Value.ToString("N2")</span>}
+                                {
+                                    <span class="original-price">&#8369;@p.OriginalPrice.Value.ToString("N2")</span>
+                                    <span class="discount-pct">-@rDisc%</span>
+                                }
                             </div>
                             <div class="product-actions">
-                                <a href="@Url.Action("Details","Product",new{id=p.Id})" class="btn-outline-sm"><i class="fa-regular fa-eye"></i> View</a>
-                                <a href="@Url.Action("Add","Cart",new{id=p.Id})" class="btn-primary-sm"><i class="fa-solid fa-cart-plus"></i> Add</a>
+                                <a href="@Url.Action("Details","Product",new{id=p.Id})" class="btn-outline-sm" onclick="event.stopPropagation()"><i class="fa-regular fa-eye"></i> View</a>
+                                <a href="@Url.Action("Add","Cart",new{id=p.Id})" class="btn-primary-sm" onclick="event.stopPropagation()"><i class="fa-solid fa-cart-plus"></i> Add</a>
                             </div>
                         </div>
                     </div>
@@ -179,7 +209,10 @@
 @section scripts {
     <script src="@Url.Content("~/Scripts/product.js")"></script>
     <script>
-        function selectVariant(el, imgUrl) {
+        // Tracks the currently selected variant label
+        var selectedVariantLabel = null;
+
+        function selectVariant(el, imgUrl, label) {
             // Swap main product image
             var mainImg = document.getElementById('mainProductImg');
             if (mainImg && imgUrl) {
@@ -194,6 +227,41 @@
             var thumbs = document.querySelectorAll('#variantThumbs .variant-thumb');
             thumbs.forEach(function (t) { t.classList.remove('variant-active'); });
             el.classList.add('variant-active');
+
+            // Store selected label and hide the alert
+            selectedVariantLabel = label || null;
+            var alert = document.getElementById('variantAlert');
+            if (alert) alert.style.display = 'none';
         }
+
+        function addToCartWithVariant(baseUrl, productId, returnUrl) {
+            if (!selectedVariantLabel) {
+                var alert = document.getElementById('variantAlert');
+                if (alert) alert.style.display = 'block';
+                return;
+            }
+            var url = baseUrl + '?id=' + productId +
+                '&variantLabel=' + encodeURIComponent(selectedVariantLabel) +
+                '&returnUrl=' + encodeURIComponent(returnUrl);
+            window.location.href = url;
+        }
+
+        // Auto-select the first variant on page load
+        document.addEventListener('DOMContentLoaded', function () {
+            var firstThumb = document.querySelector('#variantThumbs .variant-thumb');
+            if (firstThumb) {
+                var img = firstThumb.getAttribute('data-img') || '';
+                var label = firstThumb.getAttribute('data-label') || '';
+                selectedVariantLabel = label || null;
+            }
+
+            // If the page was redirected back with ?variantRequired=1, flash the selector
+            if (window.location.search.indexOf('variantRequired=1') !== -1) {
+                var alert = document.getElementById('variantAlert');
+                if (alert) alert.style.display = 'block';
+                var section = document.querySelector('.variant-section');
+                if (section) section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
     </script>
 }
