@@ -152,15 +152,19 @@
         <label style="font-size:12px;font-weight:700;color:var(--text-mid);display:block;margin-bottom:6px">
             Main Image <span class="req">*</span>
         </label>
-        <div class="img-upload-box" id="imgBox0" onclick="document.getElementById('imgFile0').click()">
-            <img id="imgPreview0" src="" alt="Preview" style="display:none" />
-            <div class="placeholder" id="imgIcon0">
-                <i class="fa-regular fa-image"></i>
-                <span>Click to upload main image</span>
-                <small>PNG, JPG up to 5MB</small>
+
+        <input type="file" id="imgFile0" accept="image/*" style="display:none" onchange="previewImg(this,0)" />
+
+        <div onclick="document.getElementById('imgFile0').click()" style="display:block;cursor:pointer;">
+            <div class="img-upload-box" id="imgBox0" style="margin-bottom:0;">
+                <img id="imgPreview0" src="" alt="Preview" style="display:none;max-height:150px;max-width:100%;object-fit:contain;border-radius:10px;" />
+                <div class="placeholder" id="imgIcon0">
+                    <i class="fa-regular fa-image"></i>
+                    <span>Click to upload main image</span>
+                    <small>PNG, JPG up to 5MB</small>
+                </div>
             </div>
         </div>
-        <input type="file" id="imgFile0" accept="image/*" style="display:none" onchange="previewImg(this,0)" />
         <input type="hidden" name="ImageUrl" id="imgPath0" value="/Content/images/products/placeholder.png" />
         <p id="img-filename0" style="font-size:11px;color:var(--text-light);margin-top:4px;margin-bottom:1.2rem"></p>
 
@@ -173,20 +177,26 @@
                 @for (int vi = 1; vi <= 4; vi++)
                 {
                     <div>
-                        <div class="img-upload-box" style="height:90px;margin-bottom:6px;position:relative;"
-                             id="vBox@vi"
-                             onclick="triggerVariantUpload(@vi)">
-                            <img id="imgPreview@vi" src="" alt="" style="display:none;max-height:88px;pointer-events:none;" />
-                            <div class="placeholder" id="imgIcon@vi" style="padding:.4rem;pointer-events:none;">
-                                <i class="fa-solid fa-plus" style="font-size:1.1rem"></i>
-                                <span style="font-size:10px">Variant @vi</span>
+                        <input type="file" id="vFile@(vi)" accept="image/*" style="display:none"
+                               onchange="previewVariant(this,@(vi))" />
+
+                        <div onclick="document.getElementById('vFile@(vi)').click()" style="cursor:pointer;margin-bottom:6px;">
+                            <div class="img-upload-box" style="height:90px;margin-bottom:0;position:relative;"
+                                 id="vBox@(vi)">
+                                <img id="imgPreview@(vi)" src="" alt=""
+                                     style="display:none;max-height:88px;pointer-events:none;width:100%;object-fit:cover;" />
+                                <div class="placeholder" id="imgIcon@(vi)" style="padding:.4rem;pointer-events:none;">
+                                    <i class="fa-solid fa-plus" style="font-size:1.1rem"></i>
+                                    <span style="font-size:10px">Variant @vi</span>
+                                </div>
                             </div>
                         </div>
-                        <input type="file" id="vFile@vi" accept="image/*" style="display:none"
-                               onchange="previewVariant(this,@vi)" />
-                        <input type="hidden" id="vPath@vi" name="VariantImagePaths" value="" />
-                        <input type="text" id="vLabel@vi" name="VariantLabels" placeholder="e.g. Red, Blue"
-                               style="width:100%;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;font-family:Poppins,sans-serif;box-sizing:border-box;background:var(--white);color:var(--text)" />
+
+                        <input type="hidden" id="vPath@(vi)" name="VariantImagePaths" value="" />
+
+                        <input type="text" id="vLabel@(vi)" name="VariantLabels" placeholder="e.g. Red, Blue"
+                               style="width:100%;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;font-family:Poppins,sans-serif;box-sizing:border-box;background:var(--white);color:var(--text)"
+                               oninput="syncVariantLabel(@(vi))" />
                     </div>
                 }
             </div>
@@ -204,7 +214,7 @@
                     @foreach (var c in categories)
                     {
                         <option value="@c">@c</option>
-}
+                    }
                 </select>
             </div>
         </div>
@@ -216,7 +226,7 @@
                     @foreach (var s in sizes)
                     {
                         <option value="@s">@s</option>
-}
+                    }
                 </select>
             </div>
             <div class="form-group"><label>Stock <span class="req">*</span></label><input type="number" name="Stock" min="0" placeholder="50" required /></div>
@@ -276,16 +286,16 @@
                 preview.src = dataUrl;
                 preview.style.display = "block";
                 if (icon) icon.style.display = "none";
-                // Store base64 data URL so the image actually displays on the product detail page
+                // Store base64 data URL so the image displays on the product detail page
                 document.getElementById("vPath" + slot).value = dataUrl;
             };
             reader.readAsDataURL(input.files[0]);
         }
 
-        // ── Trigger file picker for variant slot
-        function triggerVariantUpload(slot) {
-            var fileInput = document.getElementById("vFile" + slot);
-            if (fileInput) fileInput.click();
+        // ── Keep label input in sync (value is already submitted via name="VariantLabels",
+        //    this just ensures any trimming/feedback can be added easily later)
+        function syncVariantLabel(slot) {
+            // no-op: the text input submits directly — hook kept for future use
         }
 
         // ── Discount preview ─────────────────────────────────────────────────────────
