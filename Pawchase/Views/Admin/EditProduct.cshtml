@@ -159,6 +159,47 @@
         align-items: center;
         padding: .5rem 0;
     }
+
+    .img-upload-box {
+        width: 100%;
+        background: linear-gradient(145deg,var(--peach),#eedfd0);
+        border-radius: 12px;
+        border: 2px dashed rgba(129,166,198,.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        overflow: hidden;
+        transition: border-color .2s;
+        margin-bottom: 12px;
+    }
+
+        .img-upload-box:hover {
+            border-color: var(--blue);
+        }
+
+        .img-upload-box .placeholder {
+            text-align: center;
+            color: var(--blue-dark);
+            pointer-events: none;
+        }
+
+            .img-upload-box .placeholder i {
+                font-size: 2.2rem;
+                display: block;
+                margin-bottom: .5rem;
+            }
+
+            .img-upload-box .placeholder span {
+                font-size: 12px;
+                font-weight: 600;
+                display: block;
+            }
+
+            .img-upload-box .placeholder small {
+                font-size: 10px;
+                color: var(--text-light);
+            }
 </style>
 
 <div class="admin-page-header">
@@ -177,20 +218,27 @@
         <div class="form-section-title">
             <i class="fa-regular fa-image"></i> Product Image
         </div>
-        <div class="img-preview-current">
-            <img src="@Model.ImageUrl" alt="@Model.Name"
-                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
-            <i class="fa-solid fa-bone" style="display:none;"></i>
-        </div>
-        <div class="img-path-row">
-            <i class="fa-solid fa-folder-open"></i>
-            <input type="text" name="ImageUrl" value="@Model.ImageUrl"
-                   placeholder="/Content/images/products/myproduct.png" />
-        </div>
-        <p class="img-path-note">
-            <i class="fa-solid fa-circle-info"></i>
-            Place the image in <strong>Content/images/products/</strong> and update the path above.
-        </p>
+        <label style="font-size:12px;font-weight:700;color:var(--text-mid);display:block;margin-bottom:6px;">
+            Main Image <span style="color:#e05555;">*</span>
+        </label>
+        <!-- Hidden file input first so label[for] can reference it -->
+        <input type="file" id="editImgFile0" accept="image/*" style="display:none" onchange="previewMainEdit(this)" />
+        <label for="editImgFile0" style="display:block;cursor:pointer;">
+            <div class="img-upload-box" id="editImgBox0" style="height:150px;margin-bottom:0;">
+                <img id="editImgPreview0" src="@Model.ImageUrl" alt="@Model.Name"
+                     style="max-height:150px;max-width:100%;object-fit:contain;border-radius:10px;@(string.IsNullOrEmpty(Model.ImageUrl) ? "display:none;" : "display:block;")"
+                     onerror="this.style.display='none';document.getElementById('editImgIcon0').style.display='flex';" />
+                <div class="placeholder" id="editImgIcon0"
+                     style="@(string.IsNullOrEmpty(Model.ImageUrl) ? "" : "display:none;")">
+                    <i class="fa-regular fa-image"></i>
+                    <span>Click to replace image</span>
+                    <small>PNG, JPG up to 5MB</small>
+                </div>
+            </div>
+        </label>
+        <!-- Holds current or newly-selected image URL; starts with existing value -->
+        <input type="hidden" name="ImageUrl" id="editImgPath0" value="@Model.ImageUrl" />
+        <p id="editImg-filename0" style="font-size:11px;color:var(--text-light);margin-top:6px;"></p>
     </div>
 
 
@@ -203,22 +251,28 @@
             {
                 var ev = existingVariants.Count >= vi ? existingVariants[vi - 1] : null;
                 <div>
-                    <div class="img-upload-box" style="height:90px;margin-bottom:6px;position:relative;"
-                         id="evBox@vi" onclick="triggerEditVariantUpload(@vi)">
-                        <img id="evPreview@vi" src="@(ev != null && !string.IsNullOrEmpty(ev.ImageUrl) ? ev.ImageUrl : "")"
-                             alt="" style="@(ev != null && !string.IsNullOrEmpty(ev.ImageUrl) ? "display:block;" : "display:none;")max-height:88px;pointer-events:none;"
-                             onerror="this.style.display='none';document.getElementById('evIcon@vi').style.display='block';" />
-                        <div class="placeholder" id="evIcon@vi"
-                             style="padding:.4rem;pointer-events:none;@(ev != null && !string.IsNullOrEmpty(ev.ImageUrl) ? "display:none;" : "")">
-                            <i class="fa-solid fa-@(ev != null && !string.IsNullOrEmpty(ev.ImageUrl) ? "arrows-rotate" : "plus")" style="font-size:1.1rem"></i>
-                            <span style="font-size:10px">Variant @vi</span>
+                    <!-- Hidden file input first so label[for] can reference it -->
+                    <input type="file" id="evFile@(vi)" accept="image/*" style="display:none"
+                           onchange="previewEditVariant(this,@(vi))" />
+                    <!-- label[for] is the reliable cross-browser way to trigger file picker -->
+                    <label for="evFile@(vi)" style="display:block;cursor:pointer;margin-bottom:6px;">
+                        <div class="img-upload-box" style="height:90px;margin-bottom:0;position:relative;"
+                             id="evBox@(vi)">
+                            <img id="evPreview@(vi)"
+                                 src="@(ev != null && !string.IsNullOrEmpty(ev.ImageUrl) ? ev.ImageUrl : "")"
+                                 alt=""
+                                 style="@(ev != null && !string.IsNullOrEmpty(ev.ImageUrl) ? "display:block;" : "display:none;")max-height:88px;pointer-events:none;width:100%;object-fit:cover;"
+                                 onerror="this.style.display='none';var ic=document.getElementById('evIcon@(vi)');if(ic)ic.style.display='flex';" />
+                            <div class="placeholder" id="evIcon@(vi)"
+                                 style="padding:.4rem;pointer-events:none;@(ev != null && !string.IsNullOrEmpty(ev.ImageUrl) ? "display:none;" : "")">
+                                <i class="fa-solid fa-@(ev != null && !string.IsNullOrEmpty(ev.ImageUrl) ? "arrows-rotate" : "plus")" style="font-size:1.1rem"></i>
+                                <span style="font-size:10px">Variant @vi</span>
+                            </div>
                         </div>
-                    </div>
-                    <input type="file" id="evFile@vi" accept="image/*" style="display:none"
-                           onchange="previewEditVariant(this,@vi)" />
-                    <input type="hidden" id="evPath@vi" name="VariantImagePaths"
+                    </label>
+                    <input type="hidden" id="evPath@(vi)" name="VariantImagePaths"
                            value="@(ev != null ? ev.ImageUrl : "")" />
-                    <input type="text" id="evLabel@vi" name="VariantLabels"
+                    <input type="text" id="evLabel@(vi)" name="VariantLabels"
                            placeholder="e.g. Red, Blue"
                            value="@(ev != null ? ev.Label : "")"
                            style="width:100%;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;font-family:Poppins,sans-serif;box-sizing:border-box;background:var(--white);color:var(--text)" />
@@ -243,7 +297,7 @@
                     @foreach (var c in categories)
                     {
                         <option value="@c" @(Model.Category == c ? "selected" : "")>@c</option>
-}
+                    }
                 </select>
             </div>
         </div>
@@ -254,7 +308,7 @@
                     @foreach (var s in sizes)
                     {
                         <option value="@s" @(Model.BreedSize == s ? "selected" : "")>@s</option>
-}
+                    }
                 </select>
             </div>
             <div class="form-group">
@@ -305,10 +359,27 @@
 
 @section scripts {
     <script>
-        function triggerEditVariantUpload(slot) {
-            var f = document.getElementById("evFile" + slot);
-            if (f) f.click();
+        // ?? Main image preview (edit mode) ???????????????????????????????????????????
+        function previewMainEdit(input) {
+            if (!input.files || !input.files[0]) return;
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var preview = document.getElementById("editImgPreview0");
+                var icon = document.getElementById("editImgIcon0");
+                preview.src = e.target.result;
+                preview.style.display = "block";
+                if (icon) icon.style.display = "none";
+                // Store base64 data URL in the hidden field so the controller receives it
+                document.getElementById("editImgPath0").value = e.target.result;
+                document.getElementById("editImg-filename0").textContent = input.files[0].name;
+            };
+            reader.readAsDataURL(input.files[0]);
         }
+
+        // ?? Variant image preview ????????????????????????????????????????????????????
+        // previewEditVariant — called by onchange on each variant file input.
+        // Reads the file as base64, shows the preview, hides the placeholder,
+        // and stores the data URL in the hidden field for form submission.
         function previewEditVariant(input, slot) {
             if (!input.files || !input.files[0]) return;
             var reader = new FileReader();
@@ -319,7 +390,7 @@
                 preview.src = dataUrl;
                 preview.style.display = "block";
                 if (icon) icon.style.display = "none";
-                // Store base64 data URL so the image actually displays on the product detail page
+                // Store base64 data URL so the image displays on the product detail page
                 document.getElementById("evPath" + slot).value = dataUrl;
             };
             reader.readAsDataURL(input.files[0]);
