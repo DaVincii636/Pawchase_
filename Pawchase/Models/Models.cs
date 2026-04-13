@@ -3,6 +3,13 @@ using System.Collections.Generic;
 
 namespace Pawchase.Models
 {
+    // Represents a single color/style variant of a product (image + label)
+    public class ProductVariant
+    {
+        public string ImageUrl { get; set; }   // base64 data URL or relative path
+        public string Label { get; set; }      // e.g. "Red", "Blue", "Large"
+    }
+
     public class Product
     {
         public int Id { get; set; }
@@ -15,6 +22,8 @@ namespace Pawchase.Models
         public string ImageUrl { get; set; }
         public int Stock { get; set; }
         public bool IsOnSale => OriginalPrice.HasValue && OriginalPrice.Value > Price;
+        // Color/style variants — optional, up to 4
+        public List<ProductVariant> Variants { get; set; } = new List<ProductVariant>();
     }
 
     public class User
@@ -31,6 +40,8 @@ namespace Pawchase.Models
         public Product Product { get; set; }
         public int Quantity { get; set; }
         public decimal Subtotal => Product.Price * Quantity;
+        // The specific variant the customer selected (null if product has no variants)
+        public ProductVariant SelectedVariant { get; set; }
     }
 
     public class Order
