@@ -38,15 +38,15 @@ namespace Pawchase.Models
 
         public static List<User> Users = new List<User>
         {
-            new User { Id=1, FullName="Juan dela Cruz", Email="juan@email.com",  Password="user123", IsAdmin=false },
+            new User { Id=1, FullName="Alex", Email="alex@email.com",  Password="user123", IsAdmin=false },
             new User { Id=2, FullName="Maria Santos",   Email="maria@email.com", Password="user123", IsAdmin=false },
         };
 
         public static List<Order> Orders = new List<Order>
         {
             new Order {
-                Id=1, ReferenceNumber="PWC-000001", CustomerName="Juan dela Cruz",
-                Email="juan@email.com", Address="123 Rizal St, Brgy. Poblacion, Quezon City, 1100",
+                Id=1, ReferenceNumber="PWC-000001", CustomerName="Alex",
+                Email="alex@email.com", Address="123 Rizal St, Brgy. Poblacion, Quezon City, 1100",
                 Phone="09171234567",
                 Items=new List<CartItem> {
                     new CartItem { Product=Products[0], Quantity=2 },
@@ -209,6 +209,24 @@ namespace Pawchase.Models
                 Comments = new List<ReviewComment> {
                     new ReviewComment { Id=47, ReviewId=24, UserId=4, UserName="Ben Cruz", Text="Great, comfort is what we were looking for.", DatePosted=DateTime.Now.AddHours(-18) },
                     new ReviewComment { Id=48, ReviewId=24, UserId=1, UserName="alex", Text="Nice to know the cover is easy to wash.", DatePosted=DateTime.Now.AddHours(-12) }
+                }
+            },
+            new Review { Id=25, ProductId=2, UserId=1, CustomerName="Alex", Stars=5, Comment="Tried this after our evening walk and my dog finished the whole serving quickly. Texture looks fresh and easy to tear into smaller pieces for training.", PhotoUrl="/Content/images/review1.jpg", DatePosted=DateTime.Now.AddDays(-5), Likes=11, Category="Treats",
+                Comments = new List<ReviewComment> {
+                    new ReviewComment { Id=49, ReviewId=25, UserId=2, UserName="Maria Santos", Text="Great tip on tearing it for rewards.", DatePosted=DateTime.Now.AddDays(-4) },
+                    new ReviewComment { Id=50, ReviewId=25, UserId=3, UserName="Kyle", Text="Looks like a solid pick.", DatePosted=DateTime.Now.AddDays(-3) }
+                }
+            },
+            new Review { Id=26, ProductId=7, UserId=1, CustomerName="Alex", Stars=4, Comment="Comfortable fit and the buckle feels secure.", DatePosted=DateTime.Now.AddDays(-3), Likes=6, Category="Accessories",
+                Comments = new List<ReviewComment> {
+                    new ReviewComment { Id=51, ReviewId=26, UserId=6, UserName="Mia Dela Pena", Text="Good to know it stays secure.", DatePosted=DateTime.Now.AddDays(-2) },
+                    new ReviewComment { Id=52, ReviewId=26, UserId=2, UserName="Maria Santos", Text="Thanks, I was checking this size too.", DatePosted=DateTime.Now.AddDays(-1) }
+                }
+            },
+            new Review { Id=27, ProductId=11, UserId=1, CustomerName="Alex", Stars=3, Comment="I noticed a small improvement in coat shine after two weeks, but energy levels stayed mostly the same. Might continue for another month before deciding if I will reorder.", PhotoUrl="/Content/images/review6.jpg", DatePosted=DateTime.Now.AddDays(-2), Likes=4, Category="Health",
+                Comments = new List<ReviewComment> {
+                    new ReviewComment { Id=53, ReviewId=27, UserId=9, UserName="Noel Javier", Text="Fair and helpful review.", DatePosted=DateTime.Now.AddDays(-1) },
+                    new ReviewComment { Id=54, ReviewId=27, UserId=5, UserName="Ivy Ramos", Text="Please update after a month.", DatePosted=DateTime.Now.AddHours(-14) }
                 }
             }
         };

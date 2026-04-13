@@ -5,7 +5,8 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var likedReviews = ViewBag.LikedReviews as List<Pawchase.Models.Review> ?? new List<Pawchase.Models.Review>();
     var likedIds = ViewBag.LikedReviewIds as List<int> ?? new List<int>();
-    var displayName = (ViewBag.DisplayUserName as string) ?? "alex";
+    var displayName = (ViewBag.DisplayUserName as string) ?? "Anonymous";
+    var displayInitial = !string.IsNullOrWhiteSpace(displayName) ? displayName.Substring(0, 1).ToLower() : "a";
     var colors = new[] { "#ffe8d6", "#ddeaf3", "#f3e3d0", "#d4eadd", "#ecddd0", "#d4e4f0" };
     var icons = new[] { "fa-dog", "fa-paw", "fa-bone", "fa-dog", "fa-paw", "fa-bone" };
 
@@ -101,7 +102,7 @@
                         }
                         <div class="my-review-body">
                             <div class="my-review-head">
-                                <div class="my-review-avatar">a</div>
+                                <div class="my-review-avatar">@displayInitial</div>
                                 <div>
                                     <div class="my-review-name">@displayName</div>
                                     <div class="my-review-date">
@@ -160,7 +161,7 @@
                     <div class="my-review-card @(r.IsTextOnly ? "without-photo" : "with-photo")" onclick="openMyModal(@modelIndex)">
                         <div class="my-review-body">
                             <div class="my-review-head">
-                                <div class="my-review-avatar">a</div>
+                                <div class="my-review-avatar">@displayInitial</div>
                                 <div>
                                     <div class="my-review-name">@displayName</div>
                                     <div class="my-review-date">
@@ -209,7 +210,7 @@
         <div class="modal-photo-wrap"><div class="modal-photo" id="my-modal-photo"></div></div>
         <div class="modal-info">
             <div class="modal-header">
-                <div class="modal-avatar">a</div>
+                <div class="modal-avatar">@displayInitial</div>
                 <div>
                     <div style="font-size:14px;font-weight:700;">@displayName</div>
                     <div style="font-size:11px;color:var(--text-light);" id="my-modal-date"></div>

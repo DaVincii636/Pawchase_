@@ -1,6 +1,14 @@
 @{
     var isLoggedIn = Session["UserId"] != null;
     var userName = Session["UserName"] as string;
+    if (string.IsNullOrWhiteSpace(userName))
+    {
+        var userIdValue = Session["UserId"]?.ToString();
+        if (int.TryParse(userIdValue, out var userId))
+        {
+            userName = Pawchase.Models.MockData.Users.FirstOrDefault(u => u.Id == userId)?.FullName;
+        }
+    }
     var cart = Session["Cart"] as List<Pawchase.Models.CartItem>;
     var cartCount = cart != null ? cart.Sum(c => c.Quantity) : 0;
     var path = Request.Url.AbsolutePath.ToLower();
@@ -66,7 +74,7 @@
         {
             <div class="nav-account">
                 <i class="fa-regular fa-user"></i>
-                <span>@(userName != null && userName.Length > 10 ? userName.Substring(0, 10) + "&hellip;" : userName)</span>
+                <span>@userName</span>
                 <div class="account-dropdown">
                     <a href="@Url.Action("Orders","Account")"><i class="fa-solid fa-list-check"></i> My Orders</a>
                     <a href="@Url.Action("MyReviews","Reviews")" class="@(path.Contains("/reviews/myreviews") ? "active" : "")"><i class="fa-solid fa-bookmark"></i> My Reviews</a>

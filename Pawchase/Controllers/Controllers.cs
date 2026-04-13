@@ -194,12 +194,17 @@ namespace Pawchase.Controllers
 
         [HttpPost, ValidateAntiForgeryToken]
         public ActionResult SubmitReview(int productId, string referenceNumber, int stars, string comment) {
+            var userId = 0;
+            int.TryParse(Session["UserId"]?.ToString(), out userId);
+
             var review = new Review {
                 Id           = MockData.Reviews.Count + 1,
                 ProductId    = productId,
+                UserId       = userId,
                 CustomerName = Session["UserName"]?.ToString() ?? "Customer",
                 Stars        = stars, Comment = comment,
-                DatePosted   = System.DateTime.Now
+                DatePosted   = System.DateTime.Now,
+                Category     = MockData.Products.FirstOrDefault(p => p.Id == productId)?.Category ?? "Others"
             };
             MockData.Reviews.Add(review);
             var order = MockData.Orders.FirstOrDefault(o => o.ReferenceNumber == referenceNumber);

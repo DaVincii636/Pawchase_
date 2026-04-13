@@ -10,6 +10,7 @@ namespace Pawchase.Controllers
     {
         public ActionResult Index(string sortBy = "recent", string category = "All", string photoFilter = "all", int? openReviewId = null)
         {
+            SyncReviewAuthorNames();
             var reviews = MockData.Reviews.AsEnumerable();
             var reportedIds = GetReportedReviewIds();
 
@@ -56,6 +57,7 @@ namespace Pawchase.Controllers
 
         public ActionResult MyReviews()
         {
+            SyncReviewAuthorNames();
             int userId = GetCurrentUserId();
             var reviews = MockData.Reviews
                 .Where(r => r.UserId == userId)
@@ -70,7 +72,7 @@ namespace Pawchase.Controllers
                 .ToList();
             ViewBag.LikedReviewIds = likedIds;
             ViewBag.ReportedReviewIds = GetReportedReviewIds();
-            ViewBag.DisplayUserName = "alex";
+            ViewBag.DisplayUserName = GetCurrentUserName();
 
             return View(reviews);
         }
@@ -79,11 +81,7 @@ namespace Pawchase.Controllers
         public ActionResult Submit(int productId, int stars, string comment, string customerName, HttpPostedFileBase photo)
         {
             int userId = GetCurrentUserId();
-            var resolvedName = userId == 1
-                ? "alex"
-                : (string.IsNullOrEmpty(customerName)
-                    ? (Session["UserName"] as string ?? "Anonymous")
-                    : customerName);
+            var resolvedName = GetCurrentUserName();
 
             var review = new Review
             {
@@ -251,6 +249,35 @@ namespace Pawchase.Controllers
                 return userId;
             }
             return 1;
+        }
+
+        private string GetCurrentUserName()
+        {
+            var sessionName = Session["UserName"] as string;
+            if (!string.IsNullOrWhiteSpace(sessionName))
+            {
+                return sessionName;
+            }
+
+            var currentUser = MockData.Users.FirstOrDefault(u => u.Id == GetCurrentUserId());
+            return !string.IsNullOrWhiteSpace(currentUser?.FullName)
+                ? currentUser.FullName
+                : "Anonymous";
+        }
+
+        private void SyncReviewAuthorNames()
+        {
+            var userLookup = MockData.Users
+                .GroupBy(u => u.Id)
+                .ToDictionary(g => g.Key, g => g.First().FullName);
+
+            foreach (var review in MockData.Reviews)
+            {
+                if (userLookup.TryGetValue(review.UserId, out var userName) && !string.IsNullOrWhiteSpace(userName))
+                {
+                    review.CustomerName = userName;
+                }
+            }
         }
 
         private string GetProductCategory(int productId)
