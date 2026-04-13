@@ -2,6 +2,15 @@
 @{
     ViewBag.Title = "Products";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var ratings = ViewBag.Ratings as System.Collections.Generic.Dictionary<int, dynamic>;
+    var globalMin = (int)(ViewBag.GlobalMin ?? 0);
+    var globalMax = (int)(ViewBag.GlobalMax ?? 2000);
+    var curMin = ViewBag.MinPrice != null ? (int)ViewBag.MinPrice : globalMin;
+    var curMax = ViewBag.MaxPrice != null ? (int)ViewBag.MaxPrice : globalMax;
+    bool onSale = ViewBag.OnSale == true;
+    bool hasFilters = ViewBag.Category != null || ViewBag.Size != null ||
+                      ViewBag.Search != null || onSale ||
+                      ViewBag.MinPrice != null || ViewBag.MaxPrice != null;
 }
 @section styles {
     <link href="@Url.Content("~/Content/css/product.css")" rel="stylesheet" />
@@ -14,7 +23,7 @@
 <div class="product-toolbar-top">
     <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleFilter()">
         <i class="fa-solid fa-sliders"></i> Filters
-        @if (ViewBag.Category != null || ViewBag.Size != null || ViewBag.Search != null)
+        @if (hasFilters)
         {
             <span id="filter-dot" style="background:#e05555;color:#fff;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;">!</span>
         }
@@ -26,8 +35,21 @@
             {<text> in <strong>@ViewBag.Category</strong></text>}
             @if (ViewBag.Size != null)
             {<text> &middot; <strong>@ViewBag.Size</strong></text>}
+            @if (onSale)
+            {<text> &middot; <strong>On Sale</strong></text>}
         </span>
-        @if (ViewBag.Category != null || ViewBag.Size != null || ViewBag.Search != null)
+
+        @* Sort dropdown *@
+        <select id="sortSelect" onchange="applySort(this.value)"
+                style="padding:5px 10px;border:1.5px solid var(--border);border-radius:50px;font-size:12px;font-family:'Poppins',sans-serif;color:var(--text-mid);cursor:pointer;background:var(--white);">
+            <option value="default" @(ViewBag.Sort == "default" || ViewBag.Sort == null ? "selected" : "")>Default</option>
+            <option value="price_asc" @(ViewBag.Sort == "price_asc" ? "selected" : "")>Price: Low to High</option>
+            <option value="price_desc" @(ViewBag.Sort == "price_desc" ? "selected" : "")>Price: High to Low</option>
+            <option value="sale" @(ViewBag.Sort == "sale" ? "selected" : "")>On Sale First</option>
+            <option value="name" @(ViewBag.Sort == "name" ? "selected" : "")>Name A&ndash;Z</option>
+        </select>
+
+        @if (hasFilters)
         {
             <a href="@Url.Action("Index","Product")" class="clear-filters"><i class="fa-solid fa-times"></i> Clear</a>
         }
@@ -37,7 +59,12 @@
 <div class="products-wrapper">
     <aside class="filters" id="filterPanel">
         <h3><i class="fa-solid fa-sliders"></i> Filters</h3>
-        <form method="get" action="@Url.Action("Index","Product")" class="filter-form">
+        <form method="get" action="@Url.Action("Index","Product")" class="filter-form" id="filterForm">
+            <input type="hidden" name="sort" id="hSort" value="@ViewBag.Sort" />
+            <input type="hidden" name="category" id="hCategory" value="@ViewBag.Category" />
+            <input type="hidden" name="size" id="hSize" value="@ViewBag.Size" />
+            <input type="hidden" name="onSale" id="hOnSale" value="@(onSale ? "true" : "")" />
+
             <div class="filter-group">
                 <label>Search</label>
                 <div class="search-input-wrap">
@@ -46,24 +73,62 @@
                     <button type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
                 </div>
             </div>
+
+            <div class="filter-group">
+                <label>On Sale</label>
+                <button type="button"
+                        onclick="setFilter('onSale', @(onSale ? "''" : "'true'"))"
+                        class="filter-btn @(onSale ? "active" : "")"
+                        style="width:100%;text-align:center;border-radius:var(--radius-sm);">
+                    <i class="fa-solid fa-tag"></i> @(onSale ? "Showing Sale Items" : "Show Sale Items Only")
+                </button>
+            </div>
+
             <div class="filter-group">
                 <label>Breed Size</label>
                 <div class="filter-options">
-                    <a href="@Url.Action("Index","Product", new{category=ViewBag.Category,search=ViewBag.Search})" class="filter-btn @(ViewBag.Size==null?"active":"")">All</a>
-                    <a href="@Url.Action("Index","Product", new{size="Small",  category=ViewBag.Category,search=ViewBag.Search})" class="filter-btn @(ViewBag.Size=="Small" ?"active":"")">Small</a>
-                    <a href="@Url.Action("Index","Product", new{size="Medium", category=ViewBag.Category,search=ViewBag.Search})" class="filter-btn @(ViewBag.Size=="Medium"?"active":"")">Medium</a>
-                    <a href="@Url.Action("Index","Product", new{size="Large",  category=ViewBag.Category,search=ViewBag.Search})" class="filter-btn @(ViewBag.Size=="Large" ?"active":"")">Large</a>
+                    <button type="button" onclick="setFilter('size', '')" class="filter-btn @(ViewBag.Size==null?"active":"")">All</button>
+                    <button type="button" onclick="setFilter('size', 'Small')" class="filter-btn @(ViewBag.Size=="Small" ?"active":"")">Small</button>
+                    <button type="button" onclick="setFilter('size', 'Medium')" class="filter-btn @(ViewBag.Size=="Medium"?"active":"")">Medium</button>
+                    <button type="button" onclick="setFilter('size', 'Large')" class="filter-btn @(ViewBag.Size=="Large" ?"active":"")">Large</button>
                 </div>
             </div>
+
             <div class="filter-group">
                 <label>Category</label>
                 <div class="filter-options vertical">
                     @foreach (var cat in new[] { "Treats", "Toys", "Accessories", "Health", "Others" })
                     {
-                        <a href="@Url.Action("Index","Product", new{category=cat,size=ViewBag.Size,search=ViewBag.Search})" class="filter-btn @(ViewBag.Category==cat?"active":"")">@cat</a>
+                        <button type="button" onclick="setFilter('category', '@cat')" class="filter-btn @(ViewBag.Category==cat?"active":"")">@cat</button>
                     }
-                    <a href="@Url.Action("Index","Product", new{size=ViewBag.Size,search=ViewBag.Search})" class="filter-btn @(ViewBag.Category==null?"active":"")">All Categories</a>
+                    <button type="button" onclick="setFilter('category', '')" class="filter-btn @(ViewBag.Category==null?"active":"")">All Categories</button>
                 </div>
+            </div>
+
+            <div class="filter-group">
+                <label>Price Range &nbsp;<span id="priceRangeLabel" style="font-weight:700;color:var(--blue-dark);">&#8369;@curMin &ndash; &#8369;@curMax</span></label>
+                <div style="padding:0 4px;">
+                    <input type="hidden" name="minPrice" id="minPriceInput" value="@(ViewBag.MinPrice != null ? ViewBag.MinPrice.ToString() : "")" />
+                    <input type="hidden" name="maxPrice" id="maxPriceInput" value="@(ViewBag.MaxPrice != null ? ViewBag.MaxPrice.ToString() : "")" />
+                    <div style="position:relative;height:28px;margin:8px 0;">
+                        <input type="range" id="rangeMin" min="@globalMin" max="@globalMax" value="@curMin" step="50"
+                               style="position:absolute;width:100%;pointer-events:none;" />
+                        <input type="range" id="rangeMax" min="@globalMin" max="@globalMax" value="@curMax" step="50"
+                               style="position:absolute;width:100%;pointer-events:none;" />
+                    </div>
+                    <button type="submit" class="filter-btn" style="width:100%;text-align:center;border-radius:var(--radius-sm);margin-top:6px;">
+                        Apply Price Filter
+                    </button>
+                </div>
+            </div>
+
+            <div class="filter-group" style="margin-top:.5rem;border-top:1px solid var(--border);padding-top:1rem;">
+                <a href="@Url.Action("Index","Product")?panelOpen=1"
+                   style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px 0;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--white);color:var(--text-mid);font-size:12px;font-weight:600;font-family:'Poppins',sans-serif;cursor:pointer;text-decoration:none;transition:background .15s,color .15s;"
+                   onmouseover="this.style.background='#fee';this.style.color='#c94040';this.style.borderColor='#e05555';"
+                   onmouseout="this.style.background='var(--white)';this.style.color='var(--text-mid)';this.style.borderColor='var(--border)';">
+                    <i class="fa-solid fa-rotate-left"></i> Reset All Filters
+                </a>
             </div>
         </form>
     </aside>
@@ -93,24 +158,30 @@
                     var isOnSale = p.IsOnSale;
                     var disc = isOnSale ? (int)(((p.OriginalPrice.Value - p.Price) / p.OriginalPrice.Value) * 100) : 0;
                     var isLowStock = p.Stock > 0 && p.Stock <= 5;
+                    var isOOS = p.Stock == 0;
                     var searchText = (p.Name + " " + p.Description + " " + p.Category + " " + p.BreedSize).ToLower();
 
-                    <div class="product-card"
+                    double avgStars = 0;
+                    int reviewCount = 0;
+                    if (ratings != null && ratings.ContainsKey(p.Id))
+                    {
+                        avgStars = (double)ratings[p.Id].Avg;
+                        reviewCount = (int)ratings[p.Id].Count;
+                    }
+
+                    <div class="product-card @(isOOS ? "oos-card" : "")"
                          data-search="@searchText"
-                         onclick="window.location='@Url.Action("Details","Product",new{id=p.Id})'">
+                         onclick="@(isOOS ? "" : "window.location='" + Url.Action("Details","Product",new{id=p.Id}) + "'")">
 
-                        @* Sale badge — top-left *@
                         @if (isOnSale)
-                        {<span class="sale-badge">SALE</span> }
-
-                        @* Discount % badge — top-right, auto-calculated *@
+                        {<span class="sale-badge">SALE</span>}
                         @if (isOnSale && disc > 0)
+                        {<span class="discount-pct-badge">-@disc%</span>}
+                        @if (isOOS)
                         {
-                            <span class="discount-pct-badge">-@disc%</span>
+                            <div class="oos-overlay"><span>Out of Stock</span></div>
                         }
-
-                        @* Low stock badge — bottom of image area *@
-                        @if (isLowStock)
+                        else if (isLowStock)
                         {
                             <span class="low-stock-badge"><i class="fa-solid fa-triangle-exclamation"></i> Only @p.Stock left!</span>
                         }
@@ -122,6 +193,30 @@
                         <div class="product-info">
                             <span class="product-category">@p.Category &middot; @p.BreedSize</span>
                             <h3>@p.Name</h3>
+
+                            @* Average rating display *@
+                            @if (reviewCount > 0)
+                            {
+                                <div class="card-rating">
+                                    @for (int s = 1; s <= 5; s++)
+                                    {
+                                        if (s <= Math.Floor(avgStars))
+                                        {
+                                            <i class="fa-solid fa-star"></i>
+                                        }
+                                        else if (s - avgStars < 1 && s - avgStars > 0)
+                                        {
+                                            <i class="fa-solid fa-star-half-stroke"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="fa-regular fa-star"></i>
+                                        }
+                                    }
+                                    <span>(@reviewCount)</span>
+                                </div>
+                            }
+
                             <div class="product-price">
                                 <span class="price">&#8369;@p.Price.ToString("N2")</span>
                                 @if (isOnSale)
@@ -134,9 +229,16 @@
                                 <a href="@Url.Action("Details","Product",new{id=p.Id})" class="btn-outline-sm" onclick="event.stopPropagation()">
                                     <i class="fa-regular fa-eye"></i> Details
                                 </a>
-                                <a href="@Url.Action("Add","Cart",new{id=p.Id,returnUrl=Request.Url.PathAndQuery})" class="btn-primary-sm" onclick="event.stopPropagation()">
-                                    <i class="fa-solid fa-cart-plus"></i> Add
-                                </a>
+                                @if (!isOOS)
+                                {
+                                    <a href="@Url.Action("Add","Cart",new{id=p.Id,returnUrl=Request.Url.PathAndQuery})" class="btn-primary-sm" onclick="event.stopPropagation()">
+                                        <i class="fa-solid fa-cart-plus"></i> Add
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="btn-disabled-sm">Out of Stock</span>
+                                }
                             </div>
                         </div>
                     </div>
@@ -148,4 +250,80 @@
 
 @section scripts {
     <script src="@Url.Content("~/Scripts/product.js")"></script>
+    <script>
+        // -- setFilter: patches ONE query-string param while keeping everything else --
+        // All category/size/onSale buttons call this instead of navigating to a
+        // hardcoded URL, so every filter co-exists with every other filter.
+        function setFilter(key, value) {
+            var url = new URL(window.location.href);
+            if (value === '' || value === null || value === undefined) {
+                url.searchParams.delete(key);
+            } else {
+                url.searchParams.set(key, value);
+            }
+            window.location.href = url.toString();
+        }
+
+        // Sort dropdown -- preserves all current filters
+        function applySort(val) {
+            var url = new URL(window.location.href);
+            url.searchParams.set('sort', val);
+            window.location.href = url.toString();
+        }
+
+        // Make the search/price form also inherit all current URL params so
+        // typing a search or applying a price range never wipes category/size/onSale.
+        (function () {
+            var form = document.getElementById('filterForm');
+            if (!form) return;
+            form.addEventListener('submit', function () {
+                // Sync hidden inputs from the live URL before submit
+                var url = new URL(window.location.href);
+                ['category', 'size', 'onSale', 'sort'].forEach(function (k) {
+                    var hidden = document.getElementById('h' + k.charAt(0).toUpperCase() + k.slice(1));
+                    if (!hidden) return;
+                    var val = url.searchParams.get(k) || '';
+                    // Only write if the field wasn't already set by the form itself
+                    if (hidden.value === '' || hidden.value === null) {
+                        hidden.value = val;
+                    }
+                });
+            });
+        })();
+
+        // Auto-open filter panel if ?panelOpen=1 (set by Reset All Filters)
+        document.addEventListener('DOMContentLoaded', function () {
+            if (new URLSearchParams(window.location.search).get('panelOpen') === '1') {
+                // Small delay so CSS transition plays properly after paint
+                setTimeout(function () {
+                    if (typeof toggleFilter === 'function' && !filterOpen) toggleFilter();
+                }, 50);
+            }
+        });
+
+        // Dual-handle price range slider
+        (function () {
+            var rMin   = document.getElementById('rangeMin');
+            var rMax   = document.getElementById('rangeMax');
+            var iMin   = document.getElementById('minPriceInput');
+            var iMax   = document.getElementById('maxPriceInput');
+            var label  = document.getElementById('priceRangeLabel');
+            if (!rMin || !rMax) return;
+
+            function updateLabel() {
+                var lo = parseInt(rMin.value);
+                var hi = parseInt(rMax.value);
+                if (lo > hi) { var tmp = lo; lo = hi; hi = tmp; }
+                label.innerHTML = '&#8369;' + lo + ' &ndash; &#8369;' + hi;
+                iMin.value = lo <= @globalMin ? '' : lo;
+                iMax.value = hi >= @globalMax ? '' : hi;
+            }
+
+            rMin.style.pointerEvents = 'all';
+            rMax.style.pointerEvents = 'all';
+            rMin.addEventListener('input', updateLabel);
+            rMax.addEventListener('input', updateLabel);
+            updateLabel();
+        })();
+    </script>
 }
