@@ -73,7 +73,13 @@
                             <div class="img-fallback-sm" style="display:none;"><i class="fa-solid fa-bone"></i></div>
                             <span class="co-qty">@item.Quantity</span>
                         </div>
-                        <div class="co-name">@item.Product.Name</div>
+                        <div class="co-name">
+                            @item.Product.Name
+                            @if (item.SelectedVariant != null)
+                            {
+                                <span style="font-size:11px; color:var(--text-light); display:block;">@item.SelectedVariant.Label</span>
+                            }
+                        </div>
                         <div class="co-price">&#8369;@item.Subtotal.ToString("N2")</div>
                     </div>
                 }
