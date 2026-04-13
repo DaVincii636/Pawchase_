@@ -1,14 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewBag.Title - PawChase Admin</title>
-    
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet"/>
-    <link href="@Url.Content("~/Content/css/site.css")" rel="stylesheet"/>
-    <link href="@Url.Content("~/Content/css/admin.css")" rel="stylesheet"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet" />
+    <link href="@Url.Content("~/Content/css/site.css")" rel="stylesheet" />
+    <link href="@Url.Content("~/Content/css/admin.css")" rel="stylesheet" />
     @RenderSection("styles", required: false)
+    <style>
+        @* Toast auto-dismiss animation *@
+        .admin-toast, .admin-toast-error {
+            animation: toastIn .3s ease forwards;
+        }
+        @@keyframes toastIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .admin-toast-error {
+            background: rgba(224,85,85,.12);
+            border-left: 3px solid #e05555;
+            color: #c0392b;
+        }
+    </style>
 </head>
 <body class="admin-body">
     <aside class="admin-sidebar">
@@ -26,6 +40,11 @@
             </a>
             <a href="@Url.Action("Products","Admin")" class="sidebar-link @(action=="Products"||action=="AddProduct"||action=="EditProduct"?"active":"")">
                 <i class="fa-solid fa-boxes-stacked"></i> Products
+                @{
+                    var lowStockBadge = Pawchase.Models.MockData.Products.Count(p => !p.IsDeleted && p.Stock == 0);
+                    if (lowStockBadge > 0)
+                    { <span style="background:#e05555;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:50px;margin-left:4px;">@lowStockBadge OOS</span> }
+                }
             </a>
             <a href="@Url.Action("Orders","Admin")" class="sidebar-link @(action=="Orders"?"active":"")">
                 <i class="fa-solid fa-receipt"></i> Orders
@@ -52,8 +71,14 @@
     <div class="admin-main">
         @if (TempData["Success"] != null)
         {
-            <div class="admin-toast">
+            <div class="admin-toast" id="adminToast">
                 <i class="fa-solid fa-circle-check"></i> @TempData["Success"]
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="admin-toast admin-toast-error" id="adminToastError">
+                <i class="fa-solid fa-triangle-exclamation"></i> @TempData["Error"]
             </div>
         }
         @RenderBody()
