@@ -101,39 +101,50 @@ namespace Pawchase.Controllers
         public ActionResult Index()
         {
             if (!IsLoggedIn) return RedirectToAction("Login", "Account", new { returnUrl = Url.Action("Index", "Cart") });
-            return View(GetCart());
+            // Purge cart items whose product was soft-deleted
+            var cart = GetCart();
+            cart.RemoveAll(c => c.Product == null || c.Product.IsDeleted);
+            Session["Cart"] = cart;
+            return View(cart);
         }
 
-        public ActionResult Add(int id, string returnUrl, string variantLabel)
+        public ActionResult Add(int id, string returnUrl, string variantLabel, int qty = 1)
         {
             if (!IsLoggedIn) return RedirectToAction("Login", "Account", new { returnUrl = returnUrl ?? Url.Action("Index", "Product") });
-            var product = MockData.Products.FirstOrDefault(p => p.Id == id);
+
+            var product = MockData.Products.FirstOrDefault(p => p.Id == id && !p.IsDeleted);
             if (product == null) return HttpNotFound();
 
-            // If the product has variants and none was specified, bounce back to details so the user can pick one
+            // FIX: stock guard — cannot add out-of-stock products even via direct URL
+            if (product.Stock <= 0)
+                return RedirectToAction("Details", "Product", new { id = id });
+
             if (product.Variants != null && product.Variants.Any() && string.IsNullOrEmpty(variantLabel))
             {
                 var detailUrl = Url.Action("Details", "Product", new { id = id });
-                // Preserve original returnUrl in the fragment so the page knows to flash the variant selector
                 return Redirect(detailUrl + "?variantRequired=1");
             }
 
-            // Resolve the chosen variant object (null-safe: products without variants stay null)
             ProductVariant chosen = null;
             if (!string.IsNullOrEmpty(variantLabel) && product.Variants != null)
                 chosen = product.Variants.FirstOrDefault(v => v.Label == variantLabel);
 
             var cart = GetCart();
-            // Match on both product id AND variant so the same product in different variants are distinct line items
             var existing = cart.FirstOrDefault(c =>
                 c.Product.Id == id &&
                 (c.SelectedVariant == null && chosen == null ||
                  c.SelectedVariant != null && chosen != null && c.SelectedVariant.Label == chosen.Label));
 
             if (existing != null)
-                existing.Quantity++;
+            {
+                // FIX: don't exceed available stock
+                var newQty = existing.Quantity + qty;
+                existing.Quantity = Math.Min(newQty, product.Stock);
+            }
             else
-                cart.Add(new CartItem { Product = product, Quantity = 1, SelectedVariant = chosen });
+            {
+                cart.Add(new CartItem { Product = product, Quantity = Math.Min(qty, product.Stock), SelectedVariant = chosen });
+            }
 
             Session["Cart"] = cart;
             if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
@@ -160,7 +171,14 @@ namespace Pawchase.Controllers
                 c.Product.Id == id &&
                 ((string.IsNullOrEmpty(variantLabel) && c.SelectedVariant == null) ||
                  (c.SelectedVariant != null && c.SelectedVariant.Label == variantLabel)));
-            if (item != null) { if (quantity <= 0) cart.Remove(item); else item.Quantity = quantity; }
+            if (item != null)
+            {
+                if (quantity <= 0)
+                    cart.Remove(item);
+                else
+                    // FIX: cap at available stock
+                    item.Quantity = Math.Min(quantity, item.Product.Stock);
+            }
             Session["Cart"] = cart;
             return RedirectToAction("Index");
         }
@@ -169,6 +187,7 @@ namespace Pawchase.Controllers
         {
             if (!IsLoggedIn) return RedirectToAction("Login", "Account", new { returnUrl = Url.Action("Checkout", "Cart") });
             var cart = GetCart();
+            cart.RemoveAll(c => c.Product == null || c.Product.IsDeleted);
             if (!cart.Any()) return RedirectToAction("Index");
             return View(cart);
         }
@@ -179,7 +198,23 @@ namespace Pawchase.Controllers
             if (!IsLoggedIn) return RedirectToAction("Login", "Account");
             var cart = GetCart();
             if (!cart.Any()) return RedirectToAction("Index");
+
             var shipping = cart.Sum(c => c.Subtotal) >= 500 ? 0 : 80;
+
+            // FIX: snapshot each item so order history is immune to product edits/deletes
+            var snapshots = cart.Select(c => new OrderItemSnapshot
+            {
+                ProductId = c.Product.Id,
+                ProductName = c.Product.Name,
+                ProductImageUrl = c.Product.ImageUrl,
+                Category = c.Product.Category,
+                BreedSize = c.Product.BreedSize,
+                UnitPrice = c.Product.Price,
+                Quantity = c.Quantity,
+                VariantLabel = c.SelectedVariant?.Label,
+                VariantImageUrl = c.SelectedVariant?.ImageUrl
+            }).ToList();
+
             var order = new Order
             {
                 Id = MockData.Orders.Count + 1,
@@ -188,12 +223,23 @@ namespace Pawchase.Controllers
                 Email = Session["UserEmail"].ToString(),
                 Address = address,
                 Phone = phone,
-                Items = new List<CartItem>(cart),
+                Items = new List<CartItem>(cart), // keep for backward compat
+                Snapshots = snapshots,
                 Total = cart.Sum(c => c.Subtotal) + shipping,
-                OrderDate = System.DateTime.Now,
+                OrderDate = DateTime.Now,
                 Status = "To Ship"
             };
+
             MockData.Orders.Add(order);
+
+            // FIX: decrement stock for each item ordered
+            foreach (var item in cart)
+            {
+                var product = MockData.Products.FirstOrDefault(p => p.Id == item.Product.Id);
+                if (product != null)
+                    product.Stock = Math.Max(0, product.Stock - item.Quantity);
+            }
+
             Session["Cart"] = new List<CartItem>();
             return RedirectToAction("Confirmation", "Order", new { referenceNumber = order.ReferenceNumber });
         }
@@ -248,7 +294,7 @@ namespace Pawchase.Controllers
                 CustomerName = Session["UserName"]?.ToString() ?? "Customer",
                 Stars = stars,
                 Comment = comment,
-                DatePosted = System.DateTime.Now,
+                DatePosted = DateTime.Now,
                 Category = MockData.Products.FirstOrDefault(p => p.Id == productId)?.Category ?? "Others"
             };
             MockData.Reviews.Add(review);
@@ -282,17 +328,25 @@ namespace Pawchase.Controllers
         public ActionResult Dashboard()
         {
             if (!IsAdmin) return RedirectToAction("Login");
-            ViewBag.TotalProducts = MockData.Products.Count;
+            ViewBag.TotalProducts = MockData.Products.Count(p => !p.IsDeleted);
             ViewBag.TotalOrders = MockData.Orders.Count;
             ViewBag.PendingOrders = MockData.Orders.Count(o => o.Status == "To Ship");
             ViewBag.TotalRevenue = MockData.Orders.Sum(o => o.Total);
             ViewBag.TotalUsers = MockData.Users.Count;
             ViewBag.RecentOrders = MockData.Orders.OrderByDescending(o => o.OrderDate).Take(5).ToList();
             ViewBag.RefundCount = MockData.Orders.Count(o => o.HasRefundRequest);
+            // FIX: low-stock alert for dashboard
+            ViewBag.LowStockCount = MockData.Products.Count(p => !p.IsDeleted && p.Stock > 0 && p.Stock <= 5);
+            ViewBag.OutOfStockCount = MockData.Products.Count(p => !p.IsDeleted && p.Stock == 0);
             return View();
         }
 
-        public ActionResult Products() { if (!IsAdmin) return RedirectToAction("Login"); return View(MockData.Products); }
+        public ActionResult Products()
+        {
+            if (!IsAdmin) return RedirectToAction("Login");
+            // Only show non-deleted products in admin list
+            return View(MockData.Products.Where(p => !p.IsDeleted).ToList());
+        }
 
         public ActionResult AddProduct() { if (!IsAdmin) return RedirectToAction("Login"); return View(); }
 
@@ -300,23 +354,26 @@ namespace Pawchase.Controllers
         public ActionResult AddProduct(Product product, string[] VariantImagePaths, string[] VariantLabels)
         {
             if (!IsAdmin) return RedirectToAction("Login");
+
+            // FIX: validate that original price > sale price
+            if (product.OriginalPrice.HasValue && product.OriginalPrice.Value > 0 && product.OriginalPrice.Value <= product.Price)
+            {
+                TempData["Error"] = "Original Price must be greater than Sale Price for a sale badge to appear.";
+                return RedirectToAction("AddProduct");
+            }
+
             product.Id = MockData.Products.Max(p => p.Id) + 1;
 
-            // FIX: If the ImageUrl is a base64 data URL (uploaded via file picker), keep it as-is.
-            // Only rewrite the path when it is a plain filename/path typed in manually.
             if (string.IsNullOrWhiteSpace(product.ImageUrl))
                 product.ImageUrl = "/Content/images/products/placeholder.png";
             else if (!product.ImageUrl.StartsWith("data:image"))
             {
-                // Manual path entry — rewrite to category subfolder as before
                 var fileName = System.IO.Path.GetFileName(product.ImageUrl);
                 var folder = (product.Category ?? "Others").ToLower();
                 product.ImageUrl = "/Content/images/products/" + folder + "/" + fileName;
             }
-            // else: base64 data URL from file picker — store it directly, no rewriting needed
 
-            // Build variants from parallel arrays
-            product.Variants = new System.Collections.Generic.List<Pawchase.Models.ProductVariant>();
+            product.Variants = new List<ProductVariant>();
             int maxV = Math.Max(VariantImagePaths != null ? VariantImagePaths.Length : 0,
                                 VariantLabels != null ? VariantLabels.Length : 0);
             for (int i = 0; i < maxV; i++)
@@ -324,14 +381,7 @@ namespace Pawchase.Controllers
                 var imgPath = (VariantImagePaths != null && i < VariantImagePaths.Length) ? VariantImagePaths[i] : null;
                 var label = (VariantLabels != null && i < VariantLabels.Length) ? VariantLabels[i] : null;
                 if (!string.IsNullOrWhiteSpace(imgPath) || !string.IsNullOrWhiteSpace(label))
-                {
-                    product.Variants.Add(new Pawchase.Models.ProductVariant
-                    {
-                        // FIX: base64 data URLs from the variant file picker are stored directly
-                        ImageUrl = string.IsNullOrWhiteSpace(imgPath) ? null : imgPath,
-                        Label = label
-                    });
-                }
+                    product.Variants.Add(new ProductVariant { ImageUrl = string.IsNullOrWhiteSpace(imgPath) ? null : imgPath, Label = label });
             }
 
             MockData.Products.Add(product);
@@ -342,7 +392,7 @@ namespace Pawchase.Controllers
         public ActionResult EditProduct(int id)
         {
             if (!IsAdmin) return RedirectToAction("Login");
-            var p = MockData.Products.FirstOrDefault(x => x.Id == id);
+            var p = MockData.Products.FirstOrDefault(x => x.Id == id && !x.IsDeleted);
             if (p == null) return HttpNotFound();
             return View(p);
         }
@@ -351,6 +401,14 @@ namespace Pawchase.Controllers
         public ActionResult EditProduct(Product updated, string[] VariantImagePaths, string[] VariantLabels)
         {
             if (!IsAdmin) return RedirectToAction("Login");
+
+            // FIX: validate original price > sale price
+            if (updated.OriginalPrice.HasValue && updated.OriginalPrice.Value > 0 && updated.OriginalPrice.Value <= updated.Price)
+            {
+                TempData["Error"] = "Original Price must be greater than Sale Price.";
+                return RedirectToAction("EditProduct", new { id = updated.Id });
+            }
+
             var p = MockData.Products.FirstOrDefault(x => x.Id == updated.Id);
             if (p != null)
             {
@@ -362,17 +420,12 @@ namespace Pawchase.Controllers
                 p.BreedSize = updated.BreedSize;
                 p.Stock = updated.Stock;
 
-                // FIX: Same base64 guard for the main image on Edit.
-                // If a new file was picked it arrives as a data URL — keep it.
-                // If no new file was picked the existing URL (data URL or /Content/... path) is
-                // passed through unchanged from the hidden field in EditProduct.cshtml.
                 if (string.IsNullOrWhiteSpace(updated.ImageUrl))
                     p.ImageUrl = "/Content/images/products/placeholder.png";
                 else
-                    p.ImageUrl = updated.ImageUrl; // preserves both data URLs and existing /Content/ paths
+                    p.ImageUrl = updated.ImageUrl;
 
-                // Rebuild variants from parallel arrays
-                p.Variants = new System.Collections.Generic.List<Pawchase.Models.ProductVariant>();
+                p.Variants = new List<ProductVariant>();
                 int maxV = Math.Max(VariantImagePaths != null ? VariantImagePaths.Length : 0,
                                     VariantLabels != null ? VariantLabels.Length : 0);
                 for (int i = 0; i < maxV; i++)
@@ -380,25 +433,37 @@ namespace Pawchase.Controllers
                     var imgPath = (VariantImagePaths != null && i < VariantImagePaths.Length) ? VariantImagePaths[i] : null;
                     var label = (VariantLabels != null && i < VariantLabels.Length) ? VariantLabels[i] : null;
                     if (!string.IsNullOrWhiteSpace(imgPath) || !string.IsNullOrWhiteSpace(label))
-                    {
-                        p.Variants.Add(new Pawchase.Models.ProductVariant
-                        {
-                            ImageUrl = string.IsNullOrWhiteSpace(imgPath) ? null : imgPath,
-                            Label = label
-                        });
-                    }
+                        p.Variants.Add(new ProductVariant { ImageUrl = string.IsNullOrWhiteSpace(imgPath) ? null : imgPath, Label = label });
                 }
             }
             TempData["Success"] = $"Product \"{updated.Name}\" updated!";
             return RedirectToAction("Products");
         }
 
+        // FIX: soft-delete — product is hidden but order/cart references stay intact
         public ActionResult DeleteProduct(int id)
         {
             if (!IsAdmin) return RedirectToAction("Login");
             var p = MockData.Products.FirstOrDefault(x => x.Id == id);
-            if (p != null) MockData.Products.Remove(p);
-            TempData["Success"] = "Product deleted.";
+            if (p != null)
+            {
+                p.IsDeleted = true;
+                TempData["Success"] = $"Product \"{p.Name}\" deleted.";
+            }
+            return RedirectToAction("Products");
+        }
+
+        // FIX: quick stock update from the products table (AJAX-friendly)
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult UpdateStock(int id, int stock)
+        {
+            if (!IsAdmin) return RedirectToAction("Login");
+            var p = MockData.Products.FirstOrDefault(x => x.Id == id && !x.IsDeleted);
+            if (p != null)
+            {
+                p.Stock = Math.Max(0, stock);
+                TempData["Success"] = $"Stock for \"{p.Name}\" updated to {p.Stock}.";
+            }
             return RedirectToAction("Products");
         }
 
