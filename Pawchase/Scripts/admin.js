@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (price > 0 && orig > price) {
                     var pct = Math.round((orig - price) / orig * 100);
                     preview.style.display = 'block';
-                    text.textContent = pct + '% OFF &mdash; SALE badge will appear on product';
+                    text.innerHTML = pct + '% OFF &mdash; SALE badge will appear on product';
                 } else {
                     preview.style.display = 'none';
                 }
