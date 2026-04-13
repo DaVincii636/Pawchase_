@@ -4,6 +4,13 @@
     Layout = "~/Views/Admin/_AdminLayout.cshtml";
 }
 
+@if (TempData["Error"] != null)
+{
+    <div style="background:rgba(224,85,85,.1);border:1px solid rgba(224,85,85,.3);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:1rem;font-size:13px;color:#c94040;display:flex;align-items:center;gap:8px;">
+        <i class="fa-solid fa-triangle-exclamation"></i> @TempData["Error"]
+    </div>
+}
+
 <div class="admin-page-header">
     <h1>Products</h1>
     <a href="@Url.Action("AddProduct","Admin")" class="btn-primary" style="padding:9px 18px;font-size:12px;">
@@ -11,26 +18,139 @@
     </a>
 </div>
 
+@* Admin table search *@
+<div style="margin-bottom:1rem;display:flex;align-items:center;gap:10px;">
+    <div style="display:flex;border:1.5px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;max-width:340px;flex:1;">
+        <input type="text" id="adminProductSearch" placeholder="Search by name or category…"
+               style="flex:1;padding:8px 12px;border:none;outline:none;font-size:13px;font-family:'Poppins',sans-serif;background:var(--white);color:var(--text);"
+               oninput="filterAdminProducts(this.value)" />
+        <span style="padding:0 12px;display:flex;align-items:center;color:var(--text-light);font-size:13px;background:var(--white);">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </span>
+    </div>
+    <span id="adminProductCount" style="font-size:12px;color:var(--text-light);">@Model.Count products</span>
+</div>
+
 <div class="admin-table-card">
-    <table class="admin-table">
-        <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Size</th><th>Price</th><th>Stock</th><th>Sale?</th><th>Actions</th></tr></thead>
+    <table class="admin-table" id="adminProductTable">
+        <thead>
+            <tr>
+                <th style="width:56px;">Image</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Size</th>
+                <th>Price</th>
+                <th>Stock</th>
+                <th>Sale?</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
         <tbody>
             @foreach (var p in Model)
             {
-                <tr>
-                    <td>@p.Id</td>
+                <tr data-name="@p.Name.ToLower()" data-category="@p.Category.ToLower()">
+                    <td>
+                        <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;background:linear-gradient(145deg,var(--peach),#eedfd0);flex-shrink:0;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;">
+                            <img src="@p.ImageUrl" alt="@p.Name"
+                                 style="width:100%;height:100%;object-fit:cover;"
+                                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                            <i class="fa-solid fa-bone" style="display:none;color:var(--blue);opacity:.4;font-size:16px;"></i>
+                        </div>
+                    </td>
                     <td><strong>@p.Name</strong></td>
                     <td>@p.Category</td>
                     <td>@p.BreedSize</td>
                     <td>&#8369;@p.Price.ToString("N2")</td>
-                    <td><span class="@(p.Stock<=5?"stock-low":"stock-ok")">@p.Stock</span></td>
-                    <td>@if(p.IsOnSale){<span class="sale-pill">SALE</span>}else{<span style="color:#aaa;">&mdash;</span>}</td>
+                    <td>
+                        @* Inline stock edit *@
+                        <form method="post" action="@Url.Action("UpdateStock","Admin")" style="display:inline-flex;align-items:center;gap:4px;" onsubmit="return confirmStockUpdate(this)">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@p.Id" />
+                            <input type="number" name="stock" value="@p.Stock" min="0"
+                                   class="stock-input @(p.Stock==0?"stock-zero":p.Stock<=5?"stock-low":"stock-ok")"
+                                   style="width:58px;padding:4px 6px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:'Poppins',sans-serif;text-align:center;" />
+                            <button type="submit" title="Update stock"
+                                    style="background:none;border:none;cursor:pointer;color:var(--blue);font-size:13px;padding:2px 4px;">
+                                <i class="fa-solid fa-check"></i>
+                            </button>
+                        </form>
+                    </td>
+                    <td>@if (p.IsOnSale)
+                    {<span class="sale-pill">SALE</span>}
+                    else
+                    {<span style="color:#aaa;">&mdash;</span>}</td>
                     <td class="action-col">
                         <a href="@Url.Action("EditProduct","Admin",new{id=p.Id})" class="tbl-btn edit"><i class="fa-solid fa-pen"></i> Edit</a>
-                        <a href="@Url.Action("DeleteProduct","Admin",new{id=p.Id})" class="tbl-btn delete" onclick="return confirm('Delete this product?')"><i class="fa-regular fa-trash-can"></i> Delete</a>
+                        <button type="button" class="tbl-btn delete"
+                                onclick="confirmDelete(@p.Id, '@Html.Raw(p.Name.Replace("'","\'"))')">
+                            <i class="fa-regular fa-trash-can"></i> Delete
+                        </button>
                     </td>
                 </tr>
             }
         </tbody>
     </table>
 </div>
+
+@* Delete confirmation modal *@
+<div id="deleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--white);border-radius:var(--radius-lg);padding:2rem;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2);text-align:center;">
+        <div style="width:56px;height:56px;border-radius:50%;background:rgba(224,85,85,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+            <i class="fa-regular fa-trash-can" style="font-size:1.5rem;color:#e05555;"></i>
+        </div>
+        <h3 style="font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:.5rem;">Delete Product?</h3>
+        <p id="deleteModalText" style="font-size:13px;color:var(--text-mid);margin-bottom:1.5rem;line-height:1.6;"></p>
+        <div style="display:flex;gap:10px;justify-content:center;">
+            <button onclick="closeDeleteModal()" class="btn-outline" style="padding:9px 22px;font-size:13px;">Cancel</button>
+            <a id="deleteConfirmLink" href="#" class="btn-primary" style="padding:9px 22px;font-size:13px;background:linear-gradient(135deg,#e85d5d,#c94040);border-color:#c94040;">
+                <i class="fa-regular fa-trash-can"></i> Delete
+            </a>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        // Admin product table search
+        function filterAdminProducts(query) {
+            var q = query.toLowerCase().trim();
+            var rows = document.querySelectorAll('#adminProductTable tbody tr');
+            var visible = 0;
+            rows.forEach(function (row) {
+                var name = row.getAttribute('data-name') || '';
+                var cat  = row.getAttribute('data-category') || '';
+                var show = q === '' || name.indexOf(q) !== -1 || cat.indexOf(q) !== -1;
+                row.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+            var countEl = document.getElementById('adminProductCount');
+            if (countEl) countEl.textContent = visible + ' product' + (visible !== 1 ? 's' : '');
+        }
+
+        // Inline stock update guard
+        function confirmStockUpdate(form) {
+            var input = form.querySelector('input[name="stock"]');
+            var val = parseInt(input.value);
+            if (isNaN(val) || val < 0) { alert('Please enter a valid stock number (0 or more).'); return false; }
+            return true;
+        }
+
+        // Delete modal
+        function confirmDelete(id, name) {
+            document.getElementById('deleteModalText').textContent =
+                'Are you sure you want to delete "' + name + '"? This action cannot be undone. The product will be hidden from the store.';
+            document.getElementById('deleteConfirmLink').href = '@Url.Action("DeleteProduct","Admin")?id=' + id;
+            var modal = document.getElementById('deleteModal');
+            modal.style.display = 'flex';
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+        }
+
+        // Close modal on backdrop click
+        document.getElementById('deleteModal').addEventListener('click', function (e) {
+            if (e.target === this) closeDeleteModal();
+        });
+    </script>
+}
