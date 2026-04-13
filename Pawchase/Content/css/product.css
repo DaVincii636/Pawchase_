@@ -597,3 +597,136 @@
         text-overflow: ellipsis;
         white-space: nowrap;
     }
+
+/* ── OUT OF STOCK OVERLAY ────────────────────────────────────────────────── */
+.oos-card {
+    cursor: default !important;
+    opacity: .75;
+}
+
+.oos-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(1px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4;
+    border-radius: inherit;
+}
+
+    .oos-overlay span {
+        background: rgba(80,80,80,0.85);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 6px 16px;
+        border-radius: 50px;
+        letter-spacing: .5px;
+        text-transform: uppercase;
+    }
+
+/* ── CARD STAR RATING ────────────────────────────────────────────────────── */
+.card-rating {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 11px;
+    color: #E6A520;
+    margin-bottom: 2px;
+}
+
+    .card-rating span {
+        font-size: 11px;
+        color: var(--text-light);
+        margin-left: 2px;
+    }
+
+/* ── QUANTITY STEPPER ────────────────────────────────────────────────────── */
+.qty-stepper {
+    margin: .2rem 0 .8rem;
+}
+
+.qty-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+    .qty-controls button {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 1.5px solid var(--border);
+        background: var(--white);
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--blue-dark);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        transition: all .15s;
+    }
+
+        .qty-controls button:hover {
+            border-color: var(--blue);
+            background: rgba(129,166,198,0.1);
+        }
+
+    .qty-controls #qtyDisplay {
+        min-width: 32px;
+        text-align: center;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text);
+    }
+
+/* ── DISABLED BUTTON (OOS on cards) ─────────────────────────────────────── */
+.btn-disabled-sm {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border-radius: 50px;
+    border: 1.5px solid var(--border);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-light);
+    background: var(--bg);
+    cursor: not-allowed;
+    opacity: .6;
+}
+
+/* ── PRICE RANGE DUAL SLIDER ─────────────────────────────────────────────── */
+input[type=range]#rangeMin,
+input[type=range]#rangeMax {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: transparent;
+    outline: none;
+    pointer-events: all;
+    cursor: pointer;
+}
+
+    input[type=range]#rangeMin::-webkit-slider-thumb,
+    input[type=range]#rangeMax::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--blue);
+        border: 2px solid #fff;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        cursor: pointer;
+        position: relative;
+        z-index: 2;
+    }
+
+/* Track background for the range container */
+#rangeMin + #rangeMax {
+    background: linear-gradient(to right, var(--border) 0%, var(--blue) 0%, var(--blue) 100%, var(--border) 100%);
+}
