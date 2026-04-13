@@ -3,11 +3,13 @@
     ViewBag.Title = "Dashboard";
     Layout = "~/Views/Admin/_AdminLayout.cshtml";
     var recentOrders = ViewBag.RecentOrders as List<Pawchase.Models.Order>;
+    int lowStockCount = ViewBag.LowStockCount != null ? (int)ViewBag.LowStockCount : 0;
+    int outOfStockCount = ViewBag.OutOfStockCount != null ? (int)ViewBag.OutOfStockCount : 0;
 }
 
 <div class="admin-page-header">
     <h1>Dashboard</h1>
-    <p>Welcome back, <strong>@Session["AdminName"]</strong> 👋</p>
+    <p>Welcome back, <strong>@Session["AdminName"]</strong></p>
 </div>
 
 <div class="stat-cards">
@@ -18,18 +20,40 @@
     <div class="stat-card"><div class="sc-icon" style="background:rgba(155,89,182,.15);color:#8e44ad;"><i class="fa-solid fa-users"></i></div><div class="sc-info"><span>Registered Users</span><strong>@ViewBag.TotalUsers</strong></div></div>
 </div>
 
+@* Low stock / out-of-stock alerts *@
+@if (outOfStockCount > 0)
+{
+    <div style="background:rgba(224,85,85,.08);border:1px solid rgba(224,85,85,.25);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:.75rem;display:flex;align-items:center;gap:10px;font-size:13px;color:#c0392b;">
+        <i class="fa-solid fa-circle-xmark" style="flex-shrink:0;"></i>
+        <span>
+            <strong>@outOfStockCount</strong> product@(outOfStockCount != 1 ? "s are" : " is") <strong>out of stock</strong>.
+            <a href="@Url.Action("Products","Admin")" style="color:#c0392b;font-weight:700;text-decoration:underline;margin-left:4px;">Manage stock &rarr;</a>
+        </span>
+    </div>
+}
+@if (lowStockCount > 0)
+{
+    <div style="background:rgba(230,130,20,.08);border:1px solid rgba(230,130,20,.3);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:1.5rem;display:flex;align-items:center;gap:10px;font-size:13px;color:#b8610a;">
+        <i class="fa-solid fa-triangle-exclamation" style="flex-shrink:0;"></i>
+        <span>
+            <strong>@lowStockCount</strong> product@(lowStockCount != 1 ? "s are" : " is") <strong>running low</strong> (5 or fewer left).
+            <a href="@Url.Action("Products","Admin")" style="color:#b8610a;font-weight:700;text-decoration:underline;margin-left:4px;">View products &rarr;</a>
+        </span>
+    </div>
+}
+
 @if ((int)ViewBag.RefundCount > 0)
 {
     <div style="background:rgba(224,85,85,.08);border:1px solid rgba(224,85,85,.25);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:1.5rem;display:flex;align-items:center;gap:10px;font-size:13px;color:#c0392b;">
         <i class="fa-solid fa-triangle-exclamation"></i>
-        <span>You have <strong>@ViewBag.RefundCount</strong> pending refund request(s). <a href="@Url.Action("Orders","Admin")" style="color:#c0392b;font-weight:700;text-decoration:underline;">Review now →</a></span>
+        <span>You have <strong>@ViewBag.RefundCount</strong> pending refund request(s). <a href="@Url.Action("Orders","Admin")" style="color:#c0392b;font-weight:700;text-decoration:underline;">Review now &rarr;</a></span>
     </div>
 }
 
 <div class="admin-table-card">
     <div class="atc-header">
         <h3>Recent Orders</h3>
-        <a href="@Url.Action("Orders","Admin")" style="font-size:12px;color:var(--blue-dark);font-weight:600;">View All →</a>
+        <a href="@Url.Action("Orders","Admin")" style="font-size:12px;color:var(--blue-dark);font-weight:600;">View All &rarr;</a>
     </div>
     <table class="admin-table">
         <thead><tr><th>Reference</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
@@ -39,7 +63,10 @@
                 foreach (var o in recentOrders)
                 {
                     <tr>
-                        <td><strong>@o.ReferenceNumber</strong>@if(o.HasRefundRequest){<text> <span class="flag-badge"><i class="fa-solid fa-circle-exclamation"></i> REFUND</span></text>}</td>
+                        <td>
+                            <strong>@o.ReferenceNumber</strong>@if (o.HasRefundRequest)
+                            {<text> <span class="flag-badge"><i class="fa-solid fa-circle-exclamation"></i> REFUND</span></text>}
+                        </td>
                         <td>@o.CustomerName</td>
                         <td>@o.OrderDate.ToString("MMM dd, yyyy")</td>
                         <td>&#8369;@o.Total.ToString("N2")</td>
@@ -48,7 +75,10 @@
                     </tr>
                 }
             }
-            else { <tr><td colspan="6" class="no-data">No orders yet.</td></tr> }
+            else
+            {
+                <tr><td colspan="6" class="no-data">No orders yet.</td></tr>
+            }
         </tbody>
     </table>
 </div>
