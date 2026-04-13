@@ -104,34 +104,62 @@ namespace Pawchase.Controllers
             return View(GetCart());
         }
 
-        public ActionResult Add(int id, string returnUrl)
+        public ActionResult Add(int id, string returnUrl, string variantLabel)
         {
             if (!IsLoggedIn) return RedirectToAction("Login", "Account", new { returnUrl = returnUrl ?? Url.Action("Index", "Product") });
             var product = MockData.Products.FirstOrDefault(p => p.Id == id);
             if (product == null) return HttpNotFound();
+
+            // If the product has variants and none was specified, bounce back to details so the user can pick one
+            if (product.Variants != null && product.Variants.Any() && string.IsNullOrEmpty(variantLabel))
+            {
+                var detailUrl = Url.Action("Details", "Product", new { id = id });
+                // Preserve original returnUrl in the fragment so the page knows to flash the variant selector
+                return Redirect(detailUrl + "?variantRequired=1");
+            }
+
+            // Resolve the chosen variant object (null-safe: products without variants stay null)
+            ProductVariant chosen = null;
+            if (!string.IsNullOrEmpty(variantLabel) && product.Variants != null)
+                chosen = product.Variants.FirstOrDefault(v => v.Label == variantLabel);
+
             var cart = GetCart();
-            var existing = cart.FirstOrDefault(c => c.Product.Id == id);
-            if (existing != null) existing.Quantity++;
-            else cart.Add(new CartItem { Product = product, Quantity = 1 });
+            // Match on both product id AND variant so the same product in different variants are distinct line items
+            var existing = cart.FirstOrDefault(c =>
+                c.Product.Id == id &&
+                (c.SelectedVariant == null && chosen == null ||
+                 c.SelectedVariant != null && chosen != null && c.SelectedVariant.Label == chosen.Label));
+
+            if (existing != null)
+                existing.Quantity++;
+            else
+                cart.Add(new CartItem { Product = product, Quantity = 1, SelectedVariant = chosen });
+
             Session["Cart"] = cart;
             if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
             return RedirectToAction("Index");
         }
 
-        public ActionResult Remove(int id)
+        public ActionResult Remove(int id, string variantLabel)
         {
             var cart = GetCart();
-            var item = cart.FirstOrDefault(c => c.Product.Id == id);
+            var item = cart.FirstOrDefault(c =>
+                c.Product.Id == id &&
+                ((string.IsNullOrEmpty(variantLabel) && c.SelectedVariant == null) ||
+                 (c.SelectedVariant != null && c.SelectedVariant.Label == variantLabel)));
             if (item != null) cart.Remove(item);
             Session["Cart"] = cart;
             return RedirectToAction("Index");
         }
 
         [HttpPost]
-        public ActionResult UpdateQuantity(int id, int quantity)
+        public ActionResult UpdateQuantity(int id, int quantity, string variantLabel)
         {
             var cart = GetCart();
-            var item = cart.FirstOrDefault(c => c.Product.Id == id);
+            var item = cart.FirstOrDefault(c =>
+                c.Product.Id == id &&
+                ((string.IsNullOrEmpty(variantLabel) && c.SelectedVariant == null) ||
+                 (c.SelectedVariant != null && c.SelectedVariant.Label == variantLabel)));
             if (item != null) { if (quantity <= 0) cart.Remove(item); else item.Quantity = quantity; }
             Session["Cart"] = cart;
             return RedirectToAction("Index");
@@ -274,15 +302,18 @@ namespace Pawchase.Controllers
             if (!IsAdmin) return RedirectToAction("Login");
             product.Id = MockData.Products.Max(p => p.Id) + 1;
 
-            // Save main image using category subfolder
+            // FIX: If the ImageUrl is a base64 data URL (uploaded via file picker), keep it as-is.
+            // Only rewrite the path when it is a plain filename/path typed in manually.
             if (string.IsNullOrWhiteSpace(product.ImageUrl))
                 product.ImageUrl = "/Content/images/products/placeholder.png";
-            else
+            else if (!product.ImageUrl.StartsWith("data:image"))
             {
+                // Manual path entry — rewrite to category subfolder as before
                 var fileName = System.IO.Path.GetFileName(product.ImageUrl);
                 var folder = (product.Category ?? "Others").ToLower();
                 product.ImageUrl = "/Content/images/products/" + folder + "/" + fileName;
             }
+            // else: base64 data URL from file picker — store it directly, no rewriting needed
 
             // Build variants from parallel arrays
             product.Variants = new System.Collections.Generic.List<Pawchase.Models.ProductVariant>();
@@ -296,6 +327,7 @@ namespace Pawchase.Controllers
                 {
                     product.Variants.Add(new Pawchase.Models.ProductVariant
                     {
+                        // FIX: base64 data URLs from the variant file picker are stored directly
                         ImageUrl = string.IsNullOrWhiteSpace(imgPath) ? null : imgPath,
                         Label = label
                     });
@@ -329,7 +361,15 @@ namespace Pawchase.Controllers
                 p.Category = updated.Category;
                 p.BreedSize = updated.BreedSize;
                 p.Stock = updated.Stock;
-                p.ImageUrl = updated.ImageUrl;
+
+                // FIX: Same base64 guard for the main image on Edit.
+                // If a new file was picked it arrives as a data URL — keep it.
+                // If no new file was picked the existing URL (data URL or /Content/... path) is
+                // passed through unchanged from the hidden field in EditProduct.cshtml.
+                if (string.IsNullOrWhiteSpace(updated.ImageUrl))
+                    p.ImageUrl = "/Content/images/products/placeholder.png";
+                else
+                    p.ImageUrl = updated.ImageUrl; // preserves both data URLs and existing /Content/ paths
 
                 // Rebuild variants from parallel arrays
                 p.Variants = new System.Collections.Generic.List<Pawchase.Models.ProductVariant>();
