@@ -6,7 +6,7 @@
     var reviews = ViewBag.Reviews as List<Pawchase.Models.Review>;
 }
 @section styles {
-    <link href="@Url.Content("~/Content/css/product.css")" rel="stylesheet"/>
+    <link href="@Url.Content("~/Content/css/product.css")" rel="stylesheet" />
 }
 
 <section class="product-detail-section">
@@ -22,10 +22,11 @@
 
     <div class="product-detail-inner">
         <div class="detail-image">
-            <img src="@Model.ImageUrl" alt="@Model.Name"
-                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"/>
+            <img id="mainProductImg" src="@Model.ImageUrl" alt="@Model.Name"
+                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
             <div class="img-fallback-lg" style="display:none;"><i class="fa-solid fa-bone"></i></div>
-            @if (Model.IsOnSale) { <span class="sale-badge-lg">SALE</span> }
+            @if (Model.IsOnSale)
+            {<span class="sale-badge-lg">SALE</span>}
         </div>
 
         <div class="detail-info">
@@ -48,12 +49,48 @@
 
             <p class="detail-description">@Model.Description</p>
 
+            @if (Model.Variants != null && Model.Variants.Any())
+            {
+                <div class="variant-section">
+                    <span class="variant-label-title">Color / Style</span>
+                    <div class="variant-thumbs" id="variantThumbs">
+                        @{ int vIdx = 0; }
+                        @foreach (var v in Model.Variants)
+                        {
+                            <div class="variant-thumb @(vIdx == 0 ? "variant-active" : "")"
+                                 title="@v.Label"
+                                 data-img="@v.ImageUrl"
+                                 onclick="selectVariant(this, '@v.ImageUrl')">
+                                @if (!string.IsNullOrEmpty(v.ImageUrl))
+                                {
+                                    <img src="@v.ImageUrl" alt="@(string.IsNullOrEmpty(v.Label) ? "Variant" : v.Label)"
+                                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                                    <div class="variant-thumb-placeholder" style="display:none;"><i class="fa-solid fa-palette"></i></div>
+                                }
+                                else
+                                {
+                                    <div class="variant-thumb-placeholder"><i class="fa-solid fa-palette"></i></div>
+                                }
+                                @if (!string.IsNullOrEmpty(v.Label))
+                                {
+                                    <span>@v.Label</span>
+                                }
+                            </div>
+                            vIdx++;
+                        }
+                    </div>
+                </div>
+            }
+
             <div class="detail-meta">
                 <div class="meta-item">
                     <i class="fa-solid fa-boxes-stacked"></i>
-                    @if (Model.Stock > 10)      { <span><strong style="color:#1e8449;">In Stock</strong> (@Model.Stock available)</span> }
-                    else if (Model.Stock > 0)   { <span><strong style="color:#d4a017;">Low Stock</strong> (Only @Model.Stock left!)</span> }
-                    else                         { <span><strong style="color:#e05555;">Out of Stock</strong></span> }
+                    @if (Model.Stock > 10)
+                    {<span><strong style="color:#1e8449;">In Stock</strong> (@Model.Stock available)</span> }
+                else if (Model.Stock > 0)
+                { <span><strong style="color:#d4a017;">Low Stock</strong> (Only @Model.Stock left!)</span> }
+            else
+            { <span><strong style="color:#e05555;">Out of Stock</strong></span>}
                 </div>
                 <div class="meta-item">
                     <i class="fa-solid fa-truck"></i>
@@ -90,7 +127,7 @@
                     <div style="background:var(--white);border-radius:var(--radius);border:1.5px solid var(--border);padding:1.2rem;box-shadow:var(--shadow-card);">
                         <div style="display:flex;gap:3px;color:#E6A520;margin-bottom:.5rem;">
                             @for (int i = 1; i <= 5; i++)
-                            { <i class="@(i<=r.Stars?"fa-solid":"fa-regular") fa-star" style="font-size:13px;"></i> }
+                            {<i class="@(i<=r.Stars?"fa-solid":"fa-regular") fa-star" style="font-size:13px;"></i>}
                         </div>
                         <p style="font-size:13px;color:var(--text-mid);line-height:1.6;">"@r.Comment"</p>
                         <small style="font-size:11px;color:var(--text-light);margin-top:.4rem;display:block;">&mdash; @r.CustomerName &middot; Verified Buyer</small>
@@ -113,9 +150,10 @@
                 @foreach (var p in related)
                 {
                     <div class="product-card">
-                        @if (p.IsOnSale) { <span class="sale-badge">SALE</span> }
+                        @if (p.IsOnSale)
+                        {<span class="sale-badge">SALE</span>}
                         <div class="product-img">
-                            <img src="@p.ImageUrl" alt="@p.Name" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"/>
+                            <img src="@p.ImageUrl" alt="@p.Name" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
                             <div class="img-fallback" style="display:none;"><i class="fa-solid fa-bone"></i></div>
                         </div>
                         <div class="product-info">
@@ -123,7 +161,8 @@
                             <h3>@p.Name</h3>
                             <div class="product-price">
                                 <span class="price">&#8369;@p.Price.ToString("N2")</span>
-                                @if(p.IsOnSale){<span class="original-price">&#8369;@p.OriginalPrice.Value.ToString("N2")</span>}
+                                @if (p.IsOnSale)
+                                {<span class="original-price">&#8369;@p.OriginalPrice.Value.ToString("N2")</span>}
                             </div>
                             <div class="product-actions">
                                 <a href="@Url.Action("Details","Product",new{id=p.Id})" class="btn-outline-sm"><i class="fa-regular fa-eye"></i> View</a>
@@ -139,4 +178,22 @@
 
 @section scripts {
     <script src="@Url.Content("~/Scripts/product.js")"></script>
+    <script>
+        function selectVariant(el, imgUrl) {
+            // Swap main product image
+            var mainImg = document.getElementById('mainProductImg');
+            if (mainImg && imgUrl) {
+                mainImg.style.opacity = '0';
+                mainImg.style.transition = 'opacity .18s';
+                setTimeout(function () {
+                    mainImg.src = imgUrl;
+                    mainImg.style.opacity = '1';
+                }, 120);
+            }
+            // Update active state on thumbs
+            var thumbs = document.querySelectorAll('#variantThumbs .variant-thumb');
+            thumbs.forEach(function (t) { t.classList.remove('variant-active'); });
+            el.classList.add('variant-active');
+        }
+    </script>
 }
