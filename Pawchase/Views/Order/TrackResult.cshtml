@@ -2,13 +2,13 @@
 @{
     ViewBag.Title = "Order Status";
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var statuses   = new[] { "To Ship", "In Transit", "Out for Delivery", "Delivered" };
-    var icons      = new[] { "fa-box", "fa-truck", "fa-location-dot", "fa-circle-check" };
+    var statuses = new[] { "To Ship", "In Transit", "Out for Delivery", "Delivered" };
+    var icons = new[] { "fa-box", "fa-truck", "fa-location-dot", "fa-circle-check" };
     var displayStatus = Model.Status == "To Rate" || Model.Status == "Completed" ? "Delivered" : Model.Status;
     var currentIdx = Array.IndexOf(statuses, displayStatus);
 }
 @section styles {
-    <link href="@Url.Content("~/Content/css/order.css")" rel="stylesheet"/>
+    <link href="@Url.Content("~/Content/css/order.css")" rel="stylesheet" />
 }
 
 <div class="page-hero">
@@ -51,24 +51,25 @@
             </div>
             <div class="order-items-detail">
                 <h3>Items Ordered</h3>
-                @foreach (var item in Model.Items)
+                @foreach (var snap in Model.Snapshots)
                 {
+                    var trackImg = !string.IsNullOrEmpty(snap.VariantImageUrl) ? snap.VariantImageUrl : snap.ProductImageUrl;
                     <div class="order-item-row">
-                    <div class="oi-thumb">
-                        <img src="@item.Product.ImageUrl" alt="@item.Product.Name"
-                             style="width:100%; height:100%; object-fit:cover; border-radius:6px;"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-                        <i class="fa-solid fa-bone" style="display:none;"></i>
-                    </div>
-                        <div class="oi-info">
-                            <strong>@item.Product.Name</strong>
-                            @if (item.SelectedVariant != null)
-                            {
-                                <span style="font-size:11px; color:var(--text-light);">@item.SelectedVariant.Label</span>
-                            }
-                            <span>Qty: @item.Quantity</span>
+                        <div class="oi-thumb">
+                            <img src="@trackImg" alt="@snap.ProductName"
+                                 style="width:100%; height:100%; object-fit:cover; border-radius:6px;"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                            <i class="fa-solid fa-bone" style="display:none;"></i>
                         </div>
-                        <div class="oi-price">&#8369;@item.Subtotal.ToString("N2")</div>
+                        <div class="oi-info">
+                            <strong>@snap.ProductName</strong>
+                            @if (!string.IsNullOrEmpty(snap.VariantLabel))
+                            {
+                                <span style="font-size:11px; color:var(--text-light);">@snap.VariantLabel</span>
+                            }
+                            <span>Qty: @snap.Quantity</span>
+                        </div>
+                        <div class="oi-price">&#8369;@snap.Subtotal.ToString("N2")</div>
                     </div>
                 }
                 <div class="order-total-row">
