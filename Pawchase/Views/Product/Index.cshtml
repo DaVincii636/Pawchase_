@@ -28,6 +28,21 @@
             <span id="filter-dot" style="background:#e05555;color:#fff;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;">!</span>
         }
     </button>
+    <div class="toolbar-search">
+        <form method="get" action="@Url.Action("Index","Product")" class="toolbar-search-form" id="toolbarSearchForm">
+            <input type="hidden" name="sort" value="@ViewBag.Sort" />
+            <input type="hidden" name="category" value="@ViewBag.Category" />
+            <input type="hidden" name="size" value="@ViewBag.Size" />
+            <input type="hidden" name="onSale" value="@(onSale ? "true" : "")" />
+            <input type="hidden" name="minPrice" value="@(ViewBag.MinPrice != null ? ViewBag.MinPrice.ToString() : "")" />
+            <input type="hidden" name="maxPrice" value="@(ViewBag.MaxPrice != null ? ViewBag.MaxPrice.ToString() : "")" />
+            <div class="search-input-wrap">
+                <input type="text" name="search" id="toolbarSearchInput" placeholder="Search products..."
+                       value="@ViewBag.Search" autocomplete="off" />
+                <button type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
+            </div>
+        </form>
+    </div>
     <div class="toolbar-right">
         <span id="resultCount">
             <strong id="resultNum">@Model.Count</strong> product@(Model.Count != 1 ? "s" : "") found
@@ -40,8 +55,7 @@
         </span>
 
         @* Sort dropdown *@
-        <select id="sortSelect" onchange="applySort(this.value)"
-                style="padding:5px 10px;border:1.5px solid var(--border);border-radius:50px;font-size:12px;font-family:'Poppins',sans-serif;color:var(--text-mid);cursor:pointer;background:var(--white);">
+        <select id="sortSelect" onchange="applySort(this.value)">
             <option value="default" @(ViewBag.Sort == "default" || ViewBag.Sort == null ? "selected" : "")>Default</option>
             <option value="price_asc" @(ViewBag.Sort == "price_asc" ? "selected" : "")>Price: Low to High</option>
             <option value="price_desc" @(ViewBag.Sort == "price_desc" ? "selected" : "")>Price: High to Low</option>
@@ -66,19 +80,12 @@
             <input type="hidden" name="onSale" id="hOnSale" value="@(onSale ? "true" : "")" />
 
             <div class="filter-group">
-                <label>Search</label>
-                <div class="search-input-wrap">
-                    <input type="text" name="search" id="searchInput" placeholder="Search products..."
-                           value="@ViewBag.Search" autocomplete="off" />
-                    <button type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
-                </div>
-            </div>
-
-            <div class="filter-group">
                 <label>On Sale</label>
                 <button type="button"
                         onclick="setFilter('onSale', @(onSale ? "''" : "'true'"))"
                         class="filter-btn @(onSale ? "active" : "")"
+                        data-filter-key="onSale"
+                        data-filter-val="@(onSale ? "" : "true")"
                         style="width:100%;text-align:center;border-radius:var(--radius-sm);">
                     <i class="fa-solid fa-tag"></i> @(onSale ? "Showing Sale Items" : "Show Sale Items Only")
                 </button>
@@ -87,10 +94,10 @@
             <div class="filter-group">
                 <label>Breed Size</label>
                 <div class="filter-options">
-                    <button type="button" onclick="setFilter('size', '')" class="filter-btn @(ViewBag.Size==null?"active":"")">All</button>
-                    <button type="button" onclick="setFilter('size', 'Small')" class="filter-btn @(ViewBag.Size=="Small" ?"active":"")">Small</button>
-                    <button type="button" onclick="setFilter('size', 'Medium')" class="filter-btn @(ViewBag.Size=="Medium"?"active":"")">Medium</button>
-                    <button type="button" onclick="setFilter('size', 'Large')" class="filter-btn @(ViewBag.Size=="Large" ?"active":"")">Large</button>
+                    <button type="button" onclick="setFilter('size', '')" class="filter-btn @(ViewBag.Size==null?"active":"")" data-filter-key="size" data-filter-val="">All</button>
+                    <button type="button" onclick="setFilter('size', 'Small')" class="filter-btn @(ViewBag.Size=="Small" ?"active":"")" data-filter-key="size" data-filter-val="Small">Small</button>
+                    <button type="button" onclick="setFilter('size', 'Medium')" class="filter-btn @(ViewBag.Size=="Medium"?"active":"")" data-filter-key="size" data-filter-val="Medium">Medium</button>
+                    <button type="button" onclick="setFilter('size', 'Large')" class="filter-btn @(ViewBag.Size=="Large" ?"active":"")" data-filter-key="size" data-filter-val="Large">Large</button>
                 </div>
             </div>
 
@@ -99,9 +106,9 @@
                 <div class="filter-options vertical">
                     @foreach (var cat in new[] { "Treats", "Toys", "Accessories", "Health", "Others" })
                     {
-                        <button type="button" onclick="setFilter('category', '@cat')" class="filter-btn @(ViewBag.Category==cat?"active":"")">@cat</button>
+                        <button type="button" onclick="setFilter('category', '@cat')" class="filter-btn @(ViewBag.Category==cat?"active":"")" data-filter-key="category" data-filter-val="@cat">@cat</button>
                     }
-                    <button type="button" onclick="setFilter('category', '')" class="filter-btn @(ViewBag.Category==null?"active":"")">All Categories</button>
+                    <button type="button" onclick="setFilter('category', '')" class="filter-btn @(ViewBag.Category==null?"active":"")" data-filter-key="category" data-filter-val="">All Categories</button>
                 </div>
             </div>
 
@@ -116,19 +123,19 @@
                         <input type="range" id="rangeMax" min="@globalMin" max="@globalMax" value="@curMax" step="50"
                                style="position:absolute;width:100%;pointer-events:none;" />
                     </div>
-                    <button type="submit" class="filter-btn" style="width:100%;text-align:center;border-radius:var(--radius-sm);margin-top:6px;">
+                    <button type="button" class="filter-btn" onclick="applyPriceFilter()"
+                            style="width:100%;text-align:center;border-radius:var(--radius-sm);margin-top:6px;">
                         Apply Price Filter
                     </button>
                 </div>
             </div>
 
             <div class="filter-group" style="margin-top:.5rem;border-top:1px solid var(--border);padding-top:1rem;">
-                <a href="@Url.Action("Index","Product")?panelOpen=1"
-                   style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px 0;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--white);color:var(--text-mid);font-size:12px;font-weight:600;font-family:'Poppins',sans-serif;cursor:pointer;text-decoration:none;transition:background .15s,color .15s;"
-                   onmouseover="this.style.background='#fee';this.style.color='#c94040';this.style.borderColor='#e05555';"
-                   onmouseout="this.style.background='var(--white)';this.style.color='var(--text-mid)';this.style.borderColor='var(--border)';">
+                <button type="button" class="filter-btn"
+                        onclick="resetAllFilters()"
+                        style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;text-align:center;border-radius:var(--radius-sm);">
                     <i class="fa-solid fa-rotate-left"></i> Reset All Filters
-                </a>
+                </button>
             </div>
         </form>
     </aside>
@@ -173,8 +180,6 @@
                          data-search="@searchText"
                          onclick="@(isOOS ? "" : "window.location='" + Url.Action("Details","Product",new{id=p.Id}) + "'")">
 
-                        @if (isOnSale)
-                        {<span class="sale-badge">SALE</span>}
                         @if (isOnSale && disc > 0)
                         {<span class="discount-pct-badge">-@disc%</span>}
                         @if (isOOS)
@@ -225,21 +230,7 @@
                                     <span class="discount-pct">-@disc%</span>
                                 }
                             </div>
-                            <div class="product-actions">
-                                <a href="@Url.Action("Details","Product",new{id=p.Id})" class="btn-outline-sm" onclick="event.stopPropagation()">
-                                    <i class="fa-regular fa-eye"></i> Details
-                                </a>
-                                @if (!isOOS)
-                                {
-                                    <a href="@Url.Action("Add","Cart",new{id=p.Id,returnUrl=Request.Url.PathAndQuery})" class="btn-primary-sm" onclick="event.stopPropagation()">
-                                        <i class="fa-solid fa-cart-plus"></i> Add
-                                    </a>
-                                }
-                                else
-                                {
-                                    <span class="btn-disabled-sm">Out of Stock</span>
-                                }
-                            </div>
+
                         </div>
                     </div>
                 }
@@ -262,9 +253,66 @@
             } else {
                 url.searchParams.set(key, value);
             }
-            // Keep the filter panel open after the page reloads
             url.searchParams.set('panelOpen', '1');
-            window.location.href = url.toString();
+            // Update active state on filter buttons immediately (no reload flash)
+            document.querySelectorAll('.filter-btn[data-filter-key="' + key + '"]').forEach(function(b){
+                b.classList.remove('active');
+            });
+            // For onSale toggle: the button's data-filter-val flips each click,
+            // so find the button whose current onclick value matches what we just set.
+            // Simpler: just mark the button that was clicked as active (or not, if turning off).
+            var matchVal = (value === '' || value === null || value === undefined) ? '' : value;
+            var target = document.querySelector('.filter-btn[data-filter-key="' + key + '"][data-filter-val="' + matchVal + '"]');
+            if (target && matchVal !== '') target.classList.add('active');
+            // For "All" / clear buttons (empty value), the matching button has data-filter-val=""
+            if (matchVal === '') {
+                var allBtn = document.querySelector('.filter-btn[data-filter-key="' + key + '"][data-filter-val=""]');
+                if (allBtn) allBtn.classList.add('active');
+            }
+            // AJAX: fetch updated product grid only
+            fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function(r){ return r.text(); })
+                .then(function(html){
+                    var parser = new DOMParser();
+                    var doc = parser.parseFromString(html, 'text/html');
+                    // Replace product grid
+                    var newGrid = doc.getElementById('productsGrid');
+                    var curGrid = document.getElementById('productsGrid');
+                    var newNoP  = doc.querySelector('.no-products:not(#noProducts)');
+                    var mainEl  = document.querySelector('.product-main');
+                    if (newGrid && curGrid) {
+                        curGrid.innerHTML = newGrid.innerHTML;
+                    } else if (!newGrid && mainEl) {
+                        // no products
+                        var existing = mainEl.querySelector('.products-grid');
+                        if (existing) existing.remove();
+                        if (!mainEl.querySelector('.no-products:not(#noProducts)') && newNoP) {
+                            mainEl.appendChild(newNoP.cloneNode(true));
+                        }
+                    }
+                    // Update result count text
+                    var newCount = doc.getElementById('resultCount');
+                    var curCount = document.getElementById('resultCount');
+                    if (newCount && curCount) curCount.innerHTML = newCount.innerHTML;
+                    // Update hidden inputs so price filter submit stays correct
+                    var hCat = document.getElementById('hCategory');
+                    if (hCat && key === 'category') hCat.value = value || '';
+                    var hSize = document.getElementById('hSize');
+                    if (hSize && key === 'size') hSize.value = value || '';
+                    var hOnSale = document.getElementById('hOnSale');
+                    if (hOnSale && key === 'onSale') hOnSale.value = value || '';
+                    // Update URL without reload so browser history works
+                    window.history.replaceState(null, '', url.toString());
+                    // Re-init card animations for newly loaded cards
+                    var cards = document.querySelectorAll('.product-card');
+                    cards.forEach(function(card, i) {
+                        card.style.opacity = '0';
+                        card.style.transform = 'translateY(12px)';
+                        card.style.transition = 'opacity .3s ease ' + (i * 0.04) + 's, transform .3s ease ' + (i * 0.04) + 's';
+                        setTimeout(function(c){ c.style.opacity='1'; c.style.transform='translateY(0)'; }, 50, card);
+                    });
+                })
+                .catch(function(){ window.location.href = url.toString(); });
         }
 
         // Sort dropdown -- preserves all current filters
@@ -276,6 +324,89 @@
                 url.searchParams.set('panelOpen', '1');
             }
             window.location.href = url.toString();
+        }
+
+        // -- Shared AJAX fetch + DOM update used by price & reset --
+        function fetchAndUpdate(url) {
+            fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function(r){ return r.text(); })
+                .then(function(html){
+                    var parser = new DOMParser();
+                    var doc = parser.parseFromString(html, 'text/html');
+                    var newGrid = doc.getElementById('productsGrid');
+                    var curGrid = document.getElementById('productsGrid');
+                    var newNoP  = doc.querySelector('.no-products:not(#noProducts)');
+                    var mainEl  = document.querySelector('.product-main');
+                    if (newGrid && curGrid) {
+                        curGrid.innerHTML = newGrid.innerHTML;
+                    } else if (!newGrid && mainEl) {
+                        var existing = mainEl.querySelector('.products-grid');
+                        if (existing) existing.remove();
+                        if (!mainEl.querySelector('.no-products:not(#noProducts)') && newNoP) {
+                            mainEl.appendChild(newNoP.cloneNode(true));
+                        }
+                    }
+                    var newCount = doc.getElementById('resultCount');
+                    var curCount = document.getElementById('resultCount');
+                    if (newCount && curCount) curCount.innerHTML = newCount.innerHTML;
+                    window.history.replaceState(null, '', url.toString());
+                    var cards = document.querySelectorAll('.product-card');
+                    cards.forEach(function(card, i) {
+                        card.style.opacity = '0';
+                        card.style.transform = 'translateY(12px)';
+                        card.style.transition = 'opacity .3s ease ' + (i * 0.04) + 's, transform .3s ease ' + (i * 0.04) + 's';
+                        setTimeout(function(c){ c.style.opacity='1'; c.style.transform='translateY(0)'; }, 50, card);
+                    });
+                })
+                .catch(function(){ window.location.href = url.toString(); });
+        }
+
+        // -- Apply Price Filter: reads current slider values, patches URL, AJAX update --
+        function applyPriceFilter() {
+            var rMin = document.getElementById('rangeMin');
+            var rMax = document.getElementById('rangeMax');
+            if (!rMin || !rMax) return;
+            var lo = parseInt(rMin.value);
+            var hi = parseInt(rMax.value);
+            if (lo > hi) { var tmp = lo; lo = hi; hi = tmp; }
+            var url = new URL(window.location.href);
+            var gMin = @globalMin;
+            var gMax = @globalMax;
+            if (lo <= gMin) { url.searchParams.delete('minPrice'); } else { url.searchParams.set('minPrice', lo); }
+            if (hi >= gMax) { url.searchParams.delete('maxPrice'); } else { url.searchParams.set('maxPrice', hi); }
+            url.searchParams.set('panelOpen', '1');
+            // Mark button as active visually
+            var applyBtn = document.querySelector('[onclick="applyPriceFilter()"]');
+            if (applyBtn) applyBtn.classList.add('active');
+            fetchAndUpdate(url);
+        }
+
+        // -- Reset All Filters: clears every filter param, AJAX update, resets button states --
+        function resetAllFilters() {
+            var url = new URL(window.location.href);
+            ['category', 'size', 'onSale', 'minPrice', 'maxPrice', 'search'].forEach(function(k){
+                url.searchParams.delete(k);
+            });
+            url.searchParams.set('panelOpen', '1');
+            // Reset all filter button active states
+            document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('active'); });
+            // Re-activate the "All" defaults
+            document.querySelectorAll('.filter-btn[data-filter-val=""]').forEach(function(b){ b.classList.add('active'); });
+            // Reset slider UI back to full range
+            var rMin = document.getElementById('rangeMin');
+            var rMax = document.getElementById('rangeMax');
+            if (rMin) rMin.value = rMin.min;
+            if (rMax) rMax.value = rMax.max;
+            var label = document.getElementById('priceRangeLabel');
+            if (label && rMin && rMax) label.innerHTML = '&#8369;' + rMin.min + ' &ndash; &#8369;' + rMax.max;
+            // Sync hidden inputs
+            var hCat = document.getElementById('hCategory'); if (hCat) hCat.value = '';
+            var hSize = document.getElementById('hSize'); if (hSize) hSize.value = '';
+            var hOnSale = document.getElementById('hOnSale'); if (hOnSale) hOnSale.value = '';
+            // Clear toolbar search input too
+            var toolbarSearch = document.getElementById('toolbarSearchInput');
+            if (toolbarSearch) toolbarSearch.value = '';
+            fetchAndUpdate(url);
         }
 
         // Make the search/price form also inherit all current URL params so
