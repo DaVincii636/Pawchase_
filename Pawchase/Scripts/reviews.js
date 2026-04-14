@@ -47,7 +47,7 @@ function initWriteReviewCounter() {
     var submitBtn = byId('write-review-submit');
     if (!textarea || !counter || !submitBtn) return;
 
-    var maxChars = 150;
+    var maxChars = 200;
     var update = function () {
         var len = textarea.value.length;
         var exceeded = len > maxChars;
@@ -136,9 +136,20 @@ function openModal(index) {
 
     modal.classList.toggle('single', !!r.isTextOnly);
     if (!r.isTextOnly) {
-        if (r.photoUrl) {
+        var photoUrl = r.resolvedPhotoUrl || r.photoUrl;
+        if (photoUrl) {
             photo.style.background = '#f4f7fb';
-            photo.innerHTML = '<img src="' + r.photoUrl + '" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<i class=\\\"fa-solid ' + r.icon + '\\\" style=\\\"font-size:5rem;color:rgba(0,0,0,.15)\\\"></i>\'"/>';
+            photo.innerHTML = '<img src="' + photoUrl + '" alt="Review photo" style="width:100%;height:100%;object-fit:cover;display:block"><i class="fa-solid ' + r.icon + '" style="font-size:5rem;color:rgba(0,0,0,.15);display:none"></i>';
+
+            var img = photo.querySelector('img');
+            var fallbackIcon = photo.querySelector('i');
+            if (img && fallbackIcon) {
+                img.onerror = function () {
+                    this.remove();
+                    photo.style.background = r.color;
+                    fallbackIcon.style.display = 'inline-flex';
+                };
+            }
         } else {
             photo.style.background = r.color;
             photo.innerHTML = '<i class="fa-solid ' + r.icon + '" style="font-size:5rem;color:rgba(0,0,0,.15)"></i>';
@@ -149,7 +160,14 @@ function openModal(index) {
     byId('modal-name').textContent = r.name;
     byId('modal-date').textContent = r.date + ' · Verified Buyer';
     byId('modal-caption').textContent = '"' + r.comment + '"';
-    byId('modal-product').innerHTML = '<i class="fa-solid fa-bone" style="color:var(--blue)"></i> ' + r.productName;
+    var modalProduct = byId('modal-product');
+    if (r.productName) {
+        modalProduct.style.display = 'inline-flex';
+        modalProduct.innerHTML = '<i class="fa-solid fa-bone" style="color:var(--blue)"></i> ' + r.productName;
+    } else {
+        modalProduct.style.display = 'none';
+        modalProduct.innerHTML = '';
+    }
     byId('modal-product-link').href = '/Product/Details/' + r.productId;
     byId('modal-likes').textContent = r.likes;
     byId('modal-reports').textContent = r.reportCount;

@@ -18,10 +18,13 @@
             comment = r.Comment,
             likes = r.Likes,
             date = r.DatePosted.ToString("MMM dd, yyyy"),
+            productName = MockData.Products.FirstOrDefault(p => p.Id == r.ProductId)?.Name ?? "",
+            productId = r.ProductId,
             isEdited = r.IsEdited,
             editedAt = r.LastEditedAt.HasValue ? r.LastEditedAt.Value.ToString("o") : null,
             isTextOnly = r.IsTextOnly,
             photoUrl = r.PhotoUrl,
+            resolvedPhotoUrl = string.IsNullOrWhiteSpace(r.PhotoUrl) ? "" : Url.Content(r.PhotoUrl),
             color = colors[i % colors.Length],
             icon = icons[i % icons.Length],
             comments = (r.Comments ?? new List<Pawchase.Models.ReviewComment>()).Select(c => new
@@ -91,13 +94,18 @@
                 {
                     var r = withPhotos[i];
                     var modelIndex = Model.FindIndex(x => x.Id == r.Id);
+                    var prod = MockData.Products.FirstOrDefault(p => p.Id == r.ProductId);
                     var color = colors[i % colors.Length];
                     var icon = icons[i % icons.Length];
                     <div class="my-review-card @(r.IsTextOnly ? "without-photo" : "with-photo")" onclick="openMyModal(@modelIndex)">
                         @if (!r.IsTextOnly)
                         {
                             <div class="my-review-photo" style="background:@color;">
-                                <i class="fa-solid @icon" style="font-size:2.6rem;color:rgba(0,0,0,.12)"></i>
+                                @if (!string.IsNullOrWhiteSpace(r.PhotoUrl))
+                                {
+                                    <img src="@Url.Content(r.PhotoUrl)" alt="Review photo" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';" />
+                                }
+                                <i class="fa-solid @icon" style="font-size:2.6rem;color:rgba(0,0,0,.12);display:@(string.IsNullOrWhiteSpace(r.PhotoUrl) ? "inline-flex" : "none")"></i>
                             </div>
                         }
                         <div class="my-review-body">
@@ -125,8 +133,9 @@
                             <p class="my-review-text">@r.Comment</p>
 
                             <div class="my-review-actions">
-                                <button class="card-action @(likedIds.Contains(r.Id) ? "liked" : "")" onclick="event.stopPropagation();toggleMyLike(@r.Id, this, @modelIndex)"><i class="@(likedIds.Contains(r.Id) ? "fa-solid" : "fa-regular") fa-heart"></i> <span>@r.Likes</span></button>
+                                <button class="card-action @(likedIds.Contains(r.Id) ? "liked" : "")" data-review-id="@r.Id" onclick="event.stopPropagation();toggleMyLike(@r.Id, this, @modelIndex)"><i class="@(likedIds.Contains(r.Id) ? "fa-solid" : "fa-regular") fa-heart"></i> <span>@r.Likes</span></button>
                                 <button class="card-action" onclick="event.stopPropagation();openMyModalComments(@modelIndex)"><i class="fa-regular fa-comment"></i> <span>@(r.Comments?.Count ?? 0)</span></button>
+                                <a class="view-product-link" href="@(prod != null ? Url.Action("Details", "Product", new { id = prod.Id }) : "#")" onclick="event.stopPropagation()">View Product</a>
                             </div>
 
                             <div class="edit-delete-row">
@@ -156,6 +165,7 @@
                 {
                     var r = withoutPhotos[i];
                     var modelIndex = Model.FindIndex(x => x.Id == r.Id);
+                    var prod = MockData.Products.FirstOrDefault(p => p.Id == r.ProductId);
                     var color = colors[(i + withPhotos.Count) % colors.Length];
                     var icon = icons[(i + withPhotos.Count) % icons.Length];
                     <div class="my-review-card @(r.IsTextOnly ? "without-photo" : "with-photo")" onclick="openMyModal(@modelIndex)">
@@ -184,8 +194,9 @@
                             <p class="my-review-text">@r.Comment</p>
 
                             <div class="my-review-actions">
-                                <button class="card-action @(likedIds.Contains(r.Id) ? "liked" : "")" onclick="event.stopPropagation();toggleMyLike(@r.Id, this, @modelIndex)"><i class="@(likedIds.Contains(r.Id) ? "fa-solid" : "fa-regular") fa-heart"></i> <span>@r.Likes</span></button>
+                                <button class="card-action @(likedIds.Contains(r.Id) ? "liked" : "")" data-review-id="@r.Id" onclick="event.stopPropagation();toggleMyLike(@r.Id, this, @modelIndex)"><i class="@(likedIds.Contains(r.Id) ? "fa-solid" : "fa-regular") fa-heart"></i> <span>@r.Likes</span></button>
                                 <button class="card-action" onclick="event.stopPropagation();openMyModalComments(@modelIndex)"><i class="fa-regular fa-comment"></i> <span>@(r.Comments?.Count ?? 0)</span></button>
+                                <a class="view-product-link" href="@(prod != null ? Url.Action("Details", "Product", new { id = prod.Id }) : "#")" onclick="event.stopPropagation()">View Product</a>
                             </div>
 
                             <div class="edit-delete-row">
@@ -221,10 +232,12 @@
             <div class="modal-body">
                 <div class="modal-stars" id="my-modal-stars"></div>
                 <p class="modal-caption" id="my-modal-caption"></p>
+                <div class="modal-product" id="my-modal-product"></div>
             </div>
             <div class="modal-actions">
-                <button class="review-action" id="my-modal-like-btn" onclick="toggleMyLike(activeMyReview.id, this, activeMyReviewIndex)"><i class="fa-regular fa-heart"></i> <span id="my-modal-likes"></span></button>
+                <button class="review-action" id="my-modal-like-btn" data-review-id="0" onclick="toggleMyLike(activeMyReview.id, this, activeMyReviewIndex)"><i class="fa-regular fa-heart"></i> <span id="my-modal-likes"></span></button>
                 <button class="review-action" onclick="toggleMyComments()"><i class="fa-regular fa-comment"></i> <span id="my-modal-comments-count"></span></button>
+                <a class="view-product-link" id="my-modal-product-link" href="#">View Product</a>
             </div>
             <div class="modal-comments" id="my-modal-comments-panel">
                 <div class="modal-comments-list" id="my-modal-comments-list"></div>

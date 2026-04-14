@@ -87,7 +87,11 @@
                     @if (!r.IsTextOnly)
                     {
                         <div class="review-card-photo" style="background:@color;">
-                            <i class="fa-solid @icon" style="font-size:3rem;color:rgba(0,0,0,.12)"></i>
+                            @if (!string.IsNullOrWhiteSpace(r.PhotoUrl))
+                            {
+                                <img src="@Url.Content(r.PhotoUrl)" alt="Review photo" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';" />
+                            }
+                            <i class="fa-solid @icon" style="font-size:3rem;color:rgba(0,0,0,.12);display:@(string.IsNullOrWhiteSpace(r.PhotoUrl) ? "inline-flex" : "none")"></i>
                         </div>
                     }
                     <div class="review-card-body">
@@ -249,8 +253,8 @@
 
             <div class="form-group" style="margin-bottom:1rem;">
                 <label>Your Review</label>
-                <textarea id="write-review-comment" name="comment" rows="4" maxlength="150" required style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px;font-family:'Poppins',sans-serif;"></textarea>
-                <div id="write-review-counter" style="margin-top:6px;font-size:11px;color:var(--text-light);text-align:right;">0 / 150 characters</div>
+                <textarea id="write-review-comment" name="comment" rows="4" maxlength="200" required style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px;font-family:'Poppins',sans-serif;"></textarea>
+                <div id="write-review-counter" style="margin-top:6px;font-size:11px;color:var(--text-light);text-align:right;">0 / 200 characters</div>
             </div>
 
             <div class="form-group" style="margin-bottom:1.3rem;">
@@ -295,6 +299,7 @@ window.reviewsData = {
             isEdited = r.IsEdited,
             editedAt = r.LastEditedAt.HasValue ? r.LastEditedAt.Value.ToString("o") : null,
             photoUrl = r.PhotoUrl,
+            resolvedPhotoUrl = string.IsNullOrWhiteSpace(r.PhotoUrl) ? "" : Url.Content(r.PhotoUrl),
             color = colors[i % colors.Length],
             icon = icons[i % icons.Length],
             comments = (r.Comments ?? new List<Pawchase.Models.ReviewComment>()).Select(c => new {
