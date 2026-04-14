@@ -98,12 +98,26 @@
                             <span class="status-pill @pillClass">@order.Status</span>
                         </div>
                         <div class="order-items-row">
-                            @foreach (var item in order.Items.Take(3))
+                            @{ var snapList = order.Snapshots != null && order.Snapshots.Any() ? order.Snapshots : (order.Items != null ? order.Items.Select(i => new Pawchase.Models.OrderItemSnapshot { ProductName = i.Product.Name, ProductImageUrl = i.Product.ImageUrl, VariantImageUrl = i.SelectedVariant?.ImageUrl, Quantity = i.Quantity, UnitPrice = i.Product.Price }).ToList() : new List<Pawchase.Models.OrderItemSnapshot>()); }
+                            @foreach (var snap in snapList.Take(3))
                             {
-                                <div class="order-item-thumb"><i class="fa-solid fa-bone"></i></div>
+                                var thumbImg = !string.IsNullOrEmpty(snap.VariantImageUrl) ? snap.VariantImageUrl : snap.ProductImageUrl;
+                                <div class="order-item-thumb" style="overflow:hidden;border-radius:6px;">
+                                    @if (!string.IsNullOrEmpty(thumbImg))
+                                    {
+                                        <img src="@thumbImg" alt="@snap.ProductName"
+                                             style="width:100%;height:100%;object-fit:cover;border-radius:6px;"
+                                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                                        <i class="fa-solid fa-bone" style="display:none;margin:auto;"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fa-solid fa-bone" style="margin:auto;"></i>
+                                    }
+                                </div>
                             }
-                            @if (order.Items.Count > 3)
-                            {<span style="font-size:11px;color:var(--text-light);align-self:center">+@(order.Items.Count-3) more</span>}
+                            @if (snapList.Count > 3)
+                            {<span style="font-size:11px;color:var(--text-light);align-self:center">+@(snapList.Count-3) more</span>}
                         </div>
                         <div class="order-card-foot">
                             <span class="order-total">Total: &#8369;@order.Total.ToString("N2")</span>
