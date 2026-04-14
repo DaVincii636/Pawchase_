@@ -254,6 +254,7 @@
         // -- setFilter: patches ONE query-string param while keeping everything else --
         // All category/size/onSale buttons call this instead of navigating to a
         // hardcoded URL, so every filter co-exists with every other filter.
+        // panelOpen=1 is always preserved so the filter panel stays open after navigation.
         function setFilter(key, value) {
             var url = new URL(window.location.href);
             if (value === '' || value === null || value === undefined) {
@@ -261,6 +262,8 @@
             } else {
                 url.searchParams.set(key, value);
             }
+            // Keep the filter panel open after the page reloads
+            url.searchParams.set('panelOpen', '1');
             window.location.href = url.toString();
         }
 
@@ -268,6 +271,10 @@
         function applySort(val) {
             var url = new URL(window.location.href);
             url.searchParams.set('sort', val);
+            // Preserve panel open state
+            if (typeof filterOpen !== 'undefined' && filterOpen) {
+                url.searchParams.set('panelOpen', '1');
+            }
             window.location.href = url.toString();
         }
 
@@ -288,6 +295,15 @@
                         hidden.value = val;
                     }
                 });
+                // Keep the panel open after search/price submit
+                var panelInput = form.querySelector('input[name="panelOpen"]');
+                if (!panelInput) {
+                    panelInput = document.createElement('input');
+                    panelInput.type = 'hidden';
+                    panelInput.name = 'panelOpen';
+                    form.appendChild(panelInput);
+                }
+                panelInput.value = '1';
             });
         })();
 
