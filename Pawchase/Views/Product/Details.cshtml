@@ -440,23 +440,24 @@
                 return;
             }
 
-            var addUrl      = '@Url.Action("Add","Cart")';
-            var checkoutUrl = '@Url.Action("Checkout","Cart")';
-            var productId   = @Model.Id;
-            var returnUrl   = _cartModalMode === 'buynow'
-                ? checkoutUrl
-                : window.location.pathname + window.location.search;
+            var addUrl    = '@Url.Action("Add","Cart")';
+            var buyNowUrl = '@Url.Action("BuyNow","Cart")';
+            var productId = @Model.Id;
 
+            if (_cartModalMode === 'buynow') {
+                // Buy Now: go directly to isolated single-item checkout (never touches cart)
+                var url = buyNowUrl + '?id=' + productId
+                    + '&qty=' + modalQty
+                    + (modalVariantLabel ? '&variantLabel=' + encodeURIComponent(modalVariantLabel) : '');
+                window.location.href = url;
+                return;
+            }
+
+            var returnUrl = window.location.pathname + window.location.search;
             var url = addUrl + '?id=' + productId
                 + '&qty=' + modalQty
                 + (modalVariantLabel ? '&variantLabel=' + encodeURIComponent(modalVariantLabel) : '')
                 + '&returnUrl=' + encodeURIComponent(returnUrl);
-
-            if (_cartModalMode === 'buynow') {
-                // Navigate directly — server handles the redirect to checkout
-                window.location.href = url;
-                return;
-            }
 
             // ── AJAX add to cart (stay on page, update badge) ──────────────
             closeCartModal();
