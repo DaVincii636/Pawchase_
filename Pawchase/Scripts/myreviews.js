@@ -45,9 +45,20 @@ function openMyModal(index) {
         modal.classList.add('single');
     } else {
         modal.classList.remove('single');
-        if (r.photoUrl) {
+        const photoUrl = r.resolvedPhotoUrl || r.photoUrl;
+        if (photoUrl) {
             photo.style.background = '#f4f7fb';
-            photo.innerHTML = '<img src="' + r.photoUrl + '" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<i class=\\\"fa-solid ' + r.icon + '\\\" style=\\\"font-size:5rem;color:rgba(0,0,0,.15)\\\"></i>\'"/>';
+            photo.innerHTML = '<img src="' + photoUrl + '" alt="Review photo" style="width:100%;height:100%;object-fit:cover;display:block"><i class="fa-solid ' + r.icon + '" style="font-size:5rem;color:rgba(0,0,0,.15);display:none"></i>';
+
+            const img = photo.querySelector('img');
+            const fallbackIcon = photo.querySelector('i');
+            if (img && fallbackIcon) {
+                img.onerror = function () {
+                    this.remove();
+                    photo.style.background = r.color;
+                    fallbackIcon.style.display = 'inline-flex';
+                };
+            }
         } else {
             photo.style.background = r.color;
             photo.innerHTML = '<i class="fa-solid ' + r.icon + '" style="font-size:5rem;color:rgba(0,0,0,.15)"></i>';
@@ -65,11 +76,21 @@ function openMyModal(index) {
         modalEdited.removeAttribute('data-edited-at');
     }
     document.getElementById('my-modal-caption').textContent = '"' + r.comment + '"';
+    const myModalProduct = document.getElementById('my-modal-product');
+    if (r.productName) {
+        myModalProduct.style.display = 'inline-flex';
+        myModalProduct.innerHTML = '<i class="fa-solid fa-bone" style="color:var(--blue)"></i> ' + r.productName;
+    } else {
+        myModalProduct.style.display = 'none';
+        myModalProduct.innerHTML = '';
+    }
+    document.getElementById('my-modal-product-link').href = '/Product/Details/' + r.productId;
     document.getElementById('my-modal-likes').textContent = r.likes;
     document.getElementById('my-modal-comments-count').textContent = r.comments.length;
     document.getElementById('my-comment-review-id').value = r.id;
     const liked = document.querySelectorAll('.my-review-card')[index].querySelector('.my-review-actions .card-action')?.classList.contains('liked');
     const modalLikeBtn = document.getElementById('my-modal-like-btn');
+    modalLikeBtn.setAttribute('data-review-id', r.id);
     modalLikeBtn.classList.toggle('liked', !!liked);
     modalLikeBtn.querySelector('i').className = liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
 
@@ -148,21 +169,21 @@ function toggleMyLike(reviewId, btn, index) {
     $.post(likeUrl, { id: reviewId }, function (data) {
         if (!data || !data.ok) return;
 
-        const icon = btn.querySelector('i');
-        const count = btn.querySelector('span');
-        if (count) {
-            count.textContent = data.likes;
-        }
-        icon.className = data.liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
-        btn.classList.toggle('liked', !!data.liked);
+        const allLikeButtons = document.querySelectorAll('[data-review-id="' + reviewId + '"]');
+        allLikeButtons.forEach(function (likeBtn) {
+            const icon = likeBtn.querySelector('i');
+            const count = likeBtn.querySelector('span');
+            if (count) {
+                count.textContent = data.likes;
+            }
+            if (icon) {
+                icon.className = data.liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
+            }
+            likeBtn.classList.toggle('liked', !!data.liked);
+        });
 
         if (typeof index === 'number' && myReviews[index]) {
             myReviews[index].likes = data.likes;
-            const card = document.querySelectorAll('.my-review-card')[index];
-            if (card) {
-                const cardLike = card.querySelector('.my-review-actions .card-action span');
-                if (cardLike) cardLike.textContent = data.likes;
-            }
         }
 
         if (activeMyReview && activeMyReview.id === reviewId) {
