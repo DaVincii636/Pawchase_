@@ -20,23 +20,23 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 9px 18px;
+    padding: 10px 18px;
     background: var(--white);
-    border: 1.5px solid var(--border);
+    border: 1.5px solid rgba(129,166,198,.45);
     border-radius: 50px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-mid);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue-dark);
     cursor: pointer;
-    transition: all .2s;
+    transition: all .25s ease;
     font-family: 'Poppins', sans-serif;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    box-shadow: none;
 }
 
     .filter-toggle-btn:hover {
         border-color: var(--blue);
-        color: var(--blue-dark);
-        box-shadow: 0 4px 12px rgba(129,166,198,0.2);
+        box-shadow: 0 4px 12px rgba(129,166,198,.18);
+        transform: translateY(-1px);
     }
 
     .filter-toggle-btn.active {
@@ -44,6 +44,7 @@
         border-color: var(--blue-dark);
         color: #fff;
         box-shadow: 0 4px 14px rgba(129,166,198,0.35);
+        transform: translateY(0);
     }
 
     .filter-toggle-btn i {
@@ -54,9 +55,29 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    font-size: 13px;
-    color: var(--text-light);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue-dark);
 }
+
+    .toolbar-right #resultCount {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--blue-dark);
+    }
+
+    .toolbar-right #sortSelect {
+        padding: 10px 18px;
+        border-radius: 50px;
+        border: 1.5px solid rgba(129,166,198,.45);
+        font-family: 'Poppins', sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--blue-dark);
+        background: var(--white);
+        cursor: pointer;
+        transition: all .25s ease;
+    }
 
 .clear-filters {
     color: #e05555;
@@ -77,7 +98,7 @@
 .products-wrapper {
     display: flex;
     gap: 0;
-    padding: 0 4%;
+    padding: 1.8rem 4% 0;
     max-width: 1400px;
     margin: 0 auto;
     align-items: flex-start;
@@ -94,11 +115,11 @@
     padding: 0;
     box-shadow: none;
     position: sticky;
-    top: 120px;
+    top: 148px;
     flex-shrink: 0;
     transition: width .3s cubic-bezier(.4,0,.2,1), opacity .3s ease, padding .3s ease, margin .3s ease, box-shadow .3s ease;
     margin-right: 0;
-    max-height: calc(100vh - 140px);
+    max-height: calc(100vh - 168px);
     overflow-y: auto;
 }
 
@@ -447,14 +468,14 @@
 @media (max-width: 600px) {
     .filters.open {
         position: fixed;
-        top: 0;
+        top: 66px;
         left: 0;
         width: 280px !important;
-        height: 100vh;
+        height: calc(100vh - 66px);
         z-index: 500;
-        border-radius: 0;
+        border-radius: 0 0 var(--radius-lg) 0;
         margin: 0;
-        max-height: 100vh;
+        max-height: calc(100vh - 66px);
     }
 
     .filter-overlay {
@@ -729,4 +750,130 @@ input[type=range]#rangeMax {
 /* Track background for the range container */
 #rangeMin + #rangeMax {
     background: linear-gradient(to right, var(--border) 0%, var(--blue) 0%, var(--blue) 100%, var(--border) 100%);
+}
+
+/* ── Toolbar search bar (left-aligned, beside Filter button) ────────────── */
+.product-toolbar-top {
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-start;
+}
+
+.toolbar-search {
+    flex: 0 1 300px;
+    min-width: 160px;
+    max-width: 320px;
+}
+
+.toolbar-right {
+    margin-left: auto;
+}
+
+.toolbar-search-form {
+    display: flex;
+    width: 100%;
+}
+
+.toolbar-search .search-input-wrap {
+    display: flex;
+    width: 100%;
+    border: 1.5px solid rgba(129,166,198,.45);
+    border-radius: 50px;
+    overflow: hidden;
+    background: var(--white);
+    transition: all .25s ease;
+}
+
+    .toolbar-search .search-input-wrap:focus-within {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px rgba(129,166,198,.14);
+    }
+
+    .toolbar-search .search-input-wrap input {
+        flex: 1;
+        padding: 10px 14px;
+        border: none;
+        outline: none;
+        font-size: 12px;
+        font-family: 'Poppins', sans-serif;
+        font-weight: 700;
+        background: transparent;
+        color: var(--blue-dark);
+    }
+
+        .toolbar-search .search-input-wrap input::placeholder {
+            color: rgba(129,166,198,.7);
+            font-weight: 600;
+        }
+
+    .toolbar-search .search-input-wrap button {
+        background: none;
+        border: none;
+        padding: 0 14px;
+        cursor: pointer;
+        color: var(--blue-dark);
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        transition: color .2s;
+    }
+
+        .toolbar-search .search-input-wrap button:hover {
+            color: var(--blue);
+        }
+
+/* ── Image nav arrows — styled to match qty +/- buttons ─────────────────── */
+.img-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--blue-dark);
+    transition: border-color .15s, background .15s, box-shadow .15s;
+    z-index: 5;
+    line-height: 1;
+}
+
+    .img-nav-btn:hover {
+        border-color: var(--blue);
+        background: rgba(129,166,198,0.1);
+        box-shadow: 0 3px 12px rgba(129,166,198,0.25);
+    }
+
+.img-nav-left {
+    left: 10px;
+}
+
+.img-nav-right {
+    right: 10px;
+}
+
+/* ── Filter panel inner padding (more breathing room) ───────────────────── */
+.filters.open {
+    padding: 1.8rem 1.6rem !important;
+}
+
+.filter-group {
+    margin-bottom: 1.6rem;
+}
+
+    .filter-group label {
+        margin-bottom: 8px;
+    }
+
+/* ── Cart toast notification ─────────────────────────────────────────────── */
+#cartToast {
+    transition: opacity .35s ease;
+    pointer-events: none;
 }
