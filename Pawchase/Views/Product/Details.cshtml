@@ -34,12 +34,8 @@
             {<span class="discount-badge" style="position:absolute;top:12px;right:12px;">-@disc%</span>}
             @if (hasVariants)
             {
-                <button class="img-nav-btn img-nav-left" id="imgNavLeft" onclick="navigateImage(-1)" title="Previous image">
-                    <i class="fa-solid fa-chevron-left"></i>
-                </button>
-                <button class="img-nav-btn img-nav-right" id="imgNavRight" onclick="navigateImage(1)" title="Next image">
-                    <i class="fa-solid fa-chevron-right"></i>
-                </button>
+                <button class="img-nav-btn img-nav-left" id="imgNavLeft" onclick="navigateImage(-1)" title="Previous image">&lt;</button>
+                <button class="img-nav-btn img-nav-right" id="imgNavRight" onclick="navigateImage(1)" title="Next image">&gt;</button>
             }
         </div>
 
@@ -366,7 +362,7 @@
             el.classList.add('variant-active');
             modalVariantLabel = el.getAttribute('data-label') || null;
             var selEl = document.getElementById('modalVariantSelected');
-            if (selEl) selEl.textContent = modalVariantLabel ? '— ' + modalVariantLabel : '';
+            if (selEl) selEl.textContent = modalVariantLabel ? modalVariantLabel : '';
             var alert = document.getElementById('modalVariantAlert');
             if (alert) alert.style.display = 'none';
             // Also update main image to match
@@ -408,7 +404,7 @@
                 var active = document.querySelector('#modalVariantThumbs .variant-thumb.variant-active');
                 modalVariantLabel = active ? active.getAttribute('data-label') : null;
                 var selEl = document.getElementById('modalVariantSelected');
-                if (selEl) selEl.textContent = modalVariantLabel ? '— ' + modalVariantLabel : '';
+                if (selEl) selEl.textContent = modalVariantLabel ? modalVariantLabel : '';
             } else {
                 modalVariantLabel = null;
             }
