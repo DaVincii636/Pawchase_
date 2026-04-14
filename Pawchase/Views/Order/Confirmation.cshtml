@@ -4,7 +4,7 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 @section styles {
-    <link href="@Url.Content("~/Content/css/order.css")" rel="stylesheet"/>
+    <link href="@Url.Content("~/Content/css/order.css")" rel="stylesheet" />
 }
 
 <section class="confirmation-section">
@@ -12,7 +12,7 @@
         <i class="fa-solid fa-circle-check confirm-icon"></i>
         <h1>Order Placed!</h1>
         <p class="confirm-sub">
-            Thank you, <strong>@Model.CustomerName</strong>!<br/>
+            Thank you, <strong>@Model.CustomerName</strong>!<br />
             Your order has been received and is now being prepared.
         </p>
 
@@ -43,11 +43,18 @@
 
         <div class="confirm-items">
             <h3>Items in This Order</h3>
-            @foreach (var item in Model.Items)
+            @foreach (var snap in Model.Snapshots)
             {
+                var snapImg = !string.IsNullOrEmpty(snap.VariantImageUrl) ? snap.VariantImageUrl : snap.ProductImageUrl;
                 <div class="confirm-item">
-                    <span>@item.Product.Name &times; @item.Quantity</span>
-                    <span>&#8369;@item.Subtotal.ToString("N2")</span>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <img src="@snapImg" alt="@snap.ProductName"
+                             style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid var(--border);"
+                             onerror="this.style.display='none'" />
+                        <span>@snap.ProductName @if (!string.IsNullOrEmpty(snap.VariantLabel))
+                        {<text>(@snap.VariantLabel)</text>} &times; @snap.Quantity</span>
+                    </div>
+                    <span>&#8369;@snap.Subtotal.ToString("N2")</span>
                 </div>
             }
         </div>
