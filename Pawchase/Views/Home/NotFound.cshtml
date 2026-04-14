@@ -1,0 +1,22 @@
+@{
+    ViewBag.Title = "Page Not Found";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section styles {
+<style>
+.error-page { text-align:center; padding:6rem 2rem; }
+.error-code { font-size:6rem; font-weight:800; color:var(--blue); opacity:.2; line-height:1; }
+.error-title { font-size:1.5rem; font-weight:700; color:var(--text); margin-bottom:1rem; }
+.error-msg { color:var(--text-mid); font-size:14px; margin-bottom:2rem; }
+.error-actions { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; }
+</style>
+}
+<div class="error-page">
+    <div class="error-code">404</div>
+    <h1 class="error-title">Page Not Found</h1>
+    <p class="error-msg">The page you're looking for doesn't exist or has been moved.</p>
+    <div class="error-actions">
+        <a href="@Url.Action("Index","Home")" class="btn-primary">Go to Homepage</a>
+        <a href="@Url.Action("Index","Product")" class="btn-outline">Browse Products</a>
+    </div>
+</div>
