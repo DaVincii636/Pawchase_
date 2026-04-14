@@ -340,6 +340,120 @@ namespace Pawchase.Controllers
             }
         }
 
+        // ── BUY NOW: single-item express checkout, never touches the cart ──
+        public ActionResult BuyNow(int id, string variantLabel, int qty = 1)
+        {
+            try
+            {
+                if (!IsLoggedIn)
+                    return RedirectToAction("Login", "Account",
+                        new { returnUrl = Url.Action("Details", "Product", new { id = id }) });
+
+                var product = MockData.Products.FirstOrDefault(p => p.Id == id && !p.IsDeleted);
+                if (product == null)
+                {
+                    TempData["Error"] = "Product not found.";
+                    return RedirectToAction("Index", "Product");
+                }
+                if (product.Stock <= 0)
+                {
+                    TempData["Error"] = "Sorry, this product is out of stock.";
+                    return RedirectToAction("Details", "Product", new { id = id });
+                }
+
+                if (qty < 1) qty = 1;
+                qty = Math.Min(qty, product.Stock);
+
+                ProductVariant chosen = null;
+                if (!string.IsNullOrEmpty(variantLabel) && product.Variants != null)
+                    chosen = product.Variants.FirstOrDefault(v => v.Label == variantLabel);
+
+                var buyNowItem = new CartItem
+                {
+                    Product = product,
+                    Quantity = qty,
+                    SelectedVariant = chosen
+                };
+
+                Session["BuyNowItem"] = buyNowItem;
+                return View("BuyNowCheckout", new List<CartItem> { buyNowItem });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("BuyNow Error: " + ex.Message);
+                TempData["Error"] = "Could not start checkout. Please try again.";
+                return RedirectToAction("Details", "Product", new { id = id });
+            }
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult PlaceBuyNowOrder(string address, string phone)
+        {
+            try
+            {
+                if (!IsLoggedIn)
+                    return RedirectToAction("Login", "Account");
+
+                if (string.IsNullOrWhiteSpace(address))
+                {
+                    TempData["Error"] = "Delivery address is required.";
+                    return RedirectToAction("Index", "Home");
+                }
+
+                var buyNowItem = Session["BuyNowItem"] as CartItem;
+                if (buyNowItem == null || buyNowItem.Product == null || buyNowItem.Product.IsDeleted)
+                {
+                    TempData["Error"] = "Your buy now item is no longer available.";
+                    return RedirectToAction("Index", "Product");
+                }
+
+                var items = new List<CartItem> { buyNowItem };
+                var shipping = items.Sum(c => c.Subtotal) >= 500 ? 0 : 80;
+                var snapshots = items.Select(c => new OrderItemSnapshot
+                {
+                    ProductId = c.Product.Id,
+                    ProductName = c.Product.Name,
+                    ProductImageUrl = c.Product.ImageUrl,
+                    Category = c.Product.Category,
+                    BreedSize = c.Product.BreedSize,
+                    UnitPrice = c.Product.Price,
+                    Quantity = c.Quantity,
+                    VariantLabel = c.SelectedVariant?.Label,
+                    VariantImageUrl = c.SelectedVariant?.ImageUrl
+                }).ToList();
+
+                var order = new Order
+                {
+                    Id = MockData.Orders.Count + 1,
+                    ReferenceNumber = "PWC-" + (MockData.Orders.Count + 1).ToString("D6"),
+                    CustomerName = Session["UserName"].ToString(),
+                    Email = Session["UserEmail"].ToString(),
+                    Address = address.Trim(),
+                    Phone = phone?.Trim(),
+                    Items = items,
+                    Snapshots = snapshots,
+                    Total = items.Sum(c => c.Subtotal) + shipping,
+                    OrderDate = DateTime.Now,
+                    Status = "To Ship"
+                };
+
+                MockData.Orders.Add(order);
+
+                var p = MockData.Products.FirstOrDefault(x => x.Id == buyNowItem.Product.Id);
+                if (p != null) p.Stock = Math.Max(0, p.Stock - buyNowItem.Quantity);
+
+                Session["BuyNowItem"] = null;
+                return RedirectToAction("Confirmation", "Order",
+                    new { referenceNumber = order.ReferenceNumber });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("PlaceBuyNowOrder Error: " + ex.Message);
+                TempData["Error"] = "Order could not be placed. Please try again.";
+                return RedirectToAction("Index", "Home");
+            }
+        }
+
         [HttpPost, ValidateAntiForgeryToken]
         public ActionResult PlaceOrder(string address, string phone)
         {

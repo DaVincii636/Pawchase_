@@ -19,7 +19,7 @@ function toggleFilter() {
 var liveTimer = null;
 
 function initLiveSearch() {
-    var input = document.getElementById('searchInput');
+    var input = document.getElementById('toolbarSearchInput');
     if (!input) return;
 
     input.addEventListener('input', function () {

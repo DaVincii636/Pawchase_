@@ -1,0 +1,104 @@
+@model List<Pawchase.Models.CartItem>
+@{
+    ViewBag.Title = "Buy Now – Checkout";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var subtotal = Model.Sum(c => c.Subtotal);
+    var shipping = subtotal >= 500 ? 0 : 80;
+    var total = subtotal + shipping;
+    var item = Model.First();
+    var imgUrl = (item.SelectedVariant != null && !string.IsNullOrEmpty(item.SelectedVariant.ImageUrl))
+                   ? item.SelectedVariant.ImageUrl
+                   : item.Product.ImageUrl;
+}
+@section styles {
+    <link href="@Url.Content("~/Content/css/cart.css")" rel="stylesheet" />
+}
+
+<div class="page-hero">
+    <h1>Buy Now</h1>
+    <p>Complete your purchase for this item</p>
+</div>
+
+<section class="checkout-section">
+    <div class="checkout-inner">
+        <div>
+            <div class="checkout-form-wrap">
+                <h2><i class="fa-solid fa-location-dot"></i> Delivery Information</h2>
+                <form method="post" action="@Url.Action("PlaceBuyNowOrder","Cart")">
+                    @Html.AntiForgeryToken()
+                    <div class="form-group">
+                        <label><i class="fa-regular fa-user"></i> Full Name</label>
+                        <input type="text" value="@Session["UserName"]" readonly class="readonly-input" />
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fa-regular fa-envelope"></i> Email</label>
+                        <input type="email" value="@Session["UserEmail"]" readonly class="readonly-input" />
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-phone"></i> Phone Number <span class="required">*</span></label>
+                        <input type="tel" name="phone" placeholder="e.g. 09171234567" required />
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-location-dot"></i> Delivery Address <span class="required">*</span></label>
+                        <textarea name="address" rows="3" placeholder="House No., Street, Barangay, City, Province, ZIP" required></textarea>
+                    </div>
+
+                    <h2 style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border);">
+                        <i class="fa-solid fa-credit-card"></i> Payment Method
+                    </h2>
+                    <div class="payment-options">
+                        <label class="payment-opt active">
+                            <input type="radio" name="payment" value="COD" checked />
+                            <i class="fa-solid fa-money-bill-wave"></i>
+                            <span>Cash on Delivery</span>
+                        </label>
+                        <label class="payment-opt disabled" title="Coming soon">
+                            <input type="radio" name="payment" value="GCash" disabled />
+                            <i class="fa-solid fa-mobile-screen"></i>
+                            <span>GCash <small>(Coming Soon)</small></span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-primary place-order-btn">
+                        <i class="fa-solid fa-circle-check"></i> Place Order
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="checkout-summary">
+            <h2><i class="fa-solid fa-receipt" style="color:var(--blue);"></i> Order Summary</h2>
+            <div class="checkout-items">
+                <div class="checkout-item">
+                    <div class="co-img">
+                        <img src="@imgUrl" alt="@item.Product.Name"
+                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                        <div class="img-fallback-sm" style="display:none;"><i class="fa-solid fa-bone"></i></div>
+                        <span class="co-qty">@item.Quantity</span>
+                    </div>
+                    <div class="co-name">
+                        @item.Product.Name
+                        @if (item.SelectedVariant != null)
+                        {
+                            <span style="font-size:11px; color:var(--text-light); display:block;">@item.SelectedVariant.Label</span>
+                        }
+                    </div>
+                    <div class="co-price">&#8369;@item.Subtotal.ToString("N2")</div>
+                </div>
+            </div>
+            <div class="co-summary-row"><span>Subtotal</span><span>&#8369;@subtotal.ToString("N2")</span></div>
+            <div class="co-summary-row">
+                <span>Shipping</span>
+                @if (shipping == 0)
+                {<span class="free-ship"><i class="fa-solid fa-truck"></i> FREE</span>}
+                else
+                {<span>&#8369;80.00</span>}
+            </div>
+            <div class="co-summary-total"><span>Total</span><span>&#8369;@total.ToString("N2")</span></div>
+        </div>
+    </div>
+</section>
+
+@section scripts {
+    <script src="@Url.Content("~/Scripts/cart.js")"></script>
+}
