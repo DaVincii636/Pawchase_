@@ -1,4 +1,4 @@
-@{
+﻿@{
     ViewBag.Title = "Home";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var reviews = ViewBag.Reviews as List<Pawchase.Models.Review>;
@@ -26,15 +26,6 @@
             <div class="stat"><strong>Free</strong><span>Ship &#8369;500+</span></div>
         </div>
     </div>
-    <div class="hero-image">
-        <div class="hero-img-wrapper">
-            <div class="hero-img-placeholder">
-                <i class="fa-solid fa-dog"></i>
-                <p>Hero Image</p>
-                <small>Recommended: 600&times;480px</small>
-            </div>
-        </div>
-    </div>
 </section>
 
 <!-- BREED SIZE -->
@@ -45,25 +36,53 @@
     </div>
     <div class="breed-grid">
         <a href="@Url.Action("Index","Product", new{size="Small"})" class="breed-card">
-            <i class="fa-solid fa-dog"></i>
-            <h3>Small</h3>
-            <p>Under 10 kg</p>
-            <small>Chihuahua &middot; Shih Tzu &middot; Pomeranian</small>
-            <span class="view-link">View Products</span>
+            <div class="breed-card-top">
+                <img src="/Content/images/small-dog.png" alt="Small dog" class="breed-img" />
+                <span class="breed-size-tag">Small</span>
+            </div>
+            <div class="breed-card-body">
+                <h3>Small Breeds</h3>
+                <p class="breed-weight"><i class="fa-solid fa-weight-scale"></i> Under 10 kg</p>
+                <p class="breed-examples">Chihuahua &middot; Shih Tzu &middot; Pomeranian</p>
+                <div class="breed-features">
+                    <span><i class="fa-solid fa-cookie-bite"></i> Bite-size treats</span>
+                    <span><i class="fa-solid fa-shirt"></i> Tiny accessories</span>
+                </div>
+                <span class="view-link">Shop Small Breeds <i class="fa-solid fa-arrow-right"></i></span>
+            </div>
         </a>
-        <a href="@Url.Action("Index","Product", new{size="Medium"})" class="breed-card">
-            <i class="fa-solid fa-dog"></i>
-            <h3>Medium</h3>
-            <p>10 &ndash; 25 kg</p>
-            <small>Beagle &middot; Bulldog &middot; Labrador Mix</small>
-            <span class="view-link">View Products</span>
+        <a href="@Url.Action("Index","Product", new{size="Medium"})" class="breed-card breed-card--featured">
+            <div class="breed-card-top">
+                <img src="/Content/images/medium-dog.png" alt="Medium dog" class="breed-img" />
+                <span class="breed-size-tag">Medium</span>
+                <span class="breed-popular-tag">Most Popular</span>
+            </div>
+            <div class="breed-card-body">
+                <h3>Medium Breeds</h3>
+                <p class="breed-weight"><i class="fa-solid fa-weight-scale"></i> 10 &ndash; 25 kg</p>
+                <p class="breed-examples">Beagle &middot; Bulldog &middot; Labrador Mix</p>
+                <div class="breed-features">
+                    <span><i class="fa-solid fa-bone"></i> Premium chews</span>
+                    <span><i class="fa-solid fa-ball"></i> Active toys</span>
+                </div>
+                <span class="view-link">Shop Medium Breeds <i class="fa-solid fa-arrow-right"></i></span>
+            </div>
         </a>
         <a href="@Url.Action("Index","Product", new{size="Large"})" class="breed-card">
-            <i class="fa-solid fa-dog"></i>
-            <h3>Large</h3>
-            <p>25 kg and above</p>
-            <small>German Shepherd &middot; Husky &middot; Labrador</small>
-            <span class="view-link">View Products</span>
+            <div class="breed-card-top">
+                <img src="/Content/images/large-dog.png" alt="Large dog" class="breed-img" />
+                <span class="breed-size-tag">Large</span>
+            </div>
+            <div class="breed-card-body">
+                <h3>Large Breeds</h3>
+                <p class="breed-weight"><i class="fa-solid fa-weight-scale"></i> 25 kg and above</p>
+                <p class="breed-examples">German Shepherd &middot; Husky &middot; Labrador</p>
+                <div class="breed-features">
+                    <span><i class="fa-solid fa-dumbbell"></i> Joint support</span>
+                    <span><i class="fa-solid fa-shield-dog"></i> Heavy-duty toys</span>
+                </div>
+                <span class="view-link">Shop Large Breeds <i class="fa-solid fa-arrow-right"></i></span>
+            </div>
         </a>
     </div>
 </section>
@@ -75,11 +94,26 @@
         <p>Everything your dog needs, organized just for you</p>
     </div>
     <div class="categories-grid">
-        <a href="@Url.Action("Index","Product",new{category="Treats"})" class="category-card"><i class="fa-solid fa-bone"></i><h3>Treats</h3><span>View All</span></a>
-        <a href="@Url.Action("Index","Product",new{category="Toys"})" class="category-card"><i class="fa-regular fa-circle-dot"></i><h3>Toys</h3><span>View All</span></a>
-        <a href="@Url.Action("Index","Product",new{category="Accessories"})" class="category-card"><i class="fa-solid fa-tag"></i><h3>Accessories</h3><span>View All</span></a>
-        <a href="@Url.Action("Index","Product",new{category="Health"})" class="category-card"><i class="fa-solid fa-pills"></i><h3>Health &amp; Care</h3><span>View All</span></a>
-        <a href="@Url.Action("Index","Product",new{category="Others"})" class="category-card"><i class="fa-regular fa-box"></i><h3>Others</h3><span>View All</span></a>
+        <a href="@Url.Action("Index","Product",new{category="Treats"})" class="category-card cat-treats">
+            <div class="cat-icon-wrap"><i class="fa-solid fa-bone"></i></div>
+            <div class="cat-label"><h3>Treats</h3><span>View All</span></div>
+        </a>
+        <a href="@Url.Action("Index","Product",new{category="Toys"})" class="category-card cat-toys">
+            <div class="cat-icon-wrap"><i class="fa-regular fa-circle-dot"></i></div>
+            <div class="cat-label"><h3>Toys</h3><span>View All</span></div>
+        </a>
+        <a href="@Url.Action("Index","Product",new{category="Accessories"})" class="category-card cat-acc">
+            <div class="cat-icon-wrap"><i class="fa-solid fa-tag"></i></div>
+            <div class="cat-label"><h3>Accessories</h3><span>View All</span></div>
+        </a>
+        <a href="@Url.Action("Index","Product",new{category="Health"})" class="category-card cat-health">
+            <div class="cat-icon-wrap"><i class="fa-solid fa-pills"></i></div>
+            <div class="cat-label"><h3>Health &amp; Care</h3><span>View All</span></div>
+        </a>
+        <a href="@Url.Action("Index","Product",new{category="Others"})" class="category-card cat-others">
+            <div class="cat-icon-wrap"><i class="fa-solid fa-ellipsis"></i></div>
+            <div class="cat-label"><h3>Others</h3><span>View All</span></div>
+        </a>
     </div>
 </section>
 
@@ -93,28 +127,133 @@
 
 <!-- PROMO BANNERS -->
 <section class="promo-section">
-    <div class="section-header"><h2>Hot Deals &#128293;</h2></div>
+    <div class="promo-header">
+        <div class="promo-header-left">
+            <div class="promo-eyebrow">
+                <span class="promo-live-dot"></span>
+                <span class="promo-eyebrow-text">Limited Time Offers</span>
+            </div>
+            <h2 class="promo-title">
+                <i class="fa-solid fa-fire promo-fire-icon"></i> Hot Deals
+            </h2>
+            <p class="promo-tagline">Don&rsquo;t miss out &mdash; these prices are going fast!</p>
+        </div>
+        <a href="@Url.Action("Index","Product",new{onSale=true})" class="promo-view-all">
+            View All Deals <i class="fa-solid fa-arrow-right"></i>
+        </a>
+    </div>
     <div class="promo-grid">
-        <a href="@Url.Action("Index","Product",new{category="Treats"})" class="promo-card" style="background:linear-gradient(145deg,#ffe8d6,#ffd4b5);">
-            <div class="pct">50%<span> OFF</span></div>
-            <h4>Dog Treats</h4>
-            <p>Premium flavors your dog will love</p>
-            <span class="shop-now-btn">Shop Now</span>
+        <a href="@Url.Action("Index","Product",new{category="Treats",onSale=true})" class="promo-card promo-card--imgbg promo-card--treats">
+            <div class="promo-imgbg-layer" style="background-image:url('/Content/images/promo1-bg.png');"></div>
+            <div class="promo-imgbg-overlay promo-overlay--treats"></div>
+            <div class="promo-imgbg-content">
+                <div class="promo-imgbg-top">
+                    <span class="promo-badge">50% OFF</span>
+                </div>
+                <div class="promo-imgbg-body">
+                    <span class="promo-cat-label"><i class="fa-solid fa-bone"></i> Treats</span>
+                    <h4>Dog Treats</h4>
+                    <p>Premium flavors your dog will love</p>
+                    <span class="promo-shop-btn">
+                        Shop Now <i class="fa-solid fa-arrow-right"></i>
+                    </span>
+                </div>
+            </div>
         </a>
-        <a href="@Url.Action("Index","Product",new{category="Toys"})" class="promo-card" style="background:linear-gradient(145deg,var(--lblue),#c8e0ea);">
-            <div class="pct">Buy 1</div>
-            <h4>Get 1 Free &mdash; Toys</h4>
-            <p>Keep your pup entertained for less</p>
-            <span class="shop-now-btn">Shop Now</span>
+        <a href="@Url.Action("Index","Product",new{category="Toys",onSale=true})" class="promo-card promo-card--imgbg promo-card--toys promo-card--star">
+            <div class="promo-imgbg-layer" style="background-image: url('/Content/images/promo2-bg.png');"></div>
+            <div class="promo-imgbg-overlay promo-overlay--toys"></div>
+            <div class="promo-imgbg-content">
+                <div class="promo-imgbg-top">
+                    <span class="promo-badge promo-badge--bogo">Buy 1 Get 1</span>
+                </div>
+                <div class="promo-imgbg-body">
+                    <span class="promo-cat-label"><i class="fa-regular fa-circle-dot"></i> Toys</span>
+                    <h4>Interactive Dog Toys</h4>
+                    <p>Buy one, take one free &mdash; double the fun!</p>
+                    <span class="promo-shop-btn">
+                        Shop Now <i class="fa-solid fa-arrow-right"></i>
+                    </span>
+                </div>
+            </div>
         </a>
-        <a href="@Url.Action("Index","Product",new{category="Health"})" class="promo-card" style="background:linear-gradient(145deg,var(--peach),#eedfd0);">
-            <div class="pct">30%<span> OFF</span></div>
-            <h4>Health &amp; Care</h4>
-            <p>Keep your dog healthy for less</p>
-            <span class="shop-now-btn">Shop Now</span>
+        <a href="@Url.Action("Index","Product",new{category="Health",onSale=true})" class="promo-card promo-card--imgbg promo-card--health">
+            <div class="promo-imgbg-layer" style="background-image: url('/Content/images/promo3-bg.png');"></div>
+            <div class="promo-imgbg-overlay promo-overlay--health"></div>
+            <div class="promo-imgbg-content">
+                <div class="promo-imgbg-top">
+                    <span class="promo-badge promo-badge--green">30% OFF</span>
+                </div>
+                <div class="promo-imgbg-body">
+                    <span class="promo-cat-label"><i class="fa-solid fa-pills"></i> Health &amp; Care</span>
+                    <h4>Health &amp; Care Essentials</h4>
+                    <p>Keep your dog healthy for less &mdash; vitamins &amp; more on sale.</p>
+                    <span class="promo-shop-btn">
+                        Shop Now <i class="fa-solid fa-arrow-right"></i>
+                    </span>
+                </div>
+            </div>
         </a>
     </div>
 </section>
+
+<!-- FEATURED PRODUCTS -->
+@{
+    var featured = ViewBag.FeaturedProducts as List<Pawchase.Models.Product>;
+}
+@if (featured != null && featured.Any())
+{
+    <section class="featured-section">
+        <div class="featured-bg-pattern"></div>
+        <div class="featured-inner">
+            <div class="section-header">
+                <h2><i class="fa-solid fa-star" style="color:#E6A520;margin-right:8px;"></i>Featured Products</h2>
+                <p>Top picks your dog will love</p>
+            </div>
+            <div class="featured-grid">
+                @foreach (var p in featured)
+                {
+                    bool isOnSale = p.OriginalPrice.HasValue && p.OriginalPrice > p.Price;
+                    int disc = isOnSale ? (int)Math.Round((1 - (double)p.Price / (double)p.OriginalPrice.Value) * 100) : 0;
+                    <a href="@Url.Action("Details","Product",new{id=p.Id})" class="featured-card">
+                        @if (isOnSale && disc > 0)
+                        {
+                            <span class="discount-pct-badge">-@disc%</span>
+                        }
+                        <div class="featured-img">
+                            <img src="@p.ImageUrl" alt="@p.Name"
+                                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                            <div class="featured-img-fallback">
+                                <i class="fa-solid fa-bone"></i>
+                            </div>
+                        </div>
+                        <div class="featured-info">
+                            <span class="featured-cat-label">@p.Category &middot; @p.BreedSize</span>
+                            <h3>@p.Name</h3>
+                            <div class="product-price">
+                                <span class="price">&#8369;@p.Price.ToString("N2")</span>
+                                @if (isOnSale)
+                                {
+                                    <span class="original-price">&#8369;@p.OriginalPrice.Value.ToString("N2")</span>
+                                }
+                            </div>
+                            <div class="featured-card-footer">
+                                <span class="featured-view-btn">
+                                    View Product <i class="fa-solid fa-arrow-right"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </a>
+                }
+            </div>
+            <div class="view-all-wrap">
+                <a href="@Url.Action("Index","Product")" class="btn-outline featured-viewall-btn">
+                    <i class="fa-solid fa-store"></i> View All Products
+                </a>
+            </div>
+        </div>
+    </section>
+}
 
 <!-- REVIEWS -->
 @if (reviews != null && reviews.Any())

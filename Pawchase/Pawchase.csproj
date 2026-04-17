@@ -142,6 +142,7 @@
     <Content Include="Content\css\cart.css" />
     <Content Include="Content\css\home.css" />
     <Content Include="Content\css\mobile.css" />
+    <Content Include="Content\images\hero-dog.png" />
     <Content Include="Content\myreviews.css" />
     <Content Include="Content\css\navbar.css" />
     <Content Include="Content\css\order.css" />
