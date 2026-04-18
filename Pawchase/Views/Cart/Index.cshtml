@@ -35,6 +35,7 @@
                 margin: 8px 0;
                 align-items: center;
                 gap: 6px;
+                flex-direction: column; /* stack progress above text */
             }
 
             .variant-tag {
@@ -56,6 +57,27 @@
                 border: 1px solid #ccc;
                 background: white;
                 margin-top: 6px;
+            }
+
+            /* Free shipping progress bar */
+            .ship-progress {
+                width: 100%;
+                height: 8px;
+                background: rgba(0,0,0,0.06);
+                border-radius: 999px;
+                overflow: hidden;
+                margin-bottom: 6px;
+            }
+            .ship-progress-fill {
+                height: 100%;
+                width: 0%;
+                background: linear-gradient(90deg, #4caf50, #2a8a56);
+                transition: width 300ms ease;
+            }
+            .ship-progress-text {
+                font-size: 11px;
+                font-weight: 600;
+                color: #2a8a56;
             }
         </style>
     }
@@ -168,6 +190,10 @@
                         <span id="sum-shipping">@(shipping==0?"<span class='free-ship'><i class='fa-solid fa-truck'></i> FREE</span>":"&#8369;80.00")</span>
                     </div>
                     <div id="sum-tip" @(total < 500 ? "style='display:flex'" : "")>
+                        <div class="ship-progress" aria-hidden="true">
+                            <div class="ship-progress-fill" style="width:0%"></div>
+                        </div>
+                        <div class="ship-progress-text"></div>
                         <i class="fa-solid fa-truck"></i>
                         <span>Add &#8369;@((500-total).ToString("N2")) more for FREE shipping!</span>
                     </div>

@@ -42,8 +42,18 @@ function updateSummary() {
     var tip = el('sum-tip');
     if (tip) tip.style.display = subtotal > 0 && subtotal < 500 ? 'flex' : 'none';
     if (tip && subtotal > 0) {
+        var amountNeeded = Math.max(0, 500 - subtotal);
         var tipSpan = tip.querySelector('span');
-        if (tipSpan) tipSpan.innerHTML = 'Add &#8369;' + (500 - subtotal).toFixed(2) + ' more for FREE shipping!';
+        if (tipSpan) tipSpan.innerHTML = 'Add &#8369;' + amountNeeded.toFixed(2) + ' more for FREE shipping!';
+
+        // Update progress bar
+        var progressFill = tip.querySelector('.ship-progress-fill');
+        var progressText = tip.querySelector('.ship-progress-text');
+        if (progressFill && progressText) {
+            var percent = Math.min(100, Math.round((subtotal / 500) * 100));
+            progressFill.style.width = percent + '%';
+            progressText.textContent = percent + '% towards free shipping';
+        }
     }
 }
 
