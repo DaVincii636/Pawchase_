@@ -31,7 +31,7 @@
 <nav class="navbar">
     <div class="nav-logo">
         <a href="@Url.Action("Index","Home")">
-            <img src="@Url.Content("~/Content/images/Pawchase.png")" alt="PawChase"
+            <img src="@Url.Content("~/Content/images/Pawchase_logo.png")" alt="PawChase"
                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
             <span class="logo-text-fallback" style="display:none;">
                 <i class="fa-solid fa-paw"></i> PawChase
@@ -76,8 +76,8 @@
                 <i class="fa-regular fa-user"></i>
                 <span>@userName</span>
                 <div class="account-dropdown">
-                    <a href="@Url.Action("Orders","Account")"><i class="fa-solid fa-list-check"></i> My Orders</a>
-                    <a href="@Url.Action("MyReviews","Reviews")" class="@(path.Contains("/reviews/myreviews") ? "active" : "")"><i class="fa-solid fa-bookmark"></i> My Reviews</a>
+                    <a href="@Url.Action("Orders","Account")"><i class="fa-solid fa-user-pen"></i> Profile</a>
+                    <a href="@Url.Action("MyReviews","Reviews")"><i class="fa-solid fa-paw"></i> My Reviews</a>
                     <a href="@Url.Action("Logout","Account")" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
                 </div>
             </div>
