@@ -1,4 +1,4 @@
-@{
+﻿@{
     ViewBag.Title = "Contact Us";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
@@ -32,21 +32,20 @@
                 <div><strong>Support Hours</strong><p>Monday &ndash; Saturday, 8AM &ndash; 6PM</p></div>
             </div>
         </div>
-
         <div class="contact-form-wrap">
             <h2>Send a Message</h2>
             <form class="contact-form" onsubmit="handleContact(event)">
                 <div class="form-group">
                     <label><i class="fa-regular fa-user"></i> Your Name</label>
-                    <input type="text" placeholder="Juan dela Cruz" required/>
+                    <input type="text" placeholder="Juan dela Cruz" required />
                 </div>
                 <div class="form-group">
                     <label><i class="fa-regular fa-envelope"></i> Email Address</label>
-                    <input type="email" placeholder="juan@email.com" required/>
+                    <input type="email" placeholder="juan@email.com" required />
                 </div>
                 <div class="form-group">
                     <label><i class="fa-solid fa-tag"></i> Subject</label>
-                    <input type="text" placeholder="Order inquiry, product question..." required/>
+                    <input type="text" placeholder="Order inquiry, product question..." required />
                 </div>
                 <div class="form-group">
                     <label><i class="fa-regular fa-message"></i> Message</label>
@@ -61,6 +60,8 @@
             </form>
         </div>
     </div>
+
+
 </section>
 
 @section scripts {
