@@ -160,7 +160,12 @@ namespace Pawchase.Controllers
                 if (!IsLoggedIn) return RedirectToAction("Login");
                 var email = Session["UserEmail"].ToString();
                 var orders = MockData.Orders.Where(o => o.Email == email).ToList();
+                var userId = 0;
+                int.TryParse(Session["UserId"]?.ToString(), out userId);
+                var user = MockData.Users.FirstOrDefault(u => u.Id == userId);
                 ViewBag.Tab = tab;
+                ViewBag.ProfileUser = user;
+                ViewBag.CurrentUserId = userId;
                 return View(orders);
             }
             catch (Exception ex)
@@ -168,6 +173,64 @@ namespace Pawchase.Controllers
                 System.Diagnostics.Debug.WriteLine("Orders Error: " + ex.Message);
                 TempData["Error"] = "Could not load your orders. Please try again.";
                 return RedirectToAction("Index", "Home");
+            }
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult SaveProfile(string fullName, string email, string currentPassword, string newPassword, string confirmPassword)
+        {
+            try
+            {
+                if (!IsLoggedIn) return RedirectToAction("Login");
+                var userId = 0;
+                int.TryParse(Session["UserId"]?.ToString(), out userId);
+                var user = MockData.Users.FirstOrDefault(u => u.Id == userId);
+                if (user == null) return RedirectToAction("Login");
+
+                if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(email))
+                {
+                    TempData["ProfileError"] = "Name and email are required.";
+                    return RedirectToAction("Orders", new { tab = "Profile" });
+                }
+                if (MockData.Users.Any(u => u.Id != userId && u.Email.ToLower() == email.ToLower().Trim()))
+                {
+                    TempData["ProfileError"] = "That email is already in use by another account.";
+                    return RedirectToAction("Orders", new { tab = "Profile" });
+                }
+
+                if (!string.IsNullOrWhiteSpace(newPassword))
+                {
+                    if (user.Password != currentPassword)
+                    {
+                        TempData["ProfileError"] = "Current password is incorrect.";
+                        return RedirectToAction("Orders", new { tab = "Profile" });
+                    }
+                    if (newPassword.Length < 6)
+                    {
+                        TempData["ProfileError"] = "New password must be at least 6 characters.";
+                        return RedirectToAction("Orders", new { tab = "Profile" });
+                    }
+                    if (newPassword != confirmPassword)
+                    {
+                        TempData["ProfileError"] = "New passwords do not match.";
+                        return RedirectToAction("Orders", new { tab = "Profile" });
+                    }
+                    user.Password = newPassword;
+                }
+
+                user.FullName = fullName.Trim();
+                user.Email = email.Trim().ToLower();
+                Session["UserName"] = user.FullName;
+                Session["UserEmail"] = user.Email;
+
+                TempData["ProfileSuccess"] = "Profile updated successfully.";
+                return RedirectToAction("Orders", new { tab = "Profile" });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("SaveProfile Error: " + ex.Message);
+                TempData["ProfileError"] = "Could not save profile. Please try again.";
+                return RedirectToAction("Orders", new { tab = "Profile" });
             }
         }
 
@@ -546,7 +609,6 @@ namespace Pawchase.Controllers
                     }
                     else
                     {
-                        // No variant selected - clear
                         item.SelectedVariant = null;
                     }
 
@@ -568,37 +630,27 @@ namespace Pawchase.Controllers
     // ════════════════════════════ ORDER ═══════════════════════════════
     public class OrderController : Controller
     {
-        public ActionResult Track()
-        {
-            return View();
-        }
-
-        [HttpPost]
-        public ActionResult Track(string referenceNumber)
+        public ActionResult Track(string tab = "All")
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(referenceNumber))
-                {
-                    ViewBag.Error = "Please enter a reference number.";
-                    return View();
-                }
-                var order = MockData.Orders.FirstOrDefault(o =>
-                    o.ReferenceNumber.ToUpper() == referenceNumber.Trim().ToUpper());
-                if (order == null)
-                {
-                    ViewBag.Error = "No order found for \"" + referenceNumber.Trim() + "\". Please check and try again.";
-                    return View();
-                }
-                return View("TrackResult", order);
+                if (Session["UserId"] == null) return RedirectToAction("Login", "Account", new { returnUrl = "/Order/Track" });
+                var email = Session["UserEmail"]?.ToString();
+                var orders = MockData.Orders.Where(o => o.Email == email).ToList();
+                var currentUserId = 0;
+                int.TryParse(Session["UserId"]?.ToString(), out currentUserId);
+                ViewBag.Tab = tab;
+                ViewBag.CurrentUserId = currentUserId;
+                return View(orders);
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("Track Error: " + ex.Message);
-                ViewBag.Error = "Could not find your order. Please try again.";
-                return View();
+                TempData["Error"] = "Could not load your orders. Please try again.";
+                return RedirectToAction("Index", "Home");
             }
         }
+
 
         public ActionResult Confirmation(string referenceNumber)
         {
@@ -679,7 +731,6 @@ namespace Pawchase.Controllers
                     DatePosted = DateTime.Now,
                     Category = MockData.Products.FirstOrDefault(p => p.Id == productId)?.Category ?? "Others"
                 };
-
                 MockData.Reviews.Add(review);
 
                 var order = MockData.Orders.FirstOrDefault(o => o.ReferenceNumber == referenceNumber);
