@@ -40,7 +40,7 @@ else
                             {
                                 <div class="status-btns">
                                     <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status="Refund Approved"})" class="approve-btn" onclick="return confirm('Approve refund?')"><i class="fa-solid fa-check"></i> Approve</a>
-                                    <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status="Delivered"})"    class="decline-btn" onclick="return confirm('Decline refund?')"><i class="fa-solid fa-times"></i> Decline</a>
+                                    <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status="Delivered"})" class="decline-btn" onclick="return confirm('Decline refund?')"><i class="fa-solid fa-times"></i> Decline</a>
                                 </div>
                             }
                             else

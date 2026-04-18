@@ -1,44 +1,145 @@
+@using Pawchase.Models
+@model List<Pawchase.Models.Order>
 @{
-    ViewBag.Title = "Track Order";
+    ViewBag.Title = "My Orders";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var tab = ViewBag.Tab as string ?? "All";
+    var tabs = new[] { "All", "To Ship", "In Transit", "Out for Delivery", "To Rate", "Completed" };
+    var tabIcons = new Dictionary<string, string> {
+        {"All","fa-solid fa-list-check"},{"To Ship","fa-solid fa-box"},{"In Transit","fa-solid fa-truck"},
+        {"Out for Delivery","fa-solid fa-location-dot"},{"To Rate","fa-regular fa-star"},
+        {"Completed","fa-solid fa-circle-check"}
+    };
+    var filtered = tab == "All" ? Model : Model.Where(o => o.Status == tab).ToList();
 }
 @section styles {
-    <link href="@Url.Content("~/Content/css/order.css")" rel="stylesheet"/>
+    <link href="@Url.Content("~/Content/css/account.css")" rel="stylesheet" />
+    <link href="@Url.Content("~/Content/css/order.css")" rel="stylesheet" />
 }
 
-<div class="page-hero">
-    <h1>Track Your Order</h1>
-    <p>Enter your reference number to check your order status</p>
-</div>
+<div class="page-hero"><h1>My Orders</h1><p>Track and manage your orders</p></div>
 
-<section class="track-section">
-    <div class="track-card">
-        <i class="fa-regular fa-box track-icon"></i>
-        <h2>Order Tracking</h2>
-        <p>Your reference number was sent to your email after placing an order.<br/>It looks like: <strong>PWC-000001</strong></p>
-
-        @if (ViewBag.Error != null)
-        {
-            <div class="track-error"><i class="fa-solid fa-triangle-exclamation"></i> @ViewBag.Error</div>
-        }
-
-        <form method="post" action="@Url.Action("Track","Order")" class="track-form">
-            @Html.AntiForgeryToken()
-            <div class="track-input-wrap">
-                <input type="text" name="referenceNumber" placeholder="e.g. PWC-000001" maxlength="20" required/>
-                <button type="submit" class="btn-primary">
-                    <i class="fa-solid fa-magnifying-glass"></i> Track
-                </button>
+<section class="account-section">
+    <div class="account-inner">
+        <aside class="account-aside">
+            <div class="acct-header">
+                <div class="acct-avatar"><i class="fa-solid fa-box"></i></div>
+                <div class="acct-name">@Session["UserName"]</div>
+                <div class="acct-email">@Session["UserEmail"]</div>
             </div>
-        </form>
+            <nav class="acct-nav">
+                @foreach (var t in tabs)
+                {
+                    <a href="@Url.Action("Track","Order",new{tab=t})" class='acct-tab @(tab==t?"active":"")'>
+                        <i class="@tabIcons[t]"></i> @t
+                    </a>
+                }
+            </nav>
+        </aside>
 
-        <div class="track-hint">
-            <i class="fa-regular fa-lightbulb"></i>
-            <strong>Test reference numbers:</strong> PWC-000001 &middot; PWC-000002
+        <div>
+            @if (TempData["Success"] != null)
+            {
+                <div style="background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);color:#1e8449;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;margin-bottom:1rem;display:flex;align-items:center;gap:8px;">
+                    <i class="fa-solid fa-circle-check"></i> @TempData["Success"]
+                </div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div style="background:rgba(224,85,85,0.08);border:1px solid rgba(224,85,85,0.25);color:#c0392b;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;margin-bottom:1rem;display:flex;align-items:center;gap:8px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> @TempData["Error"]
+                </div>
+            }
+
+            @if (!filtered.Any())
+            {
+                var emptyIcon = tabIcons.ContainsKey(tab) ? tabIcons[tab] : "fa-solid fa-list-check";
+                <div style="text-align:center;padding:4rem 2rem;color:var(--text-light)">
+                    <i class="@emptyIcon" style="font-size:3rem;margin-bottom:1rem;display:block;color:var(--blue);opacity:.5"></i>
+                    <p>No orders @(tab != "All" ? "in this category" : "yet").</p>
+                    <a href="@Url.Action("Index","Product")" class="btn-primary" style="margin-top:1rem;display:inline-flex">Start Shopping</a>
+                </div>
+            }
+
+            @foreach (var order in filtered.OrderByDescending(o => o.OrderDate))
+            {
+                string pillClass = order.Status == "To Ship" ? "sp-ship"
+                                 : order.Status == "In Transit" ? "sp-transit"
+                                 : order.Status == "Out for Delivery" ? "sp-delivery"
+                                 : order.Status == "To Rate" ? "sp-rate"
+                                 : order.Status == "Completed" ? "sp-done"
+                                 : "sp-refund";
+                <div class="order-card">
+                    <div class="order-card-head">
+                        <div><strong>@order.ReferenceNumber</strong><small>@order.OrderDate.ToString("MMMM dd, yyyy")</small></div>
+                        <span class="status-pill @pillClass">@order.Status</span>
+                    </div>
+                    <div class="order-items-row">
+                        @{ var snapList = order.Snapshots != null && order.Snapshots.Any() ? order.Snapshots : (order.Items != null ? order.Items.Select(i => new Pawchase.Models.OrderItemSnapshot { ProductName = i.Product.Name, ProductImageUrl = i.Product.ImageUrl, VariantImageUrl = i.SelectedVariant?.ImageUrl, Quantity = i.Quantity, UnitPrice = i.Product.Price }).ToList() : new List<Pawchase.Models.OrderItemSnapshot>()); }
+                        @foreach (var snap in snapList.Take(3))
+                        {
+                            var thumbImg = !string.IsNullOrEmpty(snap.VariantImageUrl) ? snap.VariantImageUrl : snap.ProductImageUrl;
+                            <div class="order-item-thumb" style="overflow:hidden;border-radius:6px;">
+                                @if (!string.IsNullOrEmpty(thumbImg))
+                                {
+                                    <img src="@thumbImg" alt="@snap.ProductName"
+                                         style="width:100%;height:100%;object-fit:cover;border-radius:6px;"
+                                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                                    <i class="fa-solid fa-bone" style="display:none;margin:auto;"></i>
+                                }
+                                else
+                                {
+                                    <i class="fa-solid fa-bone" style="margin:auto;"></i>
+                                }
+                            </div>
+                        }
+                        @if (snapList.Count > 3)
+                        {<span style="font-size:11px;color:var(--text-light);align-self:center">+@(snapList.Count-3) more</span>}
+                    </div>
+                    <div class="order-card-foot">
+                        <span class="order-total">Total: &#8369;@order.Total.ToString("N2")</span>
+                        <div class="order-actions">
+                            @if (order.Status == "Out for Delivery")
+                            {
+                                <a href="@Url.Action("MarkReceived","Order",new{referenceNumber=order.ReferenceNumber})" class="btn-sm primary" onclick="return confirm('Confirm received?')"><i class="fa-solid fa-check"></i> Received</a>
+                                <a href="@Url.Action("RequestRefund","Order",new{referenceNumber=order.ReferenceNumber})" class="btn-sm danger" onclick="return confirm('Request refund?')"><i class="fa-solid fa-rotate-left"></i> Refund</a>
+                            }
+                            @if (order.Status == "To Rate")
+                            {
+                                <button class="btn-sm primary" onclick="toggleReview('@order.ReferenceNumber')"><i class="fa-regular fa-star"></i> Write Review</button>
+                            }
+                            @if (order.Status == "Completed")
+                            {<a href="@Url.Action("Index","Product")" class="btn-sm outline">Buy Again</a>}
+                        </div>
+                    </div>
+                    @if (order.Status == "To Rate")
+                    {
+                        <div id="review-@order.ReferenceNumber" class="review-modal" style="display:none;background:rgba(243,227,208,0.3);border-radius:var(--radius);border:1.5px solid var(--lblue);padding:1.2rem;margin-top:.75rem">
+                            @using (Html.BeginForm("SubmitReview", "Order", FormMethod.Post))
+                            {
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="productId" value="@(order.Snapshots != null && order.Snapshots.Any() ? order.Snapshots.First().ProductId : order.Items.First().Product.Id)" />
+                                <input type="hidden" name="referenceNumber" value="@order.ReferenceNumber" />
+                                <p style="font-size:13px;font-weight:700;margin-bottom:.5rem">Rate this order</p>
+                                <div class="stars-select">
+                                    @for (int si = 1; si <= 5; si++)
+                                    {<i class="fa-solid fa-star" data-val="@si" style="color:#E6A520;cursor:pointer;font-size:1.4rem" onclick="setStars(this,@si,'stars-@order.ReferenceNumber')"></i>}
+                                </div>
+                                <input type="hidden" name="stars" id="stars-@order.ReferenceNumber" value="5" />
+                                <div class="form-group" style="margin-top:.75rem"><textarea name="comment" rows="3" placeholder="Share your experience..." required style="border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:13px;width:100%;outline:none;font-family:'Poppins',sans-serif"></textarea></div>
+                                <div style="display:flex;gap:8px;margin-top:.75rem">
+                                    <button type="submit" class="btn-primary" style="padding:8px 18px;font-size:12px">Submit</button>
+                                    <button type="button" class="btn-outline" style="padding:8px 18px;font-size:12px" onclick="toggleReview('@order.ReferenceNumber')">Cancel</button>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
         </div>
     </div>
 </section>
 
 @section scripts {
-    <script src="@Url.Content("~/Scripts/order.js")"></script>
+    <script src="@Url.Content("~/Scripts/account.js")"></script>
 }
