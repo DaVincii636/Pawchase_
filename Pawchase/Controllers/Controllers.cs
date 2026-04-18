@@ -625,6 +625,57 @@ namespace Pawchase.Controllers
                 return RedirectToAction("Index");
             }
         }
+
+        [HttpPost]
+        public ActionResult CheckoutSelected(int[] selectedId, string[] selectedVariantLabel, int[] selectedQty)
+        {
+            try
+            {
+                if (!IsLoggedIn)
+                    return RedirectToAction("Login", "Account", new { returnUrl = Url.Action("Checkout", "Cart") });
+
+                var cart = GetCart();
+                var selected = new List<CartItem>();
+
+                if (selectedId != null && selectedId.Length > 0)
+                {
+                    for (int i = 0; i < selectedId.Length; i++)
+                    {
+                        var id = selectedId[i];
+                        var variant = (selectedVariantLabel != null && i < selectedVariantLabel.Length) ? selectedVariantLabel[i] : null;
+                        var qty = (selectedQty != null && i < selectedQty.Length) ? Math.Max(1, selectedQty[i]) : 1;
+
+                        var item = cart.FirstOrDefault(c => c.Product.Id == id &&
+                            ((string.IsNullOrEmpty(variant) && c.SelectedVariant == null) ||
+                             (c.SelectedVariant != null && c.SelectedVariant.Label == variant)));
+
+                        if (item != null)
+                        {
+                            selected.Add(new CartItem
+                            {
+                                Product = item.Product,
+                                SelectedVariant = item.SelectedVariant,
+                                Quantity = Math.Min(qty, item.Product.Stock)
+                            });
+                        }
+                    }
+                }
+
+                if (!selected.Any())
+                {
+                    TempData["Error"] = "No items selected for checkout.";
+                    return RedirectToAction("Index");
+                }
+
+                return View("Checkout", selected);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("CheckoutSelected Error: " + ex.Message);
+                TempData["Error"] = "Could not start checkout. Please try again.";
+                return RedirectToAction("Index");
+            }
+        }
     }
 
     // ════════════════════════════ ORDER ═══════════════════════════════

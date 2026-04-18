@@ -9,6 +9,14 @@ document.addEventListener('DOMContentLoaded', function () {
             opt.classList.add('active');
         });
     });
+
+    // Intercept the main "Proceed to Checkout" link so we only send selected items
+    document.querySelectorAll('a.checkout-btn').forEach(function (link) {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            postSelectedToCheckout(link);
+        });
+    });
 });
 
 function toggleAll(cb) {
@@ -55,6 +63,88 @@ function updateSummary() {
             progressText.textContent = percent + '% towards free shipping';
         }
     }
+}
+
+function postSelectedToCheckout(link) {
+    // Collect checked rows
+    var rows = document.querySelectorAll('.cart-row');
+    var selectedIds = [];
+    var selectedVariants = [];
+    var selectedQtys = [];
+
+    for (var i = 0; i < rows.length; i++) {
+        var cb = rows[i].querySelector('.item-check');
+        if (!cb) continue;
+        if (!cb.checked) continue;
+
+        // Read product id and variant from the existing UpdateQuantity form inputs
+        var idInput = rows[i].querySelector('form input[name="id"]');
+        // The variantLabel hidden input is inside the UpdateQuantity form (name="variantLabel")
+        var variantInput = rows[i].querySelector('form input[name="variantLabel"]');
+        // Quantity is shown in a span.qty-count; use that as the current quantity
+        var qtyEl = rows[i].querySelector('.qty-count');
+
+        var id = idInput ? idInput.value : null;
+        var variant = variantInput ? variantInput.value : '';
+        var qty = qtyEl ? qtyEl.textContent.trim() : '1';
+
+        if (id) {
+            selectedIds.push(id);
+            selectedVariants.push(variant);
+            selectedQtys.push(qty || '1');
+        }
+    }
+
+    if (selectedIds.length === 0) {
+        // If none selected, fall back to default behaviour: proceed with all items
+        // by navigating to the Checkout page
+        window.location.href = link ? link.href : 'Checkout';
+        return;
+    }
+
+    // Build and submit a temporary form to POST to CheckoutSelected
+    var form = document.createElement('form');
+    form.method = 'POST';
+    // Use a relative action so the app virtual path is respected
+    // If the link element is provided, build action from its href
+    if (link && link.href) {
+        // Replace the final 'Checkout' segment with 'CheckoutSelected' while keeping the app path
+        try {
+            var href = link.href;
+            var newAction = href.replace(/Checkout(\?.*)?$/, 'CheckoutSelected$1');
+            form.action = newAction;
+        } catch (e) {
+            form.action = 'CheckoutSelected';
+        }
+    } else {
+        form.action = 'CheckoutSelected';
+    }
+
+    // Add arrays: selectedId, selectedVariantLabel, selectedQty
+    selectedIds.forEach(function (v) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'selectedId';
+        inp.value = v;
+        form.appendChild(inp);
+    });
+    selectedVariants.forEach(function (v) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'selectedVariantLabel';
+        inp.value = v || '';
+        form.appendChild(inp);
+    });
+    selectedQtys.forEach(function (v) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'selectedQty';
+        inp.value = v || '1';
+        form.appendChild(inp);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
 }
 
 function confirmRemove() { return confirm('Remove this item from your cart?'); }

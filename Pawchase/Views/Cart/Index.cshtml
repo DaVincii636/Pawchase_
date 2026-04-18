@@ -103,8 +103,9 @@
                             <span><input type="checkbox" id="check-all" checked onchange="toggleAll(this)" style="cursor:pointer;accent-color:var(--blue);width:16px;height:16px" /></span>
                             <span>Product</span><span>Price</span><span>Quantity</span><span>Subtotal</span><span></span>
                         </div>
-                        @foreach (var item in Model)
+                        @for (int i = 0; i < Model.Count; i++)
                         {
+                            var item = Model[i];
                             var vLabel = item.SelectedVariant != null ? item.SelectedVariant.Label : null;
                             <div class="cart-row">
                                 <div style="display:flex;align-items:center">
@@ -123,7 +124,6 @@
                                     <div class="cart-product-info">
                                         <h4>@item.Product.Name</h4>
                                         <span>@item.Product.Category &middot; @item.Product.BreedSize</span>
-                                        @* Show variant info and allow changing it inline if product has variants *@
                                         @if (item.Product.Variants != null && item.Product.Variants.Any())
                                         {
                                             <form method="post" action="@Url.Action("ChangeVariant","Cart")" style="margin-top:6px;">

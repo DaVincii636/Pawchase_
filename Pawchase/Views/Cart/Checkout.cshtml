@@ -22,6 +22,15 @@
                 <h2><i class="fa-solid fa-location-dot"></i> Delivery Information</h2>
                 <form method="post" action="@Url.Action("PlaceOrder","Cart")">
                     @Html.AntiForgeryToken()
+
+                    @* Hidden inputs for selected items: PlaceOrder accepts arrays selectedId/selectedVariantLabel/selectedQty *@
+                    @foreach (var item in Model)
+                    {
+                        <input type="hidden" name="selectedId" value="@item.Product.Id" />
+                        <input type="hidden" name="selectedVariantLabel" value="@(item.SelectedVariant?.Label ?? "")" />
+                        <input type="hidden" name="selectedQty" value="@item.Quantity" />
+                    }
+
                     <div class="form-group">
                         <label><i class="fa-regular fa-user"></i> Full Name</label>
                         <input type="text" value="@Session["UserName"]" readonly class="readonly-input" />
