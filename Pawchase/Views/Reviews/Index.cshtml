@@ -59,9 +59,7 @@
         </select>
     </div>
 
-    <button class="write-review-btn" onclick="openWriteModal()">
-        <i class="fa-solid fa-pen-to-square"></i> Write a Review
-    </button>
+    @* eunice modified: removed Write a Review button from toolbar — reviews page is read-only like Shopee/Lazada *@
 </div>
 
 <section class="reviews-section @(ViewBag.PhotoFilter == "without" ? "without-photos-view" : "")">
@@ -199,13 +197,16 @@
     <div class="report-modal">
         <h3>Help us understand the issue with this review.</h3>
         <div class="report-options" id="report-options">
-            <label class="report-option"><input type="radio" name="report-reason" value="Inappropriate content" /> Inappropriate content</label>
-            <label class="report-option"><input type="radio" name="report-reason" value="Spam" /> Spam</label>
-            <label class="report-option"><input type="radio" name="report-reason" value="Misleading or inaccurate information" /> Misleading or inaccurate information</label>
-            <label class="report-option"><input type="radio" name="report-reason" value="Offensive or abusive language" /> Offensive or abusive language</label>
-            <label class="report-option"><input type="radio" name="report-reason" value="Irrelevant content" /> Irrelevant content</label>
-            <label class="report-option"><input type="radio" name="report-reason" value="Other" /> Other</label>
+            <label class="report-option"><input type="radio" name="report-reason" value="Inappropriate content" onchange="toggleOtherInput(this)" /> Inappropriate content</label>
+            <label class="report-option"><input type="radio" name="report-reason" value="Spam" onchange="toggleOtherInput(this)" /> Spam</label>
+            <label class="report-option"><input type="radio" name="report-reason" value="Misleading or inaccurate information" onchange="toggleOtherInput(this)" /> Misleading or inaccurate information</label>
+            <label class="report-option"><input type="radio" name="report-reason" value="Offensive or abusive language" onchange="toggleOtherInput(this)" /> Offensive or abusive language</label>
+            <label class="report-option"><input type="radio" name="report-reason" value="Irrelevant content" onchange="toggleOtherInput(this)" /> Irrelevant content</label>
+            <label class="report-option"><input type="radio" name="report-reason" value="Other" onchange="toggleOtherInput(this)" /> Other</label>
         </div>
+        @* eunice modified: input field shown when "Other" is selected *@
+        <input type="text" id="report-other-input" maxlength="150" placeholder="Please describe the issue..."
+               style="display:none;width:100%;margin-top:8px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Poppins',sans-serif;font-size:12px;box-sizing:border-box;" />
         <div class="report-error" id="report-error"></div>
         <div class="report-actions">
             <button type="button" class="report-cancel" onclick="closeReportModal()">Cancel</button>
@@ -272,6 +273,8 @@
 @section scripts {
     <script>
 window.reviewsData = {
+    // eunice modified: pass login state from server so JS can gate like/comment/report/write
+    isLoggedIn: @(Session["UserId"] != null ? "true" : "false"),
     currentFilters: {
         sortBy: '@(hasSortSelection ? (string)ViewBag.SortBy : "")',
         category: '@(hasCategorySelection ? (string)ViewBag.Category : "")',

@@ -374,8 +374,17 @@
             }
         }
 
+        // eunice modified: login check — redirects to Login page with returnUrl
+        var _isLoggedIn = @(Session["UserId"] != null ? "true" : "false");
+        var _loginUrl = '@Url.Action("Login","Account")';
+        function showLoginPopup() {
+            window.location.href = _loginUrl + '?returnUrl=' + encodeURIComponent(window.location.pathname + window.location.search);
+        }
+
         // ── Open unified modal ─────────────────────────────────────────────
         function openCartModal(mode) {
+            // eunice modified: require login before Add to Cart or Buy Now
+            if (!_isLoggedIn) { showLoginPopup(); return; }
             _cartModalMode = mode;
 
             // Set title and confirm button label

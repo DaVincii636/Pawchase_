@@ -3,12 +3,20 @@ var currentFilters = reviewsConfig.currentFilters || { sortBy: '', category: '',
 var urls = reviewsConfig.urls || {};
 var reviews = reviewsConfig.reviews || [];
 var openReviewId = reviewsConfig.openReviewId || 0;
+// eunice modified: read login state passed from server
+var isLoggedIn = reviewsConfig.isLoggedIn || false;
 
 var activeReview = null;
 var pendingReportReviewId = null;
 
 var byId = function (id) { return document.getElementById(id); };
 var setBodyLock = function (locked) { document.body.style.overflow = locked ? 'hidden' : ''; };
+
+// eunice modified: redirects to Login page with returnUrl so user comes back after logging in
+var _loginUrl = '/Account/Login';
+function showLoginRequired() {
+    window.location.href = _loginUrl + '?returnUrl=' + encodeURIComponent(window.location.pathname + window.location.search);
+}
 
 function renderStars(stars) {
     var html = [];
@@ -88,6 +96,8 @@ function applyFilter(changes) {
 }
 
 function openWriteModal() {
+    // eunice modified: require login to write a review
+    if (!isLoggedIn) { showLoginRequired(); return; }
     byId('write-modal').classList.add('open');
     setBodyLock(true);
 }
@@ -206,6 +216,7 @@ function closeModal() {
 }
 
 function openModalComments(index) {
+    // eunice modified: guests can view comments freely; login only needed when sending
     openModal(index);
     byId('modal-comments-panel').style.display = 'block';
 }
@@ -216,9 +227,14 @@ function toggleCommentPanel() {
 }
 
 function openReportModal(reviewId) {
+    // eunice modified: require login to report a review
+    if (!isLoggedIn) { showLoginRequired(); return; }
     pendingReportReviewId = reviewId;
     byId('report-error').textContent = '';
     document.querySelectorAll('input[name="report-reason"]').forEach(function (radio) { radio.checked = false; });
+    // eunice modified: reset Other input field when modal opens
+    var otherInput = byId('report-other-input');
+    if (otherInput) { otherInput.value = ''; otherInput.style.display = 'none'; }
     byId('report-modal-overlay').classList.add('open');
 }
 
@@ -227,11 +243,21 @@ function closeReportModal() {
     pendingReportReviewId = null;
 }
 
+// eunice modified: show/hide the Other input field based on radio selection
+function toggleOtherInput(radio) {
+    var otherInput = byId('report-other-input');
+    if (!otherInput) return;
+    otherInput.style.display = radio.value === 'Other' ? 'block' : 'none';
+    if (radio.value !== 'Other') otherInput.value = '';
+}
+
 function applyReportedState(reviewId, reportCount) {
     var reviewIndex = reviews.findIndex(function (r) { return r.id === reviewId; });
     if (reviewIndex >= 0) {
         reviews[reviewIndex].reportCount = reportCount;
         reviews[reviewIndex].isReported = true;
+        // eunice modified: auto-unlike the review when reported
+        reviews[reviewIndex].isLiked = false;
     }
 
     document.querySelectorAll('[data-report-review-id="' + reviewId + '"]').forEach(function (btn) {
@@ -240,6 +266,21 @@ function applyReportedState(reviewId, reportCount) {
         var count = btn.querySelector('span');
         if (icon) icon.className = 'fa-solid fa-flag';
         if (count) count.textContent = reportCount;
+    });
+
+    // eunice modified: auto-unlike — update like button UI and likes count
+    var likedBtns = document.querySelectorAll('[data-review-id="' + reviewId + '"]');
+    likedBtns.forEach(function (btn) {
+        if (btn.classList.contains('liked')) {
+            btn.classList.remove('liked');
+            var icon = btn.querySelector('i');
+            var countSpan = btn.querySelector('span');
+            if (icon) icon.className = 'fa-regular fa-heart';
+            if (countSpan) {
+                var currentCount = parseInt(countSpan.textContent) || 0;
+                if (currentCount > 0) countSpan.textContent = currentCount - 1;
+            }
+        }
     });
 
     var card = byId('review-' + reviewId);
@@ -252,6 +293,17 @@ function applyReportedState(reviewId, reportCount) {
         var modalReportBtn = byId('modal-report-btn');
         modalReportBtn.classList.add('reported');
         modalReportBtn.querySelector('i').className = 'fa-solid fa-flag';
+        // eunice modified: auto-unlike in modal too
+        var modalLikeBtn = byId('modal-like-btn');
+        if (modalLikeBtn && modalLikeBtn.classList.contains('liked')) {
+            modalLikeBtn.classList.remove('liked');
+            modalLikeBtn.querySelector('i').className = 'fa-regular fa-heart';
+            var modalLikes = byId('modal-likes');
+            if (modalLikes) {
+                var lc = parseInt(modalLikes.textContent) || 0;
+                if (lc > 0) modalLikes.textContent = lc - 1;
+            }
+        }
     }
 }
 
@@ -264,7 +316,19 @@ function submitReport() {
         return;
     }
 
-    $.post(urls.report || '/Reviews/Report', { id: pendingReportReviewId, reason: selected.value }, function (data) {
+    // eunice modified: if "Other" is selected, use the custom input text as the reason
+    var reason = selected.value;
+    if (reason === 'Other') {
+        var otherInput = byId('report-other-input');
+        var otherText = otherInput ? otherInput.value.trim() : '';
+        if (!otherText) {
+            byId('report-error').textContent = 'Please describe the issue.';
+            return;
+        }
+        reason = 'Other: ' + otherText;
+    }
+
+    $.post(urls.report || '/Reviews/Report', { id: pendingReportReviewId, reason: reason }, function (data) {
         if (!data || !data.ok) {
             byId('report-error').textContent = (data && data.error) ? data.error : 'Unable to submit report.';
             return;
@@ -287,6 +351,19 @@ function updateCommentCount(reviewId, count) {
 }
 
 function toggleLike(reviewId, btn) {
+    // eunice modified: require login to like
+    if (!isLoggedIn) { showLoginRequired(); return; }
+    // eunice modified: cannot like a review you already reported
+    var reviewObj = reviews.find(function (r) { return r.id === reviewId; });
+    if (reviewObj && reviewObj.isReported) {
+        var toast = document.createElement('div');
+        toast.className = 'toast-small';
+        toast.style.cssText = 'position:fixed;top:90px;right:16px;z-index:9999;background:#e85d5d;';
+        toast.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> You cannot like a review you have reported.';
+        document.body.appendChild(toast);
+        setTimeout(function () { toast.remove(); }, 3500);
+        return;
+    }
     $.post(urls.like || '/Reviews/Like', { id: reviewId }, function (data) {
         if (!data || !data.ok) return;
 
@@ -319,6 +396,8 @@ function toggleLike(reviewId, btn) {
 
 byId('modal-comment-form')?.addEventListener('submit', function (e) {
     e.preventDefault();
+    // eunice modified: require login to post a comment
+    if (!isLoggedIn) { showLoginRequired(); return; }
     if (!activeReview) return;
 
     var form = this;

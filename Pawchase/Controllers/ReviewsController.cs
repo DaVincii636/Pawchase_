@@ -137,6 +137,13 @@ namespace Pawchase.Controllers
             var review = MockData.Reviews.FirstOrDefault(r => r.Id == id);
             if (review != null)
             {
+                // eunice modified: cannot like a review you have already reported
+                var reportedIds = GetReportedReviewIds();
+                if (reportedIds.Contains(id))
+                {
+                    return Json(new { ok = false, error = "You cannot like a review you have reported." });
+                }
+
                 var likedIds = GetLikedReviewIds();
                 var alreadyLiked = likedIds.Contains(id);
 
@@ -180,6 +187,15 @@ namespace Pawchase.Controllers
                 reportedIds.Add(id);
                 review.ReportCount++;
                 SaveReportedReviewIds(reportedIds);
+
+                // eunice modified: auto-unlike the review if the user had previously liked it
+                var likedIds = GetLikedReviewIds();
+                if (likedIds.Contains(id))
+                {
+                    likedIds.Remove(id);
+                    if (review.Likes > 0) review.Likes--;
+                    SaveLikedReviewIds(likedIds);
+                }
             }
 
             return Json(new { ok = true, reportCount = review.ReportCount, reported = true });
