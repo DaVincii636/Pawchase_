@@ -48,6 +48,15 @@
                 padding: 2px 8px;
                 margin-top: 3px;
             }
+
+            .variant-select {
+                font-size: 12px;
+                padding: 4px 6px;
+                border-radius: 4px;
+                border: 1px solid #ccc;
+                background: white;
+                margin-top: 6px;
+            }
         </style>
     }
 
@@ -92,9 +101,28 @@
                                     <div class="cart-product-info">
                                         <h4>@item.Product.Name</h4>
                                         <span>@item.Product.Category &middot; @item.Product.BreedSize</span>
-                                        @if (!string.IsNullOrEmpty(vLabel))
+                                        @* Show variant info and allow changing it inline if product has variants *@
+                                        @if (item.Product.Variants != null && item.Product.Variants.Any())
                                         {
-                                            <span class="variant-tag"><i class="fa-solid fa-palette"></i> @vLabel</span>
+                                            <form method="post" action="@Url.Action("ChangeVariant","Cart")" style="margin-top:6px;">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@item.Product.Id" />
+                                                <input type="hidden" name="oldVariantLabel" value="@vLabel" />
+                                                <select name="newVariantLabel" class="variant-select" onchange="this.form.submit()">
+                                                    <option value="" @(string.IsNullOrEmpty(vLabel) ? "selected" : "")>-- No variant --</option>
+                                                    @foreach (var v in item.Product.Variants)
+                                                    {
+                                                        <option value="@v.Label" @(v.Label == vLabel ? "selected" : "")>@v.Label</option>
+                                                    }
+                                                </select>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            if (!string.IsNullOrEmpty(vLabel))
+                                            {
+                                                <span class="variant-tag"><i class="fa-solid fa-palette"></i> @vLabel</span>
+                                            }
                                         }
                                     </div>
                                 </div>

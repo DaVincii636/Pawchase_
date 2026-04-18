@@ -523,6 +523,46 @@ namespace Pawchase.Controllers
                 return RedirectToAction("Checkout");
             }
         }
+
+        // NEW: Update the selected variant for an existing cart item
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult ChangeVariant(int id, string oldVariantLabel, string newVariantLabel)
+        {
+            try
+            {
+                var cart = GetCart();
+                var item = cart.FirstOrDefault(c =>
+                    c.Product.Id == id &&
+                    ((string.IsNullOrEmpty(oldVariantLabel) && c.SelectedVariant == null) ||
+                     (c.SelectedVariant != null && c.SelectedVariant.Label == oldVariantLabel)));
+
+                if (item != null)
+                {
+                    var product = MockData.Products.FirstOrDefault(p => p.Id == id && !p.IsDeleted);
+                    if (product != null && product.Variants != null && !string.IsNullOrEmpty(newVariantLabel))
+                    {
+                        var chosen = product.Variants.FirstOrDefault(v => v.Label == newVariantLabel);
+                        item.SelectedVariant = chosen;
+                    }
+                    else
+                    {
+                        // No variant selected - clear
+                        item.SelectedVariant = null;
+                    }
+
+                    Session["Cart"] = cart;
+                    TempData["Success"] = "Variant updated.";
+                }
+
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("ChangeVariant Error: " + ex.Message);
+                TempData["Error"] = "Could not update variant. Please try again.";
+                return RedirectToAction("Index");
+            }
+        }
     }
 
     // ════════════════════════════ ORDER ═══════════════════════════════
@@ -639,6 +679,7 @@ namespace Pawchase.Controllers
                     DatePosted = DateTime.Now,
                     Category = MockData.Products.FirstOrDefault(p => p.Id == productId)?.Category ?? "Others"
                 };
+
                 MockData.Reviews.Add(review);
 
                 var order = MockData.Orders.FirstOrDefault(o => o.ReferenceNumber == referenceNumber);
