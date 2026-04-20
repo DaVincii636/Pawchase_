@@ -174,13 +174,13 @@
                     </div>
                     <div style="margin-top:1.2rem;padding:0 .5rem">
                         <a href="@Url.Action("Index","Product")" class="btn-outline" style="font-size:13px;padding:8px 20px">
-                            &larr; Continue Shopping
+                         Continue Shopping
                         </a>
                     </div>
                 </div>
 
                 <div class="cart-summary">
-                    <h3><i class="fa-solid fa-receipt" style="color:var(--blue)"></i> Order Summary</h3>
+                    <h3> Order Summary</h3>
                     <div class="summary-row">
                         <span>Subtotal (<span id="sum-count">@Model.Sum(c => c.Quantity) items</span>)</span>
                         <span id="sum-subtotal">&#8369;@total.ToString("N2")</span>
@@ -202,7 +202,7 @@
                         <span id="sum-total">&#8369;@((total+shipping).ToString("N2"))</span>
                     </div>
                     <a href="@Url.Action("Checkout","Cart")" class="btn-primary checkout-btn">
-                        <i class="fa-solid fa-lock"></i> Proceed to Checkout
+                         Proceed to Checkout
                     </a>
                     <a href="@Url.Action("Index","Product")" class="btn-outline continue-btn">Browse More</a>
                 </div>
