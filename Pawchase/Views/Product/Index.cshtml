@@ -104,7 +104,7 @@
             <div class="filter-group">
                 <label>Category</label>
                 <div class="filter-options vertical">
-                    @foreach (var cat in new[] { "Treats", "Toys", "Accessories", "Health", "Others" })
+                    @foreach (var cat in new[] { "Food & Treats", "Accessories & Apparel", "Care & Hygiene", "Toys", "Health", "Others" })
                     {
                         <button type="button" onclick="setFilter('category', '@cat')" class="filter-btn @(ViewBag.Category==cat?"active":"")" data-filter-key="category" data-filter-val="@cat">@cat</button>
                     }

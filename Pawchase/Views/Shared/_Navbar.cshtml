@@ -43,7 +43,7 @@
         <li class="@(path == "/" || path.Contains("/home/index") ? "active" : "")">
             @Html.ActionLink("Home", "Index", "Home")
         </li>
-        <li class="@(path.Contains("/product") ? "active" : "") products-nav">
+        <li class="@(path.Contains("/product") ? "active" : "")">
             @Html.ActionLink("Products", "Index", "Product")
         </li>
         <li class="@((path == "/reviews" || path.Contains("/reviews/index")) ? "active" : "")">

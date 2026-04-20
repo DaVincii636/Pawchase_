@@ -14,23 +14,23 @@ namespace Pawchase.Models
         public static List<Product> Products = new List<Product>
         {
             // TREATS
-            new Product { Id=1,  Name="Premium Chicken Treats",     Description="High-protein chicken treats for small dogs. Great for training.", Price=299m, OriginalPrice=399m, Category="Treats",      BreedSize="Small",  ImageUrl="/Content/images/products/placeholder.png", Stock=50 },
-            new Product { Id=2,  Name="Beef Jerky Dog Strips",       Description="Natural beef jerky strips. No artificial preservatives.",         Price=349m,                     Category="Treats",      BreedSize="Medium", ImageUrl="/Content/images/products/placeholder.png", Stock=40 },
-            new Product { Id=3,  Name="Large Breed Dental Chews",    Description="Reduces tartar and freshens breath. Made for big dogs.",          Price=499m, OriginalPrice=599m, Category="Treats",      BreedSize="Large",  ImageUrl="/Content/images/products/placeholder.png", Stock=30 },
+            new Product { Id=1,  Name="Premium Chicken Treats",     Description="High-protein chicken treats for small dogs. Great for training.", Price=299m, OriginalPrice=399m, Category="Food & Treats",      BreedSize="Small",  ImageUrl="/Content/images/products/placeholder.png", Stock=50 },
+            new Product { Id=2,  Name="Beef Jerky Dog Strips",       Description="Natural beef jerky strips. No artificial preservatives.",         Price=349m,                     Category="Food & Treats",      BreedSize="Medium", ImageUrl="/Content/images/products/placeholder.png", Stock=40 },
+            new Product { Id=3,  Name="Large Breed Dental Chews",    Description="Reduces tartar and freshens breath. Made for big dogs.",          Price=499m, OriginalPrice=599m, Category="Food & Treats",      BreedSize="Large",  ImageUrl="/Content/images/products/placeholder.png", Stock=30 },
             // TOYS
             new Product { Id=4,  Name="Mini Squeaky Ball Set",       Description="Set of 3 squeaky balls sized for small breeds.",                  Price=199m, OriginalPrice=260m, Category="Toys",        BreedSize="Small",  ImageUrl="/Content/images/products/placeholder.png", Stock=80 },
             new Product { Id=5,  Name="Rubber Chew Toy",             Description="Durable rubber toy for medium to large chewers.",                 Price=249m,                     Category="Toys",        BreedSize="Medium", ImageUrl="/Content/images/products/placeholder.png", Stock=100 },
             new Product { Id=6,  Name="Tug Rope Toy XL",             Description="Heavy-duty braided rope toy for large breeds.",                   Price=299m,                     Category="Toys",        BreedSize="Large",  ImageUrl="/Content/images/products/placeholder.png", Stock=60 },
             // ACCESSORIES
-            new Product { Id=7,  Name="Adjustable Puppy Collar",     Description="Soft nylon collar with quick-release buckle. Small size.",        Price=150m,                     Category="Accessories", BreedSize="Small",  ImageUrl="/Content/images/products/placeholder.png", Stock=75 },
-            new Product { Id=8,  Name="Padded Harness & Leash Set",  Description="No-pull harness set for medium breed dogs.",                      Price=450m, OriginalPrice=550m, Category="Accessories", BreedSize="Medium", ImageUrl="/Content/images/products/placeholder.png", Stock=35 },
-            new Product { Id=9,  Name="Heavy Duty Leash 2m",         Description="Strong nylon leash for large breed dogs. 2 meters.",              Price=220m,                     Category="Accessories", BreedSize="Large",  ImageUrl="/Content/images/products/placeholder.png", Stock=50 },
-            new Product { Id=10, Name="Soft Pet Carrier",            Description="Airline-approved soft carrier for small dogs.",                   Price=899m, OriginalPrice=1099m,Category="Accessories", BreedSize="Small",  ImageUrl="/Content/images/products/placeholder.png", Stock=20 },
+            new Product { Id=7,  Name="Adjustable Puppy Collar",     Description="Soft nylon collar with quick-release buckle. Small size.",        Price=150m,                     Category="Accessories & Apparel", BreedSize="Small",  ImageUrl="/Content/images/products/placeholder.png", Stock=75 },
+            new Product { Id=8,  Name="Padded Harness & Leash Set",  Description="No-pull harness set for medium breed dogs.",                      Price=450m, OriginalPrice=550m, Category="Accessories & Apparel", BreedSize="Medium", ImageUrl="/Content/images/products/placeholder.png", Stock=35 },
+            new Product { Id=9,  Name="Heavy Duty Leash 2m",         Description="Strong nylon leash for large breed dogs. 2 meters.",              Price=220m,                     Category="Accessories & Apparel", BreedSize="Large",  ImageUrl="/Content/images/products/placeholder.png", Stock=50 },
+            new Product { Id=10, Name="Soft Pet Carrier",            Description="Airline-approved soft carrier for small dogs.",                   Price=899m, OriginalPrice=1099m,Category="Accessories & Apparel", BreedSize="Small",  ImageUrl="/Content/images/products/placeholder.png", Stock=20 },
             // HEALTH
             new Product { Id=11, Name="Small Dog Multivitamins",     Description="Daily chewable vitamins for small breed dogs. Chicken flavor.",   Price=399m,                     Category="Health",      BreedSize="Small",  ImageUrl="/Content/images/products/placeholder.png", Stock=55 },
             new Product { Id=12, Name="Joint Support Supplement",    Description="Glucosamine & chondroitin for medium breed joint health.",        Price=549m, OriginalPrice=649m, Category="Health",      BreedSize="Medium", ImageUrl="/Content/images/products/placeholder.png", Stock=40 },
             new Product { Id=13, Name="Tick & Flea Drops",           Description="Fast-acting topical treatment. Works for all sizes.",             Price=399m,                     Category="Health",      BreedSize="All",    ImageUrl="/Content/images/products/placeholder.png", Stock=60 },
-            new Product { Id=14, Name="Dog Shampoo -- All Coats",     Description="Gentle oatmeal shampoo suitable for any coat type.",              Price=249m,                     Category="Health",      BreedSize="All",    ImageUrl="/Content/images/products/placeholder.png", Stock=70 },
+            new Product { Id=14, Name="Dog Shampoo -- All Coats",     Description="Gentle oatmeal shampoo suitable for any coat type.",              Price=249m,                     Category="Care & Hygiene",      BreedSize="All",    ImageUrl="/Content/images/products/placeholder.png", Stock=70 },
             // OTHERS
             new Product { Id=15, Name="Stainless Steel Bowl Set",    Description="Non-slip double bowl set. Dishwasher safe.",                      Price=299m,                     Category="Others",      BreedSize="All",    ImageUrl="/Content/images/products/placeholder.png", Stock=45 },
             new Product { Id=16, Name="Orthopedic Dog Bed L",        Description="Memory foam bed for large breed dogs. Washable cover.",           Price=1299m,OriginalPrice=1599m,Category="Others",      BreedSize="Large",  ImageUrl="/Content/images/products/placeholder.png", Stock=15 },
@@ -67,7 +67,7 @@ namespace Pawchase.Models
 
         public static List<Review> Reviews = new List<Review>
         {
-            new Review { Id=1, ProductId=1, UserId=1, CustomerName="alex", Stars=5, Comment="My dog goes crazy for these treats! Great for training.", PhotoUrl="/Content/images/review4.jpg", DatePosted=DateTime.Now.AddDays(-5), Likes=12, Category="Treats",
+            new Review { Id=1, ProductId=1, UserId=1, CustomerName="alex", Stars=5, Comment="My dog goes crazy for these treats! Great for training.", PhotoUrl="/Content/images/review4.jpg", DatePosted=DateTime.Now.AddDays(-5), Likes=12, Category="Food & Treats",
                 Comments = new List<ReviewComment> {
                     new ReviewComment { Id=1, ReviewId=1, UserId=2, UserName="Maria Santos", Text="Same! My pup loves this too.", DatePosted=DateTime.Now.AddDays(-4) },
                     new ReviewComment { Id=2, ReviewId=1, UserId=2, UserName="Carlo Reyes", Text="Thanks for sharing this review.", DatePosted=DateTime.Now.AddDays(-3) }
@@ -79,13 +79,13 @@ namespace Pawchase.Models
                     new ReviewComment { Id=22, ReviewId=2, UserId=2, UserName="Maria Santos", Text="Around 2 months with daily play.", DatePosted=DateTime.Now.AddDays(-6) }
                 }
             },
-            new Review { Id=3, ProductId=8, UserId=1, CustomerName="alex", Stars=5, Comment="Perfect fit and very sturdy. No more pulling!", PhotoUrl="/Content/images/review5.jpg", DatePosted=DateTime.Now.AddDays(-12), Likes=15, Category="Accessories",
+            new Review { Id=3, ProductId=8, UserId=1, CustomerName="alex", Stars=5, Comment="Perfect fit and very sturdy. No more pulling!", PhotoUrl="/Content/images/review5.jpg", DatePosted=DateTime.Now.AddDays(-12), Likes=15, Category="Accessories & Apparel",
                 Comments = new List<ReviewComment> {
                     new ReviewComment { Id=4, ReviewId=3, UserId=2, UserName="Nina Cruz", Text="Looks high quality!", DatePosted=DateTime.Now.AddDays(-11) },
                     new ReviewComment { Id=23, ReviewId=3, UserId=5, UserName="Ivy Ramos", Text="The buckle also feels very secure.", DatePosted=DateTime.Now.AddDays(-10) }
                 }
             },
-            new Review { Id=4, ProductId=2, UserId=2, CustomerName="Maria Santos", Stars=5, Comment="High quality beef jerky. My labrador retriever cannot get enough!", PhotoUrl="/Content/images/review1.jpg", DatePosted=DateTime.Now.AddDays(-3), Likes=18, ReportCount=2, Category="Treats",
+            new Review { Id=4, ProductId=2, UserId=2, CustomerName="Maria Santos", Stars=5, Comment="High quality beef jerky. My labrador retriever cannot get enough!", PhotoUrl="/Content/images/review1.jpg", DatePosted=DateTime.Now.AddDays(-3), Likes=18, ReportCount=2, Category="Food & Treats",
                 Comments = new List<ReviewComment> {
                     new ReviewComment { Id=5, ReviewId=4, UserId=1, UserName="alex", Text="I will reorder this soon.", DatePosted=DateTime.Now.AddDays(-2) },
                     new ReviewComment { Id=6, ReviewId=4, UserId=3, UserName="Jude Lim", Text="Good value for money.", DatePosted=DateTime.Now.AddDays(-2) }
@@ -103,7 +103,7 @@ namespace Pawchase.Models
                     new ReviewComment { Id=9, ReviewId=6, UserId=4, UserName="Rica", Text="Can confirm, very durable.", DatePosted=DateTime.Now.AddDays(-6) }
                 }
             },
-            new Review { Id=7, ProductId=7, UserId=1, CustomerName="alex", Stars=4, Comment="Fits perfectly. Good quality material.", DatePosted=DateTime.Now.AddDays(-15), Likes=6, Category="Accessories",
+            new Review { Id=7, ProductId=7, UserId=1, CustomerName="alex", Stars=4, Comment="Fits perfectly. Good quality material.", DatePosted=DateTime.Now.AddDays(-15), Likes=6, Category="Accessories & Apparel",
                 Comments = new List<ReviewComment> {
                     new ReviewComment { Id=25, ReviewId=7, UserId=3, UserName="Karen Uy", Text="Looks neat and comfy.", DatePosted=DateTime.Now.AddDays(-14) },
                     new ReviewComment { Id=26, ReviewId=7, UserId=6, UserName="Mia Dela Pena", Text="Mine also fit well on a small breed.", DatePosted=DateTime.Now.AddDays(-13) }
@@ -127,13 +127,13 @@ namespace Pawchase.Models
                     new ReviewComment { Id=13, ReviewId=10, UserId=2, UserName="Maria Santos", Text="My dog sleeps better now.", DatePosted=DateTime.Now.AddDays(-1) }
                 }
             },
-            new Review { Id=11, ProductId=3, UserId=1, CustomerName="alex", Stars=5, Comment="Dental chews reduced tartar quickly and breath smells better.", PhotoUrl="/Content/images/review7.jpg", DatePosted=DateTime.Now.AddDays(-13), Likes=14, Category="Treats",
+            new Review { Id=11, ProductId=3, UserId=1, CustomerName="alex", Stars=5, Comment="Dental chews reduced tartar quickly and breath smells better.", PhotoUrl="/Content/images/review7.jpg", DatePosted=DateTime.Now.AddDays(-13), Likes=14, Category="Food & Treats",
                 Comments = new List<ReviewComment> {
                     new ReviewComment { Id=14, ReviewId=11, UserId=2, UserName="Liza", Text="Thanks for this, trying it soon.", DatePosted=DateTime.Now.AddDays(-12) },
                     new ReviewComment { Id=29, ReviewId=11, UserId=9, UserName="Noel Javier", Text="Same result here after one week.", DatePosted=DateTime.Now.AddDays(-11) }
                 }
             },
-            new Review { Id=12, ProductId=9, UserId=1, CustomerName="alex", Stars=5, Comment="Leash quality is excellent for large breed walks.", PhotoUrl="/Content/images/review8.jpg", DatePosted=DateTime.Now.AddDays(-9), Likes=17, Category="Accessories",
+            new Review { Id=12, ProductId=9, UserId=1, CustomerName="alex", Stars=5, Comment="Leash quality is excellent for large breed walks.", PhotoUrl="/Content/images/review8.jpg", DatePosted=DateTime.Now.AddDays(-9), Likes=17, Category="Accessories & Apparel",
                 Comments = new List<ReviewComment> {
                     new ReviewComment { Id=15, ReviewId=12, UserId=3, UserName="Kyle", Text="How is the grip when wet?", DatePosted=DateTime.Now.AddDays(-8) },
                     new ReviewComment { Id=30, ReviewId=12, UserId=1, UserName="alex", Text="Grip is still solid even after rain.", DatePosted=DateTime.Now.AddDays(-7) }
@@ -145,19 +145,19 @@ namespace Pawchase.Models
                     new ReviewComment { Id=31, ReviewId=13, UserId=8, UserName="Trisha Ong", Text="Mine had the same issue after a week.", DatePosted=DateTime.Now.AddDays(-4) }
                 }
             },
-            new Review { Id=14, ProductId=14, UserId=6, CustomerName="Mia Dela Pena", Stars=3, Comment="Shampoo is okay. Cleans well but scent fades quickly after one day.", PhotoUrl="/Content/images/review9.jpg", DatePosted=DateTime.Now.AddDays(-4), Likes=5, Category="Health",
+            new Review { Id=14, ProductId=14, UserId=6, CustomerName="Mia Dela Pena", Stars=3, Comment="Shampoo is okay. Cleans well but scent fades quickly after one day.", PhotoUrl="/Content/images/review9.jpg", DatePosted=DateTime.Now.AddDays(-4), Likes=5, Category="Care & Hygiene",
                 Comments = new List<ReviewComment> {
                     new ReviewComment { Id=17, ReviewId=14, UserId=2, UserName="Maria Santos", Text="Good note on scent longevity.", DatePosted=DateTime.Now.AddDays(-3) },
                     new ReviewComment { Id=32, ReviewId=14, UserId=7, UserName="Leo Torres", Text="Neutral for me, cleaning was fine but smell was weak.", DatePosted=DateTime.Now.AddDays(-2) }
                 }
             },
-            new Review { Id=15, ProductId=10, UserId=7, CustomerName="Leo Torres", Stars=1, Comment="Carrier stitching loosened after first trip. Very disappointed with durability.", DatePosted=DateTime.Now.AddDays(-2), Likes=1, ReportCount=4, Category="Accessories",
+            new Review { Id=15, ProductId=10, UserId=7, CustomerName="Leo Torres", Stars=1, Comment="Carrier stitching loosened after first trip. Very disappointed with durability.", DatePosted=DateTime.Now.AddDays(-2), Likes=1, ReportCount=4, Category="Accessories & Apparel",
                 Comments = new List<ReviewComment> {
                     new ReviewComment { Id=18, ReviewId=15, UserId=1, UserName="alex", Text="Sorry to hear that. Hope support can replace it.", DatePosted=DateTime.Now.AddDays(-2) },
                     new ReviewComment { Id=33, ReviewId=15, UserId=6, UserName="Mia Dela Pena", Text="Customer support helped me before, try contacting them.", DatePosted=DateTime.Now.AddDays(-1) }
                 }
             },
-            new Review { Id=16, ProductId=3, UserId=8, CustomerName="Trisha Ong", Stars=4, Comment="Dental chews helped a lot with tartar buildup. Texture is firm and dogs enjoy it.", PhotoUrl="/Content/images/review10.jpg", DatePosted=DateTime.Now.AddDays(-1), Likes=9, Category="Treats",
+            new Review { Id=16, ProductId=3, UserId=8, CustomerName="Trisha Ong", Stars=4, Comment="Dental chews helped a lot with tartar buildup. Texture is firm and dogs enjoy it.", PhotoUrl="/Content/images/review10.jpg", DatePosted=DateTime.Now.AddDays(-1), Likes=9, Category="Food & Treats",
                 Comments = new List<ReviewComment> {
                     new ReviewComment { Id=19, ReviewId=16, UserId=3, UserName="Kyle", Text="Will try this for my husky.", DatePosted=DateTime.Now.AddDays(-1) },
                     new ReviewComment { Id=34, ReviewId=16, UserId=2, UserName="Maria Santos", Text="Our retriever enjoyed this too.", DatePosted=DateTime.Now.AddHours(-20) }
@@ -187,19 +187,19 @@ namespace Pawchase.Models
                     new ReviewComment { Id=40, ReviewId=20, UserId=6, UserName="Mia Dela Pena", Text="Had a similar issue with one piece too.", DatePosted=DateTime.Now.AddDays(-2) }
                 }
             },
-            new Review { Id=21, ProductId=10, UserId=13, CustomerName="Gerald Lim", Stars=2, Comment="The carrier looked nice in photos, but the side seam started loosening after two city trips. It still works for very short rides, though I would not trust it for long transport without reinforcement.", PhotoUrl="/Content/images/review9.jpg", DatePosted=DateTime.Now.AddDays(-3), Likes=2, Category="Accessories",
+            new Review { Id=21, ProductId=10, UserId=13, CustomerName="Gerald Lim", Stars=2, Comment="The carrier looked nice in photos, but the side seam started loosening after two city trips. It still works for very short rides, though I would not trust it for long transport without reinforcement.", PhotoUrl="/Content/images/review9.jpg", DatePosted=DateTime.Now.AddDays(-3), Likes=2, Category="Accessories & Apparel",
                 Comments = new List<ReviewComment> {
                     new ReviewComment { Id=41, ReviewId=21, UserId=7, UserName="Leo Torres", Text="This matches what happened to mine.", DatePosted=DateTime.Now.AddDays(-2) },
                     new ReviewComment { Id=42, ReviewId=21, UserId=2, UserName="Maria Santos", Text="Thanks, this helps before ordering.", DatePosted=DateTime.Now.AddDays(-1) }
                 }
             },
-            new Review { Id=22, ProductId=1, UserId=14, CustomerName="Faith Gomez", Stars=4, Comment="Solid training treat. Great value.", PhotoUrl="/Content/images/review4.jpg", DatePosted=DateTime.Now.AddDays(-2), Likes=7, Category="Treats",
+            new Review { Id=22, ProductId=1, UserId=14, CustomerName="Faith Gomez", Stars=4, Comment="Solid training treat. Great value.", PhotoUrl="/Content/images/review4.jpg", DatePosted=DateTime.Now.AddDays(-2), Likes=7, Category="Food & Treats",
                 Comments = new List<ReviewComment> {
                     new ReviewComment { Id=43, ReviewId=22, UserId=5, UserName="Ivy Ramos", Text="Nice quick review, thanks.", DatePosted=DateTime.Now.AddDays(-1) },
                     new ReviewComment { Id=44, ReviewId=22, UserId=1, UserName="alex", Text="Agree, works well for rewards.", DatePosted=DateTime.Now.AddHours(-20) }
                 }
             },
-            new Review { Id=23, ProductId=14, UserId=15, CustomerName="Tina Valdez", Stars=3, Comment="This shampoo cleans decently and leaves the coat soft for a day. The scent is mild and doesn't last long, but it did not irritate my dog's skin, so I might keep it as a backup option.", PhotoUrl="/Content/images/review10.jpg", DatePosted=DateTime.Now.AddDays(-8), Likes=5, Category="Health",
+            new Review { Id=23, ProductId=14, UserId=15, CustomerName="Tina Valdez", Stars=3, Comment="This shampoo cleans decently and leaves the coat soft for a day. The scent is mild and doesn't last long, but it did not irritate my dog's skin, so I might keep it as a backup option.", PhotoUrl="/Content/images/review10.jpg", DatePosted=DateTime.Now.AddDays(-8), Likes=5, Category="Care & Hygiene",
                 Comments = new List<ReviewComment> {
                     new ReviewComment { Id=45, ReviewId=23, UserId=9, UserName="Noel Javier", Text="Backup option is a fair way to put it.", DatePosted=DateTime.Now.AddDays(-7) },
                     new ReviewComment { Id=46, ReviewId=23, UserId=2, UserName="Maria Santos", Text="Good note about skin sensitivity.", DatePosted=DateTime.Now.AddDays(-6) }
@@ -211,13 +211,13 @@ namespace Pawchase.Models
                     new ReviewComment { Id=48, ReviewId=24, UserId=1, UserName="alex", Text="Nice to know the cover is easy to wash.", DatePosted=DateTime.Now.AddHours(-12) }
                 }
             },
-            new Review { Id=25, ProductId=2, UserId=1, CustomerName="Alex", Stars=5, Comment="Tried this after our evening walk and my dog finished the whole serving quickly. Texture looks fresh and easy to tear into smaller pieces for training.", PhotoUrl="/Content/images/review1.jpg", DatePosted=DateTime.Now.AddDays(-5), Likes=11, Category="Treats",
+            new Review { Id=25, ProductId=2, UserId=1, CustomerName="Alex", Stars=5, Comment="Tried this after our evening walk and my dog finished the whole serving quickly. Texture looks fresh and easy to tear into smaller pieces for training.", PhotoUrl="/Content/images/review1.jpg", DatePosted=DateTime.Now.AddDays(-5), Likes=11, Category="Food & Treats",
                 Comments = new List<ReviewComment> {
                     new ReviewComment { Id=49, ReviewId=25, UserId=2, UserName="Maria Santos", Text="Great tip on tearing it for rewards.", DatePosted=DateTime.Now.AddDays(-4) },
                     new ReviewComment { Id=50, ReviewId=25, UserId=3, UserName="Kyle", Text="Looks like a solid pick.", DatePosted=DateTime.Now.AddDays(-3) }
                 }
             },
-            new Review { Id=26, ProductId=7, UserId=1, CustomerName="Alex", Stars=4, Comment="Comfortable fit and the buckle feels secure.", DatePosted=DateTime.Now.AddDays(-3), Likes=6, Category="Accessories",
+            new Review { Id=26, ProductId=7, UserId=1, CustomerName="Alex", Stars=4, Comment="Comfortable fit and the buckle feels secure.", DatePosted=DateTime.Now.AddDays(-3), Likes=6, Category="Accessories & Apparel",
                 Comments = new List<ReviewComment> {
                     new ReviewComment { Id=51, ReviewId=26, UserId=6, UserName="Mia Dela Pena", Text="Good to know it stays secure.", DatePosted=DateTime.Now.AddDays(-2) },
                     new ReviewComment { Id=52, ReviewId=26, UserId=2, UserName="Maria Santos", Text="Thanks, I was checking this size too.", DatePosted=DateTime.Now.AddDays(-1) }

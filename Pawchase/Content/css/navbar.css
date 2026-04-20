@@ -96,13 +96,6 @@
             text-shadow: 0 0 12px rgba(170,205,220,0.5);
         }
 
-        /* Products nav item — accent matches review-filter-select color (var(--blue-dark) tinted for dark nav) */
-        .nav-left li.products-nav.active a {
-            color: rgba(129,166,198,1);
-            font-weight: 700;
-            text-shadow: 0 0 12px rgba(129,166,198,0.55);
-        }
-
 /* RIGHT - ICONS */
 .nav-right {
     display: flex;
