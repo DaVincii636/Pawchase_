@@ -82,10 +82,21 @@
                 <div class="variant-section">
                     <span class="variant-label-title">Color / Style</span>
                     <div class="variant-thumbs" id="variantThumbs">
-                        @{ int vIdx = 0; }
+                        @* Main product image as the first (default) variant option *@
+                        <div class="variant-thumb variant-active"
+                             title="Default"
+                             data-img="@Model.ImageUrl"
+                             data-label=""
+                             data-is-default="true"
+                             onclick="selectVariant(this, '@Model.ImageUrl', '')">
+                            <img src="@Model.ImageUrl" alt="@Model.Name"
+                                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                            <div class="variant-thumb-placeholder" style="display:none;"><i class="fa-solid fa-bone"></i></div>
+                            <span>Default</span>
+                        </div>
                         @foreach (var v in Model.Variants)
                         {
-                            <div class="variant-thumb @(vIdx == 0 ? "variant-active" : "")"
+                            <div class="variant-thumb"
                                  title="@v.Label"
                                  data-img="@v.ImageUrl"
                                  data-label="@v.Label"
@@ -103,7 +114,6 @@
                                 @if (!string.IsNullOrEmpty(v.Label))
                                 {<span>@v.Label</span>}
                             </div>
-                            vIdx++;
                         }
                     </div>
 
@@ -174,10 +184,21 @@
                         Color / Style &nbsp;<span id="modalVariantSelected" style="color:var(--blue-dark);font-weight:700;"></span>
                     </div>
                     <div class="variant-thumbs" id="modalVariantThumbs">
-                        @{ int mvIdx = 0; }
+                        @* Main product image as the first (default) variant option in modal *@
+                        <div class="variant-thumb variant-active"
+                             title="Default"
+                             data-img="@Model.ImageUrl"
+                             data-label=""
+                             data-is-default="true"
+                             onclick="selectModalVariant(this)">
+                            <img src="@Model.ImageUrl" alt="@Model.Name"
+                                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                            <div class="variant-thumb-placeholder" style="display:none;"><i class="fa-solid fa-bone"></i></div>
+                            <span>Default</span>
+                        </div>
                         @foreach (var v in Model.Variants)
                         {
-                            <div class="variant-thumb @(mvIdx == 0 ? "variant-active" : "")"
+                            <div class="variant-thumb"
                                  title="@v.Label"
                                  data-img="@v.ImageUrl"
                                  data-label="@v.Label"
@@ -195,7 +216,6 @@
                                 @if (!string.IsNullOrEmpty(v.Label))
                                 {<span>@v.Label</span>}
                             </div>
-                            mvIdx++;
                         }
                     </div>
                     <div id="modalVariantAlert" style="display:none;margin-top:.6rem;padding:8px 12px;background:rgba(224,85,85,.1);border:1px solid rgba(224,85,85,.3);border-radius:8px;font-size:12px;color:#c94040;font-weight:600;">
@@ -336,20 +356,26 @@
         var _cartModalMode       = 'addtocart'; // 'addtocart' | 'buynow'
 
         // ── Variant selector (main page thumbs — preview only) ─────────────
+        var _defaultImgUrl = '@Model.ImageUrl';
+
         function selectVariant(el, imgUrl, label) {
             var mainImg = document.getElementById('mainProductImg');
-            if (mainImg && imgUrl) {
+            // If the default thumb is clicked while already active, revert to default
+            var isDefault = el.getAttribute('data-is-default') === 'true';
+            var targetSrc = (isDefault || !imgUrl) ? _defaultImgUrl : imgUrl;
+            if (mainImg) {
                 mainImg.style.opacity = '0';
                 mainImg.style.transition = 'opacity .18s';
-                setTimeout(function () { mainImg.src = imgUrl; mainImg.style.opacity = '1'; }, 120);
+                setTimeout(function () { mainImg.src = targetSrc; mainImg.style.opacity = '1'; }, 120);
             }
             document.querySelectorAll('#variantThumbs .variant-thumb').forEach(function (t) {
                 t.classList.remove('variant-active');
             });
             el.classList.add('variant-active');
-            selectedVariantLabel = label || null;
+            // Default thumb means no variant selected
+            selectedVariantLabel = (isDefault || !label) ? null : label;
             var url = new URL(window.location.href);
-            if (label) url.searchParams.set('variant', label);
+            if (selectedVariantLabel) url.searchParams.set('variant', selectedVariantLabel);
             else url.searchParams.delete('variant');
             history.replaceState(null, '', url.toString());
         }
@@ -360,13 +386,14 @@
                 t.classList.remove('variant-active');
             });
             el.classList.add('variant-active');
-            modalVariantLabel = el.getAttribute('data-label') || null;
+            var isDefault = el.getAttribute('data-is-default') === 'true';
+            modalVariantLabel = (isDefault || !el.getAttribute('data-label')) ? null : el.getAttribute('data-label');
             var selEl = document.getElementById('modalVariantSelected');
-            if (selEl) selEl.textContent = modalVariantLabel ? modalVariantLabel : '';
+            if (selEl) selEl.textContent = modalVariantLabel ? modalVariantLabel : 'Default';
             var alert = document.getElementById('modalVariantAlert');
             if (alert) alert.style.display = 'none';
             // Also update main image to match
-            var img = el.getAttribute('data-img');
+            var img = isDefault ? _defaultImgUrl : (el.getAttribute('data-img') || _defaultImgUrl);
             var mainImg = document.getElementById('mainProductImg');
             if (mainImg && img) {
                 mainImg.style.opacity = '0';
@@ -401,19 +428,23 @@
             // Pre-select variant in modal to match current page selection
             var thumbs = document.querySelectorAll('#modalVariantThumbs .variant-thumb');
             if (thumbs.length > 0) {
+                thumbs.forEach(function (t) { t.classList.remove('variant-active'); });
                 var matched = false;
-                thumbs.forEach(function (t) {
-                    t.classList.remove('variant-active');
-                    if (selectedVariantLabel && t.getAttribute('data-label') === selectedVariantLabel) {
-                        t.classList.add('variant-active');
-                        matched = true;
-                    }
-                });
+                if (selectedVariantLabel) {
+                    thumbs.forEach(function (t) {
+                        if (t.getAttribute('data-label') === selectedVariantLabel) {
+                            t.classList.add('variant-active');
+                            matched = true;
+                        }
+                    });
+                }
+                // If no variant selected or no match, activate the default (first) thumb
                 if (!matched) thumbs[0].classList.add('variant-active');
                 var active = document.querySelector('#modalVariantThumbs .variant-thumb.variant-active');
-                modalVariantLabel = active ? active.getAttribute('data-label') : null;
+                var isDefault = active && active.getAttribute('data-is-default') === 'true';
+                modalVariantLabel = (active && !isDefault) ? active.getAttribute('data-label') : null;
                 var selEl = document.getElementById('modalVariantSelected');
-                if (selEl) selEl.textContent = modalVariantLabel ? modalVariantLabel : '';
+                if (selEl) selEl.textContent = modalVariantLabel ? modalVariantLabel : 'Default';
             } else {
                 modalVariantLabel = null;
             }
@@ -442,11 +473,16 @@
 
         // ── Confirm: Add to Cart (AJAX) or Buy Now (redirect) ─────────────
         function confirmCartModal() {
+            // When the product has variants, the default thumb is always a valid choice (null label = main product)
+            // Only block if somehow no thumb is active at all (defensive check)
             var hasVariants = @(hasVariants ? "true" : "false");
-            if (hasVariants && !modalVariantLabel) {
-                var va = document.getElementById('modalVariantAlert');
-                if (va) va.style.display = 'block';
-                return;
+            if (hasVariants) {
+                var activeThumb = document.querySelector('#modalVariantThumbs .variant-thumb.variant-active');
+                if (!activeThumb) {
+                    var va = document.getElementById('modalVariantAlert');
+                    if (va) va.style.display = 'block';
+                    return;
+                }
             }
 
             var addUrl    = '@Url.Action("Add","Cart")';
@@ -520,12 +556,14 @@
         var _currentImgIdx = 0;
 
         document.addEventListener('DOMContentLoaded', function () {
-            var mainSrc = document.getElementById('mainProductImg')
-                ? document.getElementById('mainProductImg').getAttribute('src') : '';
+            // _allImages[0] is the main/default image; subsequent entries are variant images
+            var mainSrc = _defaultImgUrl;
             _allImages = [mainSrc];
             document.querySelectorAll('#variantThumbs .variant-thumb').forEach(function (t) {
-                var img = t.getAttribute('data-img');
-                if (img) _allImages.push(img);
+                if (t.getAttribute('data-is-default') !== 'true') {
+                    var img = t.getAttribute('data-img');
+                    if (img) _allImages.push(img);
+                }
             });
             updateNavBtns();
 
@@ -541,10 +579,11 @@
                         matched = true;
                     }
                 });
-                if (!matched && thumbs.length > 0)
-                    selectedVariantLabel = thumbs[0].getAttribute('data-label') || null;
-            } else if (thumbs.length > 0) {
-                selectedVariantLabel = thumbs[0].getAttribute('data-label') || null;
+                // If no match, default thumb stays active; selectedVariantLabel stays null
+                if (!matched) { selectedVariantLabel = null; }
+            } else {
+                // Default thumb is active; no variant selected
+                selectedVariantLabel = null;
             }
 
             // Close modal on backdrop click
@@ -561,13 +600,17 @@
                 mainImg.style.transition = 'opacity .18s';
                 setTimeout(function () { mainImg.src = _allImages[_currentImgIdx]; mainImg.style.opacity = '1'; }, 120);
             }
+            // Sync active thumb: index 0 = default thumb, index N = variant thumb N-1
             var thumbs = document.querySelectorAll('#variantThumbs .variant-thumb');
             thumbs.forEach(function (t) { t.classList.remove('variant-active'); });
-            if (_currentImgIdx > 0 && thumbs[_currentImgIdx - 1]) {
-                thumbs[_currentImgIdx - 1].classList.add('variant-active');
-                selectedVariantLabel = thumbs[_currentImgIdx - 1].getAttribute('data-label') || null;
-            } else {
+            if (thumbs[_currentImgIdx]) {
+                thumbs[_currentImgIdx].classList.add('variant-active');
+            }
+            // If on default (index 0), no variant selected
+            if (_currentImgIdx === 0) {
                 selectedVariantLabel = null;
+            } else if (thumbs[_currentImgIdx]) {
+                selectedVariantLabel = thumbs[_currentImgIdx].getAttribute('data-label') || null;
             }
             updateNavBtns();
         }
@@ -585,7 +628,8 @@
             _origSelectVariant(el, imgUrl, label);
             var thumbs = Array.from(document.querySelectorAll('#variantThumbs .variant-thumb'));
             var idx = thumbs.indexOf(el);
-            _currentImgIdx = idx >= 0 ? idx + 1 : 0;
+            // idx corresponds directly to _allImages index (default=0, variants=1+)
+            _currentImgIdx = idx >= 0 ? idx : 0;
             updateNavBtns();
         };
     </script>

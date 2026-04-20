@@ -77,17 +77,18 @@ namespace Pawchase.Controllers
             return View(products.ToList());
         }
 
-        public ActionResult Details(int id)
+        public ActionResult Details(int? id)
         {
-            var product = MockData.Products.FirstOrDefault(p => p.Id == id && !p.IsDeleted);
+            if (id == null) return RedirectToAction("Index");
+            var product = MockData.Products.FirstOrDefault(p => p.Id == id.Value && !p.IsDeleted);
             if (product == null) return HttpNotFound();
 
             var related = MockData.Products
-                .Where(p => p.Category == product.Category && p.Id != id && !p.IsDeleted)
+                .Where(p => p.Category == product.Category && p.Id != id.Value && !p.IsDeleted)
                 .Take(4).ToList();
 
             var reviews = MockData.Reviews
-                .Where(r => r.ProductId == id).ToList();
+                .Where(r => r.ProductId == id.Value).ToList();
 
             // Average rating for this product
             var avgRating = reviews.Any() ? reviews.Average(r => r.Stars) : 0;
@@ -96,14 +97,14 @@ namespace Pawchase.Controllers
 
             // Recently viewed — store in session, max 6, exclude current
             var recentIds = Session["RecentlyViewed"] as List<int> ?? new List<int>();
-            recentIds.Remove(id);
-            recentIds.Insert(0, id);
+            recentIds.Remove(id.Value);
+            recentIds.Insert(0, id.Value);
             if (recentIds.Count > 7) recentIds = recentIds.Take(7).ToList();
             Session["RecentlyViewed"] = recentIds;
 
             // Build recently viewed product list (exclude current, max 4)
             var recentProducts = recentIds
-                .Where(rid => rid != id)
+                .Where(rid => rid != id.Value)
                 .Take(4)
                 .Select(rid => MockData.Products.FirstOrDefault(p => p.Id == rid && !p.IsDeleted))
                 .Where(p => p != null)
