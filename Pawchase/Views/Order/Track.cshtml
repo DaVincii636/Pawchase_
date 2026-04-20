@@ -99,6 +99,7 @@
                     <div class="order-card-foot">
                         <span class="order-total">Total: &#8369;@order.Total.ToString("N2")</span>
                         <div class="order-actions">
+                            <button class="btn-sm outline" onclick="openDetails('@order.ReferenceNumber')"><i class="fa-solid fa-receipt"></i> See Details</button>
                             @if (order.Status == "Out for Delivery")
                             {
                                 <a href="@Url.Action("MarkReceived","Order",new{referenceNumber=order.ReferenceNumber})" class="btn-sm primary" onclick="return confirm('Confirm received?')"><i class="fa-solid fa-check"></i> Received</a>
@@ -110,6 +111,25 @@
                             }
                             @if (order.Status == "Completed")
                             {<a href="@Url.Action("Index","Product")" class="btn-sm outline">Buy Again</a>}
+                        </div>
+                    </div>
+
+
+                    <div id="details-@order.ReferenceNumber" class="order-detail-data" style="display:none"
+                         data-ref="@order.ReferenceNumber"
+                         data-date="@order.OrderDate.ToString("MMMM dd, yyyy")"
+                         data-customer="@order.CustomerName"
+                         data-address="@order.Address"
+                         data-total="&#8369;@order.Total.ToString("N2")">
+                        <div class="detail-items">
+                            @foreach (var snap in snapList)
+                            {
+                                <div class="detail-item"
+                                     data-name="@snap.ProductName"
+                                     data-qty="@(snap.Quantity)"
+                                     data-subtotal="&#8369;@((snap.UnitPrice * snap.Quantity).ToString("N2"))">
+                                </div>
+                            }
                         </div>
                     </div>
                     @if (order.Status == "To Rate")
@@ -142,4 +162,92 @@
 
 @section scripts {
     <script src="@Url.Content("~/Scripts/account.js")"></script>
+    <script>
+        function openDetails(ref) {
+            var data = document.getElementById('details-' + ref);
+            if (!data) return;
+
+            var items = data.querySelectorAll('.detail-item');
+            var itemsHtml = '';
+            items.forEach(function (item) {
+                itemsHtml += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px dashed rgba(210,196,180,0.35);">' +
+                    '<span style="color:#3a3226;">' + item.dataset.name + ' <span style="color:#a89880;">x' + item.dataset.qty + '</span></span>' +
+                    '<span style="font-weight:600;color:#3a3226;">' + item.dataset.subtotal + '</span>' +
+                    '</div>';
+            });
+
+            document.getElementById('modal-ref').textContent = data.dataset.ref;
+            document.getElementById('modal-date').textContent = data.dataset.date;
+            document.getElementById('modal-customer').textContent = data.dataset.customer;
+            document.getElementById('modal-address').textContent = data.dataset.address;
+            document.getElementById('modal-items').innerHTML = itemsHtml;
+            document.getElementById('modal-total').textContent = data.dataset.total;
+
+            document.getElementById('order-detail-modal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeDetails() {
+            document.getElementById('order-detail-modal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeDetails();
+        });
+    </script>
+
+
+    <div id="order-detail-modal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(30,24,18,0.55);padding:1rem;" onclick="if(event.target===this)closeDetails()">
+        <div style="background:#fff;border-radius:14px;width:100%;max-width:520px;box-shadow:0 20px 60px rgba(0,0,0,0.2);overflow:hidden;animation:modalIn .2s ease;">
+            <div style="background:linear-gradient(135deg,#6b93b8,#4a7399);padding:1.2rem 1.5rem;display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <i class="fa-solid fa-receipt" style="color:#fff;font-size:16px;"></i>
+                    <span style="color:#fff;font-weight:700;font-size:15px;">Order Details</span>
+                </div>
+                <button onclick="closeDetails()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div style="padding:1.5rem;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;padding-bottom:1.2rem;border-bottom:1px solid rgba(210,196,180,0.4);margin-bottom:1.2rem;">
+                    <div>
+                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:3px;">Reference Number</div>
+                        <div id="modal-ref" style="font-size:13px;font-weight:700;color:#3a3226;"></div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:3px;">Order Date</div>
+                        <div id="modal-date" style="font-size:13px;font-weight:700;color:#3a3226;"></div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:3px;">Customer</div>
+                        <div id="modal-customer" style="font-size:13px;font-weight:700;color:#3a3226;"></div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:3px;">Delivery Address</div>
+                        <div id="modal-address" style="font-size:13px;font-weight:700;color:#3a3226;"></div>
+                    </div>
+                </div>
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:.6rem;">Items Ordered</div>
+                <div id="modal-items" style="margin-bottom:1rem;"></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.75rem;border-top:2px solid rgba(210,196,180,0.5);">
+                    <span style="font-size:13px;font-weight:700;color:#3a3226;">Total Paid</span>
+                    <span id="modal-total" style="font-size:16px;font-weight:800;color:#4a7399;"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <style>
+        @@keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(.95) translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+    </style>
 }
