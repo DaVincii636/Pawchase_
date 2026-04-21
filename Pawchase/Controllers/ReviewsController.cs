@@ -14,9 +14,15 @@ namespace Pawchase.Controllers
             var reviews = MockData.Reviews.AsEnumerable();
             var reportedIds = GetReportedReviewIds();
 
-            if (category != "All")
+            if (!string.Equals(category, "All", System.StringComparison.OrdinalIgnoreCase))
             {
-                reviews = reviews.Where(r => r.Category == category);
+                var productCategoryById = MockData.Products
+                    .GroupBy(p => p.Id)
+                    .ToDictionary(g => g.Key, g => g.First().Category);
+
+                reviews = reviews.Where(r =>
+                    productCategoryById.TryGetValue(r.ProductId, out var productCategory) &&
+                    string.Equals(productCategory, category, System.StringComparison.OrdinalIgnoreCase));
             }
 
             if (photoFilter == "without")

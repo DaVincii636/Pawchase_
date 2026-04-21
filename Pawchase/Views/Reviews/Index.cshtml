@@ -45,10 +45,11 @@
         <select class="review-filter-select @(hasCategorySelection ? "active" : "")" onchange="applyFilter({ category: this.value })">
             <option value="" @(!hasCategorySelection ? "selected" : "")>Categories</option>
             <option value="All" @(ViewBag.Category == "All" && hasCategorySelection ? "selected" : "")>All</option>
-            <option value="Treats" @(ViewBag.Category == "Treats" && hasCategorySelection ? "selected" : "")>Treats</option>
+            <option value="Food & Treats" @(ViewBag.Category == "Food & Treats" && hasCategorySelection ? "selected" : "")>Food &amp; Treats</option>
+            <option value="Accessories & Apparel" @(ViewBag.Category == "Accessories & Apparel" && hasCategorySelection ? "selected" : "")>Accessories &amp; Apparel</option>
+            <option value="Care & Hygiene" @(ViewBag.Category == "Care & Hygiene" && hasCategorySelection ? "selected" : "")>Care &amp; Hygiene</option>
             <option value="Toys" @(ViewBag.Category == "Toys" && hasCategorySelection ? "selected" : "")>Toys</option>
-            <option value="Accessories" @(ViewBag.Category == "Accessories" && hasCategorySelection ? "selected" : "")>Accessories</option>
-            <option value="Health" @(ViewBag.Category == "Health" && hasCategorySelection ? "selected" : "")>Health & Care</option>
+            <option value="Health" @(ViewBag.Category == "Health" && hasCategorySelection ? "selected" : "")>Health</option>
             <option value="Others" @(ViewBag.Category == "Others" && hasCategorySelection ? "selected" : "")>Others</option>
         </select>
 
