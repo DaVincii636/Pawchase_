@@ -82,18 +82,6 @@
                 <div class="variant-section">
                     <span class="variant-label-title">Color / Style</span>
                     <div class="variant-thumbs" id="variantThumbs">
-                        @* Main product image as the first (default) variant option *@
-                        <div class="variant-thumb variant-active"
-                             title="Default"
-                             data-img="@Model.ImageUrl"
-                             data-label=""
-                             data-is-default="true"
-                             onclick="selectVariant(this, '@Model.ImageUrl', '')">
-                            <img src="@Model.ImageUrl" alt="@Model.Name"
-                                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
-                            <div class="variant-thumb-placeholder" style="display:none;"><i class="fa-solid fa-bone"></i></div>
-                            <span>Default</span>
-                        </div>
                         @foreach (var v in Model.Variants)
                         {
                             <div class="variant-thumb"
@@ -184,18 +172,6 @@
                         Color / Style &nbsp;<span id="modalVariantSelected" style="color:var(--blue-dark);font-weight:700;"></span>
                     </div>
                     <div class="variant-thumbs" id="modalVariantThumbs">
-                        @* Main product image as the first (default) variant option in modal *@
-                        <div class="variant-thumb variant-active"
-                             title="Default"
-                             data-img="@Model.ImageUrl"
-                             data-label=""
-                             data-is-default="true"
-                             onclick="selectModalVariant(this)">
-                            <img src="@Model.ImageUrl" alt="@Model.Name"
-                                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
-                            <div class="variant-thumb-placeholder" style="display:none;"><i class="fa-solid fa-bone"></i></div>
-                            <span>Default</span>
-                        </div>
                         @foreach (var v in Model.Variants)
                         {
                             <div class="variant-thumb"
@@ -360,20 +336,32 @@
 
         function selectVariant(el, imgUrl, label) {
             var mainImg = document.getElementById('mainProductImg');
-            // If the default thumb is clicked while already active, revert to default
-            var isDefault = el.getAttribute('data-is-default') === 'true';
-            var targetSrc = (isDefault || !imgUrl) ? _defaultImgUrl : imgUrl;
-            if (mainImg) {
-                mainImg.style.opacity = '0';
-                mainImg.style.transition = 'opacity .18s';
-                setTimeout(function () { mainImg.src = targetSrc; mainImg.style.opacity = '1'; }, 120);
-            }
+            var alreadyActive = el.classList.contains('variant-active');
+
+            // Toggle: clicking an already-active variant deselects it
             document.querySelectorAll('#variantThumbs .variant-thumb').forEach(function (t) {
                 t.classList.remove('variant-active');
             });
-            el.classList.add('variant-active');
-            // Default thumb means no variant selected
-            selectedVariantLabel = (isDefault || !label) ? null : label;
+
+            if (alreadyActive) {
+                // Deselect — revert to main product image
+                selectedVariantLabel = null;
+                if (mainImg) {
+                    mainImg.style.opacity = '0';
+                    mainImg.style.transition = 'opacity .18s';
+                    setTimeout(function () { mainImg.src = _defaultImgUrl; mainImg.style.opacity = '1'; }, 120);
+                }
+            } else {
+                // Select this variant
+                el.classList.add('variant-active');
+                selectedVariantLabel = label || null;
+                if (mainImg && imgUrl) {
+                    mainImg.style.opacity = '0';
+                    mainImg.style.transition = 'opacity .18s';
+                    setTimeout(function () { mainImg.src = imgUrl; mainImg.style.opacity = '1'; }, 120);
+                }
+            }
+
             var url = new URL(window.location.href);
             if (selectedVariantLabel) url.searchParams.set('variant', selectedVariantLabel);
             else url.searchParams.delete('variant');
@@ -382,22 +370,36 @@
 
         // ── Modal variant selector ─────────────────────────────────────────
         function selectModalVariant(el) {
+            var alreadyActive = el.classList.contains('variant-active');
+
             document.querySelectorAll('#modalVariantThumbs .variant-thumb').forEach(function (t) {
                 t.classList.remove('variant-active');
             });
-            el.classList.add('variant-active');
-            var isDefault = el.getAttribute('data-is-default') === 'true';
-            modalVariantLabel = (isDefault || !el.getAttribute('data-label')) ? null : el.getAttribute('data-label');
+
             var selEl = document.getElementById('modalVariantSelected');
-            if (selEl) selEl.textContent = modalVariantLabel ? modalVariantLabel : 'Default';
             var alert = document.getElementById('modalVariantAlert');
             if (alert) alert.style.display = 'none';
-            // Also update main image to match
-            var img = isDefault ? _defaultImgUrl : (el.getAttribute('data-img') || _defaultImgUrl);
-            var mainImg = document.getElementById('mainProductImg');
-            if (mainImg && img) {
-                mainImg.style.opacity = '0';
-                setTimeout(function () { mainImg.src = img; mainImg.style.opacity = '1'; }, 120);
+
+            if (alreadyActive) {
+                // Deselect — revert main image to default
+                modalVariantLabel = null;
+                if (selEl) selEl.textContent = '';
+                var mainImg = document.getElementById('mainProductImg');
+                if (mainImg) {
+                    mainImg.style.opacity = '0';
+                    setTimeout(function () { mainImg.src = _defaultImgUrl; mainImg.style.opacity = '1'; }, 120);
+                }
+            } else {
+                // Select this variant
+                el.classList.add('variant-active');
+                modalVariantLabel = el.getAttribute('data-label') || null;
+                if (selEl) selEl.textContent = modalVariantLabel ? modalVariantLabel : '';
+                var img = el.getAttribute('data-img');
+                var mainImg = document.getElementById('mainProductImg');
+                if (mainImg && img) {
+                    mainImg.style.opacity = '0';
+                    setTimeout(function () { mainImg.src = img; mainImg.style.opacity = '1'; }, 120);
+                }
             }
         }
 
@@ -428,23 +430,19 @@
             // Pre-select variant in modal to match current page selection
             var thumbs = document.querySelectorAll('#modalVariantThumbs .variant-thumb');
             if (thumbs.length > 0) {
-                thumbs.forEach(function (t) { t.classList.remove('variant-active'); });
                 var matched = false;
-                if (selectedVariantLabel) {
-                    thumbs.forEach(function (t) {
-                        if (t.getAttribute('data-label') === selectedVariantLabel) {
-                            t.classList.add('variant-active');
-                            matched = true;
-                        }
-                    });
-                }
-                // If no variant selected or no match, activate the default (first) thumb
-                if (!matched) thumbs[0].classList.add('variant-active');
-                var active = document.querySelector('#modalVariantThumbs .variant-thumb.variant-active');
-                var isDefault = active && active.getAttribute('data-is-default') === 'true';
-                modalVariantLabel = (active && !isDefault) ? active.getAttribute('data-label') : null;
+                thumbs.forEach(function (t) {
+                    t.classList.remove('variant-active');
+                    if (selectedVariantLabel && t.getAttribute('data-label') === selectedVariantLabel) {
+                        t.classList.add('variant-active');
+                        matched = true;
+                    }
+                });
+                // Do NOT force-select the first thumb if nothing is selected on the main page
+                var active = matched ? document.querySelector('#modalVariantThumbs .variant-thumb.variant-active') : null;
+                modalVariantLabel = active ? active.getAttribute('data-label') : null;
                 var selEl = document.getElementById('modalVariantSelected');
-                if (selEl) selEl.textContent = modalVariantLabel ? modalVariantLabel : 'Default';
+                if (selEl) selEl.textContent = modalVariantLabel ? modalVariantLabel : '';
             } else {
                 modalVariantLabel = null;
             }
@@ -473,16 +471,11 @@
 
         // ── Confirm: Add to Cart (AJAX) or Buy Now (redirect) ─────────────
         function confirmCartModal() {
-            // When the product has variants, the default thumb is always a valid choice (null label = main product)
-            // Only block if somehow no thumb is active at all (defensive check)
             var hasVariants = @(hasVariants ? "true" : "false");
-            if (hasVariants) {
-                var activeThumb = document.querySelector('#modalVariantThumbs .variant-thumb.variant-active');
-                if (!activeThumb) {
-                    var va = document.getElementById('modalVariantAlert');
-                    if (va) va.style.display = 'block';
-                    return;
-                }
+            if (hasVariants && !modalVariantLabel) {
+                var va = document.getElementById('modalVariantAlert');
+                if (va) va.style.display = 'block';
+                return;
             }
 
             var addUrl    = '@Url.Action("Add","Cart")';
@@ -556,33 +549,27 @@
         var _currentImgIdx = 0;
 
         document.addEventListener('DOMContentLoaded', function () {
-            // _allImages[0] is the main/default image; subsequent entries are variant images
-            var mainSrc = _defaultImgUrl;
+            var mainSrc = document.getElementById('mainProductImg')
+                ? document.getElementById('mainProductImg').getAttribute('src') : '';
             _allImages = [mainSrc];
             document.querySelectorAll('#variantThumbs .variant-thumb').forEach(function (t) {
-                if (t.getAttribute('data-is-default') !== 'true') {
-                    var img = t.getAttribute('data-img');
-                    if (img) _allImages.push(img);
-                }
+                var img = t.getAttribute('data-img');
+                if (img) _allImages.push(img);
             });
             updateNavBtns();
 
-            // Restore variant from URL
+            // Restore variant from URL (if any); otherwise no variant is selected by default
             var urlParams        = new URLSearchParams(window.location.search);
             var variantFromUrl   = urlParams.get('variant');
             var thumbs           = document.querySelectorAll('#variantThumbs .variant-thumb');
             if (variantFromUrl && thumbs.length > 0) {
-                var matched = false;
                 thumbs.forEach(function (t) {
                     if (t.getAttribute('data-label') === variantFromUrl) {
                         selectVariant(t, t.getAttribute('data-img'), variantFromUrl);
-                        matched = true;
                     }
                 });
-                // If no match, default thumb stays active; selectedVariantLabel stays null
-                if (!matched) { selectedVariantLabel = null; }
             } else {
-                // Default thumb is active; no variant selected
+                // No variant pre-selected — show main image, no thumb highlighted
                 selectedVariantLabel = null;
             }
 
@@ -600,17 +587,13 @@
                 mainImg.style.transition = 'opacity .18s';
                 setTimeout(function () { mainImg.src = _allImages[_currentImgIdx]; mainImg.style.opacity = '1'; }, 120);
             }
-            // Sync active thumb: index 0 = default thumb, index N = variant thumb N-1
             var thumbs = document.querySelectorAll('#variantThumbs .variant-thumb');
             thumbs.forEach(function (t) { t.classList.remove('variant-active'); });
-            if (thumbs[_currentImgIdx]) {
-                thumbs[_currentImgIdx].classList.add('variant-active');
-            }
-            // If on default (index 0), no variant selected
-            if (_currentImgIdx === 0) {
+            if (_currentImgIdx > 0 && thumbs[_currentImgIdx - 1]) {
+                thumbs[_currentImgIdx - 1].classList.add('variant-active');
+                selectedVariantLabel = thumbs[_currentImgIdx - 1].getAttribute('data-label') || null;
+            } else {
                 selectedVariantLabel = null;
-            } else if (thumbs[_currentImgIdx]) {
-                selectedVariantLabel = thumbs[_currentImgIdx].getAttribute('data-label') || null;
             }
             updateNavBtns();
         }
@@ -628,8 +611,7 @@
             _origSelectVariant(el, imgUrl, label);
             var thumbs = Array.from(document.querySelectorAll('#variantThumbs .variant-thumb'));
             var idx = thumbs.indexOf(el);
-            // idx corresponds directly to _allImages index (default=0, variants=1+)
-            _currentImgIdx = idx >= 0 ? idx : 0;
+            _currentImgIdx = idx >= 0 ? idx + 1 : 0;
             updateNavBtns();
         };
     </script>
