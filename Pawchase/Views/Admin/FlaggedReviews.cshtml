@@ -67,7 +67,7 @@
         background: rgba(129,166,198,.12); color: var(--blue-dark);
         border: 1.5px solid rgba(129,166,198,.3);
         font-size: 12px; font-weight: 700; cursor: pointer;
-        font-family: 'Poppins', sans-serif; transition: all .2s; text-decoration: none;
+        font-family: 'Poppins', sans-serif; transition: all .2s;
     }
     .btn-dismiss:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
     .btn-delete-review {
@@ -76,17 +76,56 @@
         background: rgba(224,85,85,.08); color: #c0392b;
         border: 1.5px solid rgba(224,85,85,.25);
         font-size: 12px; font-weight: 700; cursor: pointer;
-        font-family: 'Poppins', sans-serif; transition: all .2s; text-decoration: none;
+        font-family: 'Poppins', sans-serif; transition: all .2s;
     }
     .btn-delete-review:hover { background: #e05555; color: #fff; border-color: #e05555; }
 
     .reports-empty {
-        text-align: center; padding: 4rem;
-        color: var(--text-light);
+        text-align: center; padding: 4rem; color: var(--text-light);
         display: flex; flex-direction: column; align-items: center; gap: .75rem;
     }
     .reports-empty i { font-size: 2.5rem; color: #2ecc71; opacity: .6; }
     .reports-empty p { font-size: 14px; font-weight: 500; }
+
+    /* ── SHARED MODAL BASE ── */
+    .pc-modal-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.45); z-index: 1000;
+        align-items: center; justify-content: center;
+    }
+    .pc-modal-box {
+        background: var(--white); border-radius: var(--radius-lg);
+        padding: 2rem; max-width: 420px; width: 90%;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.2); text-align: center;
+    }
+    .pc-modal-icon {
+        width: 58px; height: 58px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 1rem; font-size: 1.5rem;
+    }
+    .pc-modal-title { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: .5rem; }
+    .pc-modal-body  { font-size: 13px; color: var(--text-mid); margin-bottom: 1.5rem; line-height: 1.6; }
+    .pc-modal-btns  { display: flex; gap: 10px; justify-content: center; }
+    .pc-modal-cancel {
+        padding: 9px 22px; border-radius: 50px; font-size: 13px; font-weight: 600;
+        border: 1.5px solid var(--border); background: var(--white); color: var(--text-mid);
+        cursor: pointer; font-family: 'Poppins', sans-serif; transition: all .2s;
+    }
+    .pc-modal-cancel:hover { background: var(--border); }
+    .pc-modal-confirm-danger {
+        padding: 9px 22px; border-radius: 50px; font-size: 13px; font-weight: 700;
+        background: linear-gradient(135deg,#e85d5d,#c94040); color: #fff; border: none;
+        cursor: pointer; font-family: 'Poppins', sans-serif; transition: all .2s;
+        display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+    }
+    .pc-modal-confirm-danger:hover { opacity: .9; transform: translateY(-1px); }
+    .pc-modal-confirm-blue {
+        padding: 9px 22px; border-radius: 50px; font-size: 13px; font-weight: 700;
+        background: linear-gradient(135deg, var(--blue), var(--blue-dark)); color: #fff; border: none;
+        cursor: pointer; font-family: 'Poppins', sans-serif; transition: all .2s;
+        display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+    }
+    .pc-modal-confirm-blue:hover { opacity: .9; transform: translateY(-1px); }
 </style>
 
 <div class="admin-page-header" style="margin-bottom:1.4rem;">
@@ -122,27 +161,28 @@ else
                     </span>
                     <span class="report-meta">
                         by <strong>@r.CustomerName</strong> &bull; @r.DatePosted.ToString("MMM dd, yyyy")
-                        @if (r.IsEdited)
-                        { <text> &bull; <em>edited</em></text> }
+                        @if (r.IsEdited) { <text> &bull; <em>edited</em></text> }
                     </span>
                 </div>
                 <div class="report-actions">
-                    <a href="@Url.Action("DismissReport","Admin",new{id=r.Id})"
-                       class="btn-dismiss"
-                       onclick="return confirm('Dismiss all reports on this review?')">
+                    <button type="button" class="btn-dismiss"
+                            onclick="openDismissModal(@r.Id, '@Html.Raw(r.CustomerName.Replace("'", "\\'"))')">
                         <i class="fa-solid fa-check"></i> Dismiss
-                    </a>
-                    <a href="@Url.Action("DeleteReview","Admin",new{id=r.Id})"
-                       class="btn-delete-review"
-                       onclick="return confirm('Permanently delete this review?')">
+                    </button>
+                    <button type="button" class="btn-delete-review"
+                            onclick="openDeleteModal(@r.Id, '@Html.Raw(r.CustomerName.Replace("'", "\\'"))')">
                         <i class="fa-regular fa-trash-can"></i> Delete Review
-                    </a>
+                    </button>
                 </div>
             </div>
             <div class="report-card-body">
                 @if (!string.IsNullOrEmpty(r.PhotoUrl))
                 {
-                    <div class="report-thumb"><img src="@r.PhotoUrl" alt="Review photo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"/><i class="fa-solid fa-image" style="display:none;"></i></div>
+                    <div class="report-thumb">
+                        <img src="@r.PhotoUrl" alt="Review photo"
+                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"/>
+                        <i class="fa-solid fa-image" style="display:none;"></i>
+                    </div>
                 }
                 else
                 {
@@ -151,17 +191,13 @@ else
                 <div class="report-content">
                     <div class="report-stars">
                         @for (int i = 1; i <= 5; i++)
-                        {
-                            <i class="fa-@(i <= r.Stars ? "solid" : "regular") fa-star"></i>
-                        }
+                        { <i class="fa-@(i <= r.Stars ? "solid" : "regular") fa-star"></i> }
                         <span style="color:var(--text-light);font-size:11px;margin-left:4px;">@r.Stars / 5</span>
                     </div>
                     <div class="report-comment">@r.Comment</div>
                     @if (product != null)
                     {
-                        <span class="report-product-tag">
-                            <i class="fa-solid fa-tag"></i> @product.Name
-                        </span>
+                        <span class="report-product-tag"><i class="fa-solid fa-tag"></i> @product.Name</span>
                     }
                     <span style="margin-left:.4rem;" class="report-product-tag">
                         <i class="fa-solid fa-folder"></i> @r.Category
@@ -170,4 +206,70 @@ else
             </div>
         </div>
     }
+}
+
+<!-- ── DISMISS MODAL ── -->
+<div id="dismissModal" class="pc-modal-overlay">
+    <div class="pc-modal-box">
+        <div class="pc-modal-icon" style="background:rgba(129,166,198,.12);">
+            <i class="fa-solid fa-check" style="color:var(--blue);"></i>
+        </div>
+        <div class="pc-modal-title">Dismiss Reports?</div>
+        <div class="pc-modal-body" id="dismissModalText"></div>
+        <div class="pc-modal-btns">
+            <button class="pc-modal-cancel" onclick="closeDismissModal()">Cancel</button>
+            <a id="dismissConfirmLink" href="#" class="pc-modal-confirm-blue">
+                <i class="fa-solid fa-check"></i> Dismiss
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- ── DELETE REVIEW MODAL ── -->
+<div id="deleteReviewModal" class="pc-modal-overlay">
+    <div class="pc-modal-box">
+        <div class="pc-modal-icon" style="background:rgba(224,85,85,.1);">
+            <i class="fa-regular fa-trash-can" style="color:#e05555;"></i>
+        </div>
+        <div class="pc-modal-title">Delete Review?</div>
+        <div class="pc-modal-body" id="deleteReviewModalText"></div>
+        <div class="pc-modal-btns">
+            <button class="pc-modal-cancel" onclick="closeDeleteModal()">Cancel</button>
+            <a id="deleteReviewConfirmLink" href="#" class="pc-modal-confirm-danger">
+                <i class="fa-regular fa-trash-can"></i> Delete Review
+            </a>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        // ── Dismiss modal ──
+        function openDismissModal(id, name) {
+            document.getElementById('dismissModalText').textContent =
+                'This will clear all reports on ' + name + '\'s review. The review will remain visible.';
+            document.getElementById('dismissConfirmLink').href = '@Url.Action("DismissReport","Admin")?id=' + id;
+            document.getElementById('dismissModal').style.display = 'flex';
+        }
+        function closeDismissModal() {
+            document.getElementById('dismissModal').style.display = 'none';
+        }
+        document.getElementById('dismissModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDismissModal();
+        });
+
+        // ── Delete review modal ──
+        function openDeleteModal(id, name) {
+            document.getElementById('deleteReviewModalText').textContent =
+                'Are you sure you want to permanently delete ' + name + '\'s review? This cannot be undone.';
+            document.getElementById('deleteReviewConfirmLink').href = '@Url.Action("DeleteReview","Admin")?id=' + id;
+            document.getElementById('deleteReviewModal').style.display = 'flex';
+        }
+        function closeDeleteModal() {
+            document.getElementById('deleteReviewModal').style.display = 'none';
+        }
+        document.getElementById('deleteReviewModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDeleteModal();
+        });
+    </script>
 }

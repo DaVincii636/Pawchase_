@@ -87,7 +87,7 @@
         color: var(--blue);
     }
 
-/* ── FORM GROUP SPACING — lower margin-bottom to tighten gap between fields ── */
+/* ── FORM GROUP SPACING ── */
 .admin-login-card .form-group {
     margin-bottom: 0.5rem;
 }

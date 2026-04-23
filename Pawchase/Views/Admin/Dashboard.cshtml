@@ -3,92 +3,78 @@
     ViewBag.Title = "Dashboard";
     Layout = "~/Views/Admin/_AdminLayout.cshtml";
     var recentOrders = ViewBag.RecentOrders as List<Pawchase.Models.Order>;
-    int lowStockCount = ViewBag.LowStockCount != null ? (int)ViewBag.LowStockCount : 0;
+    int lowStockCount   = ViewBag.LowStockCount   != null ? (int)ViewBag.LowStockCount   : 0;
     int outOfStockCount = ViewBag.OutOfStockCount != null ? (int)ViewBag.OutOfStockCount : 0;
 }
 
 <style>
-    /* ── DASHBOARD PROPORTIONS ─── */
-    .dash-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 1.75rem;
-    }
-    .dash-header h1 {
-        font-size: 1.75rem;
-        font-weight: 900;
-        color: var(--text);
-        letter-spacing: .3px;
-    }
-    .dash-header .welcome-txt {
-        font-size: 13px;
-        color: var(--text-light);
-        margin-top: 2px;
-    }
-    .dash-header .welcome-txt strong { color: var(--text-mid); }
+    .dash-title { font-size: 1.9rem; font-weight: 900; color: var(--text); }
+    .dash-sub   { font-size: 13px; color: var(--text-light); margin-top: 2px; }
+    .dash-sub strong { color: var(--text-mid); }
 
-    /* Stat cards — bigger, more proportioned */
+    /* ── STAT CARDS: icon top-center → label → big number ── */
     .stat-cards {
         display: grid;
         grid-template-columns: repeat(5, 1fr);
         gap: 1rem;
-        margin-bottom: 1.75rem;
+        margin: 1.5rem 0;
     }
     .stat-card {
         background: var(--white);
         border-radius: var(--radius-lg);
-        padding: 1.4rem 1.2rem;
+        padding: 1.6rem 1rem 1.3rem;
         display: flex;
         flex-direction: column;
-        gap: .6rem;
+        align-items: center;
+        gap: .65rem;
         border: 1.5px solid rgba(255,255,255,.9);
         box-shadow: var(--shadow-card);
         transition: all .2s;
+        text-align: center;
     }
     .stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
     .sc-icon {
-        width: 46px; height: 46px;
-        border-radius: var(--radius-sm);
+        width: 52px; height: 52px;
+        border-radius: 14px;
         display: flex; align-items: center; justify-content: center;
-        font-size: 1.25rem;
+        font-size: 1.35rem;
+        flex-shrink: 0;
     }
-    .sc-info span   { font-size: 11px; color: var(--text-light); display: block; margin-bottom: 2px; }
-    .sc-info strong { font-size: 1.45rem; font-weight: 800; color: var(--text); line-height: 1.1; }
+    .sc-info { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .sc-info span   { font-size: 11px; color: var(--text-light); white-space: nowrap; }
+    .sc-info strong { font-size: 1.55rem; font-weight: 800; color: var(--text); line-height: 1.1; }
 
-    /* Alert banners */
+    /* ── ALERT BANNERS ── */
     .dash-alert {
         display: flex; align-items: center; gap: 10px;
         padding: 12px 16px; border-radius: var(--radius-sm);
         font-size: 13px; margin-bottom: .75rem;
     }
-    .dash-alert i { flex-shrink: 0; }
     .dash-alert.danger  { background:rgba(224,85,85,.08); border:1px solid rgba(224,85,85,.25); color:#c0392b; }
     .dash-alert.warning { background:rgba(230,130,20,.08); border:1px solid rgba(230,130,20,.3); color:#b8610a; }
-    .dash-alert a { font-weight: 700; text-decoration: underline; margin-left: 4px; color: inherit; }
+    .dash-alert a { font-weight:700; text-decoration:underline; margin-left:4px; color:inherit; }
 
-    /* Recent orders table */
-    .recent-orders-card {
+    /* ── RECENT ORDERS ── */
+    .recent-card {
         background: var(--white);
         border-radius: var(--radius-lg);
         border: 1.5px solid var(--border);
         overflow: hidden;
         box-shadow: var(--shadow-card);
+        margin-top: 1.5rem;
     }
-    .roc-header {
+    .recent-card-head {
         display: flex; align-items: center; justify-content: space-between;
         padding: 1rem 1.4rem;
         border-bottom: 1px solid var(--border);
     }
-    .roc-header h3 { font-size: 15px; font-weight: 700; color: var(--text); }
-    .roc-header a  { font-size: 12px; color: var(--blue-dark); font-weight: 600; }
+    .recent-card-head h3 { font-size: 15px; font-weight: 700; color: var(--text); }
+    .recent-card-head a  { font-size: 12px; color: var(--blue-dark); font-weight: 600; }
 </style>
 
-<div class="dash-header">
-    <div>
-        <h1>Dashboard</h1>
-        <p class="welcome-txt">Welcome back, <strong>@Session["AdminName"]</strong></p>
-    </div>
+<div>
+    <h1 class="dash-title">Dashboard</h1>
+    <p class="dash-sub">Welcome back, <strong>@Session["AdminName"]</strong></p>
 </div>
 
 <div class="stat-cards">
@@ -118,30 +104,30 @@
 @if (outOfStockCount > 0)
 {
     <div class="dash-alert danger">
-        <i class="fa-solid fa-circle-xmark"></i>
+        <i class="fa-solid fa-circle-xmark" style="flex-shrink:0;"></i>
         <span><strong>@outOfStockCount</strong> product@(outOfStockCount != 1 ? "s are" : " is") <strong>out of stock</strong>.
         <a href="@Url.Action("Products","Admin")">Manage stock &rarr;</a></span>
     </div>
 }
 @if (lowStockCount > 0)
 {
-    <div class="dash-alert warning" style="margin-bottom:1.5rem;">
-        <i class="fa-solid fa-triangle-exclamation"></i>
+    <div class="dash-alert warning">
+        <i class="fa-solid fa-triangle-exclamation" style="flex-shrink:0;"></i>
         <span><strong>@lowStockCount</strong> product@(lowStockCount != 1 ? "s are" : " is") <strong>running low</strong> (5 or fewer left).
-        <a href="@Url.Action("Products","Admin")">View products</a></span>
+        <a href="@Url.Action("Products","Admin")">View products &rarr;</a></span>
     </div>
 }
 @if ((int)ViewBag.RefundCount > 0)
 {
     <div class="dash-alert danger" style="margin-bottom:1.5rem;">
-        <i class="fa-solid fa-triangle-exclamation"></i>
+        <i class="fa-solid fa-triangle-exclamation" style="flex-shrink:0;"></i>
         <span>You have <strong>@ViewBag.RefundCount</strong> pending refund request(s).
         <a href="@Url.Action("Orders","Admin")">Review now &rarr;</a></span>
     </div>
 }
 
-<div class="recent-orders-card">
-    <div class="roc-header">
+<div class="recent-card">
+    <div class="recent-card-head">
         <h3>Recent Orders</h3>
         <a href="@Url.Action("Orders","Admin")">View All</a>
     </div>

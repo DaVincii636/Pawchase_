@@ -2,7 +2,7 @@
 @{
     ViewBag.Title = "Edit Product";
     Layout = "~/Views/Admin/_AdminLayout.cshtml";
-    var categories = new[] { "Food & Treats", "Accessories & Apparel", "Care & Hygiene", "Toys", "Health", "Others" };
+    var categories = new[] { "Treats", "Toys", "Accessories", "Health", "Others" };
     var sizes = new[] { "Small", "Medium", "Large", "All" };
 }
 <style>
@@ -203,6 +203,39 @@
         justify-content: flex-start;
     }
 
+    /* ── MODAL ───────────────────────────────────── */
+    .pc-modal-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.45); z-index: 1000;
+        align-items: center; justify-content: center;
+    }
+    .pc-modal-box {
+        background: var(--white); border-radius: var(--radius-lg);
+        padding: 2rem; max-width: 420px; width: 90%;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.2); text-align: center;
+    }
+    .pc-modal-icon {
+        width: 58px; height: 58px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 1rem; font-size: 1.5rem;
+    }
+    .pc-modal-title { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: .5rem; }
+    .pc-modal-body  { font-size: 13px; color: var(--text-mid); margin-bottom: 1.5rem; line-height: 1.6; }
+    .pc-modal-btns  { display: flex; gap: 10px; justify-content: center; }
+    .pc-modal-cancel {
+        padding: 9px 22px; border-radius: 50px; font-size: 13px; font-weight: 600;
+        border: 1.5px solid var(--border); background: var(--white); color: var(--text-mid);
+        cursor: pointer; font-family: 'Poppins', sans-serif; transition: all .2s;
+    }
+    .pc-modal-cancel:hover { background: var(--border); }
+    .pc-modal-confirm-blue {
+        padding: 9px 22px; border-radius: 50px; font-size: 13px; font-weight: 700;
+        background: linear-gradient(135deg, var(--blue), var(--blue-dark)); color: #fff; border: none;
+        cursor: pointer; font-family: 'Poppins', sans-serif; transition: all .2s;
+        display: inline-flex; align-items: center; gap: 6px;
+    }
+    .pc-modal-confirm-blue:hover { opacity: .9; transform: translateY(-1px); }
+
     /* ── RESPONSIVE ──────────────────────────────── */
     @@media (max-width: 960px) {
         .ap-grid { grid-template-columns: 1fr; }
@@ -216,7 +249,7 @@
     </a>
 </div>
 
-<form method="post" action="@Url.Action("EditProduct","Admin")">
+<form id="editProductForm" method="post" action="@Url.Action("EditProduct","Admin")">
     @Html.AntiForgeryToken()
     <input type="hidden" name="Id" value="@Model.Id" />
 
@@ -312,7 +345,7 @@
                 <div class="form-2col">
                     <div class="form-group">
                         <label><i class="fa-solid fa-pen"></i> Product Name <span class="req">*</span></label>
-                        <input type="text" name="Name" value="@Model.Name" required />
+                        <input type="text" name="Name" id="editProductName" value="@Model.Name" required />
                     </div>
                     <div class="form-group">
                         <label><i class="fa-solid fa-list"></i> Category <span class="req">*</span></label>
@@ -373,7 +406,8 @@
 
             <!-- Actions -->
             <div class="form-actions">
-                <button type="submit" class="btn-primary" style="padding:11px 28px;font-size:13px;">
+                <button type="button" class="btn-primary" style="padding:11px 28px;font-size:13px;"
+                        onclick="openSaveModal()">
                     <i class="fa-solid fa-floppy-disk"></i> Save Changes
                 </button>
                 <a href="@Url.Action("Products","Admin")" class="btn-outline" style="padding:11px 28px;font-size:13px;">
@@ -384,6 +418,23 @@
         </div>
     </div>
 </form>
+
+<!-- ── SAVE CONFIRMATION MODAL ── -->
+<div id="saveModal" class="pc-modal-overlay">
+    <div class="pc-modal-box">
+        <div class="pc-modal-icon" style="background:rgba(129,166,198,.12);">
+            <i class="fa-solid fa-floppy-disk" style="color:var(--blue);"></i>
+        </div>
+        <div class="pc-modal-title">Save Changes?</div>
+        <div class="pc-modal-body" id="saveModalText"></div>
+        <div class="pc-modal-btns">
+            <button class="pc-modal-cancel" onclick="closeSaveModal()">Cancel</button>
+            <button class="pc-modal-confirm-blue" onclick="submitEditForm()">
+                <i class="fa-solid fa-floppy-disk"></i> Save Changes
+            </button>
+        </div>
+    </div>
+</div>
 
 @section scripts {
     <script>
@@ -416,5 +467,22 @@
             };
             reader.readAsDataURL(input.files[0]);
         }
+
+        // ── Save modal ──
+        function openSaveModal() {
+            var name = document.getElementById('editProductName').value.trim() || 'this product';
+            document.getElementById('saveModalText').textContent =
+                'Are you sure you want to save changes to "' + name + '"?';
+            document.getElementById('saveModal').style.display = 'flex';
+        }
+        function closeSaveModal() {
+            document.getElementById('saveModal').style.display = 'none';
+        }
+        function submitEditForm() {
+            document.getElementById('editProductForm').submit();
+        }
+        document.getElementById('saveModal').addEventListener('click', function(e) {
+            if (e.target === this) closeSaveModal();
+        });
     </script>
 }

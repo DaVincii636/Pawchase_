@@ -4,115 +4,115 @@
     Layout = "~/Views/Admin/_AdminLayout.cshtml";
     var statuses = new[] { "To Ship", "In Transit", "Out for Delivery", "Delivered" };
     var refundOrders = Model.Where(o => o.HasRefundRequest).ToList();
-    var normalOrders = Model.Where(o => !o.HasRefundRequest).ToList();
 }
 
 <style>
     .orders-tabs {
-        display: flex;
-        gap: .5rem;
+        display: flex; gap: .5rem;
         margin-bottom: 1.4rem;
         border-bottom: 2px solid var(--border);
-        padding-bottom: 0;
     }
     .orders-tab-btn {
-        padding: 9px 20px;
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--text-light);
-        background: none;
-        border: none;
-        border-bottom: 3px solid transparent;
-        margin-bottom: -2px;
-        cursor: pointer;
-        font-family: 'Poppins', sans-serif;
-        transition: all .18s;
-        display: flex;
-        align-items: center;
-        gap: 7px;
+        padding: 9px 20px; font-size: 13px; font-weight: 600;
+        color: var(--text-light); background: none; border: none;
+        border-bottom: 3px solid transparent; margin-bottom: -2px;
+        cursor: pointer; font-family: 'Poppins', sans-serif;
+        transition: all .18s; display: flex; align-items: center; gap: 7px;
     }
     .orders-tab-btn.active { color: var(--blue-dark); border-bottom-color: var(--blue); }
     .orders-tab-btn:hover  { color: var(--text); }
-    .tab-badge {
-        background: #e05555; color: #fff;
-        font-size: 9px; font-weight: 700;
-        padding: 2px 6px; border-radius: 50px;
-    }
+    .tab-badge { background:#e05555; color:#fff; font-size:9px; font-weight:700; padding:2px 6px; border-radius:50px; }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
-    /* Refund card */
+    /* Refund cards */
     .refund-card {
-        background: var(--white);
-        border-radius: var(--radius-lg);
-        border: 1.5px solid rgba(224,85,85,.25);
-        margin-bottom: 1rem;
-        overflow: hidden;
-        box-shadow: var(--shadow-card);
+        background: var(--white); border-radius: var(--radius-lg);
+        border: 1.5px solid rgba(224,85,85,.25); margin-bottom: 1rem;
+        overflow: hidden; box-shadow: var(--shadow-card);
     }
     .refund-card-head {
-        background: rgba(224,85,85,.06);
-        padding: 1rem 1.3rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        border-bottom: 1px solid rgba(224,85,85,.15);
-        flex-wrap: wrap;
-        gap: .5rem;
+        background: rgba(224,85,85,.06); padding: 1rem 1.3rem;
+        display: flex; align-items: center; justify-content: space-between;
+        border-bottom: 1px solid rgba(224,85,85,.15); flex-wrap: wrap; gap: .5rem;
     }
-    .refund-card-head .ref-left strong { font-size: 13px; color: var(--text); }
-    .refund-card-head .ref-left small  { display: block; font-size: 11px; color: var(--text-light); margin-top: 2px; }
     .refund-card-body { padding: 1.2rem 1.3rem; display: flex; flex-direction: column; gap: 1rem; }
     .refund-info-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
     .refund-info-item label { font-size: 10px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: .4px; display: block; margin-bottom: 3px; }
     .refund-info-item span  { font-size: 13px; color: var(--text); font-weight: 500; }
-
     .gcash-box {
         background: linear-gradient(135deg, rgba(0,119,255,.06), rgba(0,119,255,.03));
-        border: 1.5px solid rgba(0,119,255,.2);
-        border-radius: var(--radius-sm);
-        padding: .9rem 1.1rem;
-        display: flex;
-        align-items: center;
-        gap: .75rem;
+        border: 1.5px solid rgba(0,119,255,.2); border-radius: var(--radius-sm);
+        padding: .9rem 1.1rem; display: flex; align-items: center; gap: .75rem;
     }
-    .gcash-icon {
-        width: 38px; height: 38px;
-        background: #0077FF;
-        border-radius: 8px;
-        display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0;
-    }
-    .gcash-icon i { color: #fff; font-size: 1rem; }
-    .gcash-info label { font-size: 10px; font-weight: 700; color: rgba(0,119,255,.7); text-transform: uppercase; letter-spacing: .4px; display: block; margin-bottom: 2px; }
-    .gcash-info .gcash-number { font-size: 15px; font-weight: 800; color: #0055bb; letter-spacing: .5px; }
-    .gcash-info .gcash-name   { font-size: 11px; color: var(--text-light); }
-    .gcash-amount {
-        margin-left: auto;
-        text-align: right;
-    }
-    .gcash-amount label { font-size: 10px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: .4px; display: block; margin-bottom: 2px; }
-    .gcash-amount strong { font-size: 16px; font-weight: 800; color: var(--text); }
-
+    .gcash-icon { width:38px; height:38px; background:#0077FF; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .gcash-icon i { color:#fff; font-size:1rem; }
+    .gcash-info label { font-size:10px; font-weight:700; color:rgba(0,119,255,.7); text-transform:uppercase; letter-spacing:.4px; display:block; margin-bottom:2px; }
+    .gcash-info .gcash-number { font-size:15px; font-weight:800; color:#0055bb; }
+    .gcash-info .gcash-name   { font-size:11px; color:var(--text-light); }
+    .gcash-amount { margin-left:auto; text-align:right; }
+    .gcash-amount label { font-size:10px; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:.4px; display:block; margin-bottom:2px; }
+    .gcash-amount strong { font-size:16px; font-weight:800; color:var(--text); }
     .refund-actions { display: flex; gap: .6rem; }
     .btn-approve {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 8px 18px; border-radius: 50px;
-        background: rgba(46,204,113,.12); color: #1e8449;
-        border: 1.5px solid rgba(46,204,113,.3);
-        font-size: 12px; font-weight: 700; cursor: pointer;
-        font-family: 'Poppins', sans-serif; transition: all .2s; text-decoration: none;
+        display:inline-flex; align-items:center; gap:6px; padding:8px 18px; border-radius:50px;
+        background:rgba(46,204,113,.12); color:#1e8449; border:1.5px solid rgba(46,204,113,.3);
+        font-size:12px; font-weight:700; cursor:pointer; font-family:'Poppins',sans-serif; transition:all .2s;
     }
-    .btn-approve:hover { background: #2ecc71; color: #fff; border-color: #2ecc71; }
+    .btn-approve:hover { background:#2ecc71; color:#fff; border-color:#2ecc71; }
     .btn-decline {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 8px 18px; border-radius: 50px;
-        background: rgba(224,85,85,.08); color: #c0392b;
-        border: 1.5px solid rgba(224,85,85,.25);
-        font-size: 12px; font-weight: 700; cursor: pointer;
-        font-family: 'Poppins', sans-serif; transition: all .2s; text-decoration: none;
+        display:inline-flex; align-items:center; gap:6px; padding:8px 18px; border-radius:50px;
+        background:rgba(224,85,85,.08); color:#c0392b; border:1.5px solid rgba(224,85,85,.25);
+        font-size:12px; font-weight:700; cursor:pointer; font-family:'Poppins',sans-serif; transition:all .2s;
     }
-    .btn-decline:hover { background: #e05555; color: #fff; border-color: #e05555; }
+    .btn-decline:hover { background:#e05555; color:#fff; border-color:#e05555; }
+
+    /* ── SHARED MODAL BASE ── */
+    .pc-modal-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.45); z-index: 1000;
+        align-items: center; justify-content: center;
+    }
+    .pc-modal-box {
+        background: var(--white); border-radius: var(--radius-lg);
+        padding: 2rem; max-width: 420px; width: 90%;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.2); text-align: center;
+    }
+    .pc-modal-icon {
+        width: 58px; height: 58px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 1rem; font-size: 1.5rem;
+    }
+    .pc-modal-title { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: .5rem; }
+    .pc-modal-body  { font-size: 13px; color: var(--text-mid); margin-bottom: 1.5rem; line-height: 1.6; }
+    .pc-modal-btns  { display: flex; gap: 10px; justify-content: center; }
+    .pc-modal-cancel {
+        padding: 9px 22px; border-radius: 50px; font-size: 13px; font-weight: 600;
+        border: 1.5px solid var(--border); background: var(--white); color: var(--text-mid);
+        cursor: pointer; font-family: 'Poppins', sans-serif; transition: all .2s;
+    }
+    .pc-modal-cancel:hover { background: var(--border); }
+    .pc-modal-confirm-blue {
+        padding: 9px 22px; border-radius: 50px; font-size: 13px; font-weight: 700;
+        background: linear-gradient(135deg, var(--blue), var(--blue-dark)); color: #fff; border: none;
+        cursor: pointer; font-family: 'Poppins', sans-serif; transition: all .2s;
+        display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+    }
+    .pc-modal-confirm-blue:hover { opacity: .9; transform: translateY(-1px); }
+    .pc-modal-confirm-green {
+        padding: 9px 22px; border-radius: 50px; font-size: 13px; font-weight: 700;
+        background: linear-gradient(135deg, #2ecc71, #1e8449); color: #fff; border: none;
+        cursor: pointer; font-family: 'Poppins', sans-serif; transition: all .2s;
+        display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+    }
+    .pc-modal-confirm-green:hover { opacity: .9; transform: translateY(-1px); }
+    .pc-modal-confirm-danger {
+        padding: 9px 22px; border-radius: 50px; font-size: 13px; font-weight: 700;
+        background: linear-gradient(135deg, #e85d5d, #c94040); color: #fff; border: none;
+        cursor: pointer; font-family: 'Poppins', sans-serif; transition: all .2s;
+        display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+    }
+    .pc-modal-confirm-danger:hover { opacity: .9; transform: translateY(-1px); }
 </style>
 
 <div class="admin-page-header">
@@ -174,8 +174,14 @@
                                 @if (o.HasRefundRequest)
                                 {
                                     <div class="status-btns">
-                                        <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status="Refund Approved"})" class="approve-btn" onclick="return confirm('Approve refund?')"><i class="fa-solid fa-check"></i> Approve</a>
-                                        <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status="Delivered"})" class="decline-btn" onclick="return confirm('Decline refund?')"><i class="fa-solid fa-times"></i> Decline</a>
+                                        <button type="button" class="approve-btn"
+                                                onclick="openApproveModal(@o.Id, '@o.ReferenceNumber', '@o.CustomerName', '@o.Total.ToString("N2")', '@o.Phone')">
+                                            <i class="fa-solid fa-check"></i> Approve
+                                        </button>
+                                        <button type="button" class="decline-btn"
+                                                onclick="openDeclineModal(@o.Id, '@o.ReferenceNumber', '@o.CustomerName')">
+                                            <i class="fa-solid fa-times"></i> Decline
+                                        </button>
                                     </div>
                                 }
                                 else
@@ -185,9 +191,8 @@
                                         {
                                             if (s != o.Status)
                                             {
-                                                <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status=s})"
-                                                   class="status-update-btn"
-                                                   onclick="return confirm('Set status to \'@s\'?')">@s</a>
+                                                <button type="button" class="status-update-btn"
+                                                        onclick="openStatusModal(@o.Id, '@o.ReferenceNumber', '@s')">@s</button>
                                             }
                                         }
                                     </div>
@@ -218,29 +223,18 @@
         {
             <div class="refund-card">
                 <div class="refund-card-head">
-                    <div class="ref-left">
+                    <div>
                         <strong>@o.ReferenceNumber <span class="flag-badge" style="margin-left:4px;"><i class="fa-solid fa-rotate-left"></i> REFUND REQUEST</span></strong>
-                        <small>Ordered @o.OrderDate.ToString("MMM dd, yyyy") &bull; @o.CustomerName</small>
+                        <small style="display:block;font-size:11px;color:var(--text-light);margin-top:2px;">Ordered @o.OrderDate.ToString("MMM dd, yyyy") &bull; @o.CustomerName</small>
                     </div>
                     <span class="status-pill status-@o.Status.ToLower().Replace(" ","-")">@o.Status</span>
                 </div>
                 <div class="refund-card-body">
                     <div class="refund-info-row">
-                        <div class="refund-info-item">
-                            <label>Customer</label>
-                            <span>@o.CustomerName</span>
-                        </div>
-                        <div class="refund-info-item">
-                            <label>Email</label>
-                            <span>@o.Email</span>
-                        </div>
-                        <div class="refund-info-item">
-                            <label>Phone</label>
-                            <span>@o.Phone</span>
-                        </div>
+                        <div class="refund-info-item"><label>Customer</label><span>@o.CustomerName</span></div>
+                        <div class="refund-info-item"><label>Email</label><span>@o.Email</span></div>
+                        <div class="refund-info-item"><label>Phone</label><span>@o.Phone</span></div>
                     </div>
-
-                    <!-- GCash Refund Info -->
                     <div class="gcash-box">
                         <div class="gcash-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
                         <div class="gcash-info">
@@ -253,18 +247,15 @@
                             <strong>&#8369;@o.Total.ToString("N2")</strong>
                         </div>
                     </div>
-
                     <div class="refund-actions">
-                        <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status="Refund Approved"})"
-                           class="btn-approve"
-                           onclick="return confirm('Approve refund of ₱@o.Total.ToString("N2") to @o.CustomerName via GCash (@o.Phone)?')">
+                        <button type="button" class="btn-approve"
+                                onclick="openApproveModal(@o.Id, '@o.ReferenceNumber', '@o.CustomerName', '@o.Total.ToString("N2")', '@o.Phone')">
                             <i class="fa-solid fa-check"></i> Approve Refund
-                        </a>
-                        <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status="Delivered"})"
-                           class="btn-decline"
-                           onclick="return confirm('Decline this refund request?')">
+                        </button>
+                        <button type="button" class="btn-decline"
+                                onclick="openDeclineModal(@o.Id, '@o.ReferenceNumber', '@o.CustomerName')">
                             <i class="fa-solid fa-times"></i> Decline Request
-                        </a>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -272,13 +263,104 @@
     }
 </div>
 
+<!-- ── STATUS UPDATE MODAL ── -->
+<div id="statusModal" class="pc-modal-overlay">
+    <div class="pc-modal-box">
+        <div class="pc-modal-icon" style="background:rgba(129,166,198,.12);">
+            <i class="fa-solid fa-arrow-right-arrow-left" style="color:var(--blue);"></i>
+        </div>
+        <div class="pc-modal-title">Update Order Status</div>
+        <div class="pc-modal-body" id="statusModalText"></div>
+        <div class="pc-modal-btns">
+            <button class="pc-modal-cancel" onclick="closeStatusModal()">Cancel</button>
+            <a id="statusConfirmLink" href="#" class="pc-modal-confirm-blue">
+                <i class="fa-solid fa-check"></i> Confirm
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- ── APPROVE REFUND MODAL ── -->
+<div id="approveModal" class="pc-modal-overlay">
+    <div class="pc-modal-box">
+        <div class="pc-modal-icon" style="background:rgba(46,204,113,.12);">
+            <i class="fa-solid fa-check" style="color:#1e8449;"></i>
+        </div>
+        <div class="pc-modal-title">Approve Refund?</div>
+        <div class="pc-modal-body" id="approveModalText"></div>
+        <div class="pc-modal-btns">
+            <button class="pc-modal-cancel" onclick="closeApproveModal()">Cancel</button>
+            <a id="approveConfirmLink" href="#" class="pc-modal-confirm-green">
+                <i class="fa-solid fa-check"></i> Approve Refund
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- ── DECLINE REFUND MODAL ── -->
+<div id="declineModal" class="pc-modal-overlay">
+    <div class="pc-modal-box">
+        <div class="pc-modal-icon" style="background:rgba(224,85,85,.1);">
+            <i class="fa-solid fa-times" style="color:#e05555;"></i>
+        </div>
+        <div class="pc-modal-title">Decline Refund Request?</div>
+        <div class="pc-modal-body" id="declineModalText"></div>
+        <div class="pc-modal-btns">
+            <button class="pc-modal-cancel" onclick="closeDeclineModal()">Cancel</button>
+            <a id="declineConfirmLink" href="#" class="pc-modal-confirm-danger">
+                <i class="fa-solid fa-times"></i> Decline Request
+            </a>
+        </div>
+    </div>
+</div>
+
 @section scripts {
     <script>
+        // ── Tab switching ──
         function switchTab(name, btn) {
             document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
             document.querySelectorAll('.orders-tab-btn').forEach(function(b) { b.classList.remove('active'); });
             document.getElementById('tab-' + name).classList.add('active');
             btn.classList.add('active');
         }
+
+        // ── Status modal ──
+        function openStatusModal(id, ref, status) {
+            document.getElementById('statusModalText').textContent =
+                'Set order ' + ref + ' status to "' + status + '"?';
+            document.getElementById('statusConfirmLink').href =
+                '@Url.Action("UpdateOrderStatus","Admin")?id=' + id + '&status=' + encodeURIComponent(status);
+            document.getElementById('statusModal').style.display = 'flex';
+        }
+        function closeStatusModal() { document.getElementById('statusModal').style.display = 'none'; }
+        document.getElementById('statusModal').addEventListener('click', function(e) {
+            if (e.target === this) closeStatusModal();
+        });
+
+        // ── Approve refund modal ──
+        function openApproveModal(id, ref, name, amount, phone) {
+            document.getElementById('approveModalText').textContent =
+                'Send ₱' + amount + ' refund to ' + name + ' via GCash (' + phone + ') for order ' + ref + '?';
+            document.getElementById('approveConfirmLink').href =
+                '@Url.Action("UpdateOrderStatus","Admin")?id=' + id + '&status=Refund%20Approved';
+            document.getElementById('approveModal').style.display = 'flex';
+        }
+        function closeApproveModal() { document.getElementById('approveModal').style.display = 'none'; }
+        document.getElementById('approveModal').addEventListener('click', function(e) {
+            if (e.target === this) closeApproveModal();
+        });
+
+        // ── Decline refund modal ──
+        function openDeclineModal(id, ref, name) {
+            document.getElementById('declineModalText').textContent =
+                'Decline ' + name + '\'s refund request for order ' + ref + '? The order status will be set back to Delivered.';
+            document.getElementById('declineConfirmLink').href =
+                '@Url.Action("UpdateOrderStatus","Admin")?id=' + id + '&status=Delivered';
+            document.getElementById('declineModal').style.display = 'flex';
+        }
+        function closeDeclineModal() { document.getElementById('declineModal').style.display = 'none'; }
+        document.getElementById('declineModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDeclineModal();
+        });
     </script>
 }
