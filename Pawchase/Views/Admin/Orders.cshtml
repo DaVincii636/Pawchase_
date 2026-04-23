@@ -3,64 +3,282 @@
     ViewBag.Title = "Manage Orders";
     Layout = "~/Views/Admin/_AdminLayout.cshtml";
     var statuses = new[] { "To Ship", "In Transit", "Out for Delivery", "Delivered" };
+    var refundOrders = Model.Where(o => o.HasRefundRequest).ToList();
+    var normalOrders = Model.Where(o => !o.HasRefundRequest).ToList();
 }
+
+<style>
+    .orders-tabs {
+        display: flex;
+        gap: .5rem;
+        margin-bottom: 1.4rem;
+        border-bottom: 2px solid var(--border);
+        padding-bottom: 0;
+    }
+    .orders-tab-btn {
+        padding: 9px 20px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-light);
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+        cursor: pointer;
+        font-family: 'Poppins', sans-serif;
+        transition: all .18s;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+    }
+    .orders-tab-btn.active { color: var(--blue-dark); border-bottom-color: var(--blue); }
+    .orders-tab-btn:hover  { color: var(--text); }
+    .tab-badge {
+        background: #e05555; color: #fff;
+        font-size: 9px; font-weight: 700;
+        padding: 2px 6px; border-radius: 50px;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Refund card */
+    .refund-card {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        border: 1.5px solid rgba(224,85,85,.25);
+        margin-bottom: 1rem;
+        overflow: hidden;
+        box-shadow: var(--shadow-card);
+    }
+    .refund-card-head {
+        background: rgba(224,85,85,.06);
+        padding: 1rem 1.3rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid rgba(224,85,85,.15);
+        flex-wrap: wrap;
+        gap: .5rem;
+    }
+    .refund-card-head .ref-left strong { font-size: 13px; color: var(--text); }
+    .refund-card-head .ref-left small  { display: block; font-size: 11px; color: var(--text-light); margin-top: 2px; }
+    .refund-card-body { padding: 1.2rem 1.3rem; display: flex; flex-direction: column; gap: 1rem; }
+    .refund-info-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    .refund-info-item label { font-size: 10px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: .4px; display: block; margin-bottom: 3px; }
+    .refund-info-item span  { font-size: 13px; color: var(--text); font-weight: 500; }
+
+    .gcash-box {
+        background: linear-gradient(135deg, rgba(0,119,255,.06), rgba(0,119,255,.03));
+        border: 1.5px solid rgba(0,119,255,.2);
+        border-radius: var(--radius-sm);
+        padding: .9rem 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+    }
+    .gcash-icon {
+        width: 38px; height: 38px;
+        background: #0077FF;
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .gcash-icon i { color: #fff; font-size: 1rem; }
+    .gcash-info label { font-size: 10px; font-weight: 700; color: rgba(0,119,255,.7); text-transform: uppercase; letter-spacing: .4px; display: block; margin-bottom: 2px; }
+    .gcash-info .gcash-number { font-size: 15px; font-weight: 800; color: #0055bb; letter-spacing: .5px; }
+    .gcash-info .gcash-name   { font-size: 11px; color: var(--text-light); }
+    .gcash-amount {
+        margin-left: auto;
+        text-align: right;
+    }
+    .gcash-amount label { font-size: 10px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: .4px; display: block; margin-bottom: 2px; }
+    .gcash-amount strong { font-size: 16px; font-weight: 800; color: var(--text); }
+
+    .refund-actions { display: flex; gap: .6rem; }
+    .btn-approve {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 8px 18px; border-radius: 50px;
+        background: rgba(46,204,113,.12); color: #1e8449;
+        border: 1.5px solid rgba(46,204,113,.3);
+        font-size: 12px; font-weight: 700; cursor: pointer;
+        font-family: 'Poppins', sans-serif; transition: all .2s; text-decoration: none;
+    }
+    .btn-approve:hover { background: #2ecc71; color: #fff; border-color: #2ecc71; }
+    .btn-decline {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 8px 18px; border-radius: 50px;
+        background: rgba(224,85,85,.08); color: #c0392b;
+        border: 1.5px solid rgba(224,85,85,.25);
+        font-size: 12px; font-weight: 700; cursor: pointer;
+        font-family: 'Poppins', sans-serif; transition: all .2s; text-decoration: none;
+    }
+    .btn-decline:hover { background: #e05555; color: #fff; border-color: #e05555; }
+</style>
 
 <div class="admin-page-header">
     <h1>Orders</h1>
     <span class="order-count">@Model.Count total orders</span>
 </div>
 
-@if (!Model.Any())
-{
-    <div class="admin-table-card"><div class="no-data-msg"><i class="fa-solid fa-receipt"></i><p>No orders yet.</p></div></div>
-}
-else
-{
-    <div class="admin-table-card">
-        <table class="admin-table">
-            <thead><tr><th>Reference</th><th>Customer</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th><th>Update Status</th></tr></thead>
-            <tbody>
-                @foreach (var o in Model)
-                {
-                    <tr @(o.HasRefundRequest ? "style='background:rgba(224,85,85,.03);'" : "")>
-                        <td>
-                            <strong>@o.ReferenceNumber</strong>
-                            @if (o.HasRefundRequest)
-                            {
-                                <span class="flag-badge" style="margin-left:4px;"><i class="fa-solid fa-circle-exclamation"></i> REFUND</span>
-                            }
-                        </td>
-                        <td>@o.CustomerName<small>@o.Email</small></td>
-                        <td>@o.OrderDate.ToString("MMM dd, yyyy")</td>
-                        <td>@o.Items.Sum(i => i.Quantity) item(s)</td>
-                        <td>&#8369;@o.Total.ToString("N2")</td>
-                        <td><span class="status-pill status-@o.Status.ToLower().Replace(" ","-")">@o.Status</span></td>
-                        <td>
-                            @if (o.HasRefundRequest)
-                            {
-                                <div class="status-btns">
-                                    <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status="Refund Approved"})" class="approve-btn" onclick="return confirm('Approve refund?')"><i class="fa-solid fa-check"></i> Approve</a>
-                                    <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status="Delivered"})" class="decline-btn" onclick="return confirm('Decline refund?')"><i class="fa-solid fa-times"></i> Decline</a>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="status-btns">
-                                    @foreach (var s in statuses)
-                                    {
-                                        if (s != o.Status)
-                                        {
-                                            <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status=s})"
-                                               class="status-update-btn"
-                                               onclick="return confirm('Set status to \'@s\'?')">@s</a>
-                                        }
-                                    }
-                                </div>
-                            }
-                        </td>
+<!-- Tabs -->
+<div class="orders-tabs">
+    <button class="orders-tab-btn active" onclick="switchTab('all', this)">
+        <i class="fa-solid fa-receipt"></i> All Orders
+        <span style="background:var(--border);color:var(--text-mid);font-size:9px;font-weight:700;padding:2px 6px;border-radius:50px;">@Model.Count</span>
+    </button>
+    <button class="orders-tab-btn" onclick="switchTab('refunds', this)">
+        <i class="fa-solid fa-rotate-left"></i> Refund / Return Requests
+        @if (refundOrders.Count > 0)
+        { <span class="tab-badge">@refundOrders.Count</span> }
+    </button>
+</div>
+
+<!-- ALL ORDERS TAB -->
+<div id="tab-all" class="tab-panel active">
+    @if (!Model.Any())
+    {
+        <div class="admin-table-card"><div class="no-data-msg"><i class="fa-solid fa-receipt"></i><p>No orders yet.</p></div></div>
+    }
+    else
+    {
+        <div class="admin-table-card">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Reference</th>
+                        <th>Customer</th>
+                        <th>Date</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Update Status</th>
                     </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+                </thead>
+                <tbody>
+                    @foreach (var o in Model)
+                    {
+                        <tr @(o.HasRefundRequest ? "style='background:rgba(224,85,85,.03);'" : "")>
+                            <td>
+                                <strong>@o.ReferenceNumber</strong>
+                                @if (o.HasRefundRequest)
+                                {
+                                    <span class="flag-badge" style="margin-left:4px;"><i class="fa-solid fa-circle-exclamation"></i> REFUND</span>
+                                }
+                            </td>
+                            <td>@o.CustomerName<small>@o.Email</small></td>
+                            <td>@o.OrderDate.ToString("MMM dd, yyyy")</td>
+                            <td>@((o.Snapshots != null && o.Snapshots.Any() ? o.Snapshots.Sum(s => s.Quantity) : o.Items != null ? o.Items.Sum(i => i.Quantity) : 0)) item(s)</td>
+                            <td>&#8369;@o.Total.ToString("N2")</td>
+                            <td><span class="status-pill status-@o.Status.ToLower().Replace(" ","-")">@o.Status</span></td>
+                            <td>
+                                @if (o.HasRefundRequest)
+                                {
+                                    <div class="status-btns">
+                                        <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status="Refund Approved"})" class="approve-btn" onclick="return confirm('Approve refund?')"><i class="fa-solid fa-check"></i> Approve</a>
+                                        <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status="Delivered"})" class="decline-btn" onclick="return confirm('Decline refund?')"><i class="fa-solid fa-times"></i> Decline</a>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="status-btns">
+                                        @foreach (var s in statuses)
+                                        {
+                                            if (s != o.Status)
+                                            {
+                                                <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status=s})"
+                                                   class="status-update-btn"
+                                                   onclick="return confirm('Set status to \'@s\'?')">@s</a>
+                                            }
+                                        }
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- REFUND / RETURN REQUESTS TAB -->
+<div id="tab-refunds" class="tab-panel">
+    @if (!refundOrders.Any())
+    {
+        <div class="admin-table-card">
+            <div class="no-data-msg">
+                <i class="fa-solid fa-circle-check" style="color:#2ecc71;"></i>
+                <p>No pending refund or return requests.</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        foreach (var o in refundOrders)
+        {
+            <div class="refund-card">
+                <div class="refund-card-head">
+                    <div class="ref-left">
+                        <strong>@o.ReferenceNumber <span class="flag-badge" style="margin-left:4px;"><i class="fa-solid fa-rotate-left"></i> REFUND REQUEST</span></strong>
+                        <small>Ordered @o.OrderDate.ToString("MMM dd, yyyy") &bull; @o.CustomerName</small>
+                    </div>
+                    <span class="status-pill status-@o.Status.ToLower().Replace(" ","-")">@o.Status</span>
+                </div>
+                <div class="refund-card-body">
+                    <div class="refund-info-row">
+                        <div class="refund-info-item">
+                            <label>Customer</label>
+                            <span>@o.CustomerName</span>
+                        </div>
+                        <div class="refund-info-item">
+                            <label>Email</label>
+                            <span>@o.Email</span>
+                        </div>
+                        <div class="refund-info-item">
+                            <label>Phone</label>
+                            <span>@o.Phone</span>
+                        </div>
+                    </div>
+
+                    <!-- GCash Refund Info -->
+                    <div class="gcash-box">
+                        <div class="gcash-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+                        <div class="gcash-info">
+                            <label>GCash Refund To</label>
+                            <div class="gcash-number">@o.Phone</div>
+                            <div class="gcash-name">@o.CustomerName</div>
+                        </div>
+                        <div class="gcash-amount">
+                            <label>Refund Amount</label>
+                            <strong>&#8369;@o.Total.ToString("N2")</strong>
+                        </div>
+                    </div>
+
+                    <div class="refund-actions">
+                        <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status="Refund Approved"})"
+                           class="btn-approve"
+                           onclick="return confirm('Approve refund of ₱@o.Total.ToString("N2") to @o.CustomerName via GCash (@o.Phone)?')">
+                            <i class="fa-solid fa-check"></i> Approve Refund
+                        </a>
+                        <a href="@Url.Action("UpdateOrderStatus","Admin",new{id=o.Id,status="Delivered"})"
+                           class="btn-decline"
+                           onclick="return confirm('Decline this refund request?')">
+                            <i class="fa-solid fa-times"></i> Decline Request
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@section scripts {
+    <script>
+        function switchTab(name, btn) {
+            document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+            document.querySelectorAll('.orders-tab-btn').forEach(function(b) { b.classList.remove('active'); });
+            document.getElementById('tab-' + name).classList.add('active');
+            btn.classList.add('active');
+        }
+    </script>
 }

@@ -22,13 +22,21 @@
             border-left: 3px solid #e05555;
             color: #c0392b;
         }
+        /* Sidebar logo with image */
+        .sidebar-logo-img {
+            width: 140px;
+            height: auto;
+            display: block;
+            margin: 0 auto .3rem;
+            object-fit: contain;
+            filter: brightness(0) invert(1);
+        }
     </style>
 </head>
 <body class="admin-body">
     <aside class="admin-sidebar">
         <div class="sidebar-logo">
-            <i class="fa-solid fa-paw"></i>
-            <h2>PawChase</h2>
+            <img src="@Url.Content("~/Content/images/Pawchase.png")" alt="PawChase" class="sidebar-logo-img" />
             <small>Admin Panel</small>
         </div>
         @{
@@ -52,6 +60,14 @@
                     var refundCount = Pawchase.Models.MockData.Orders.Count(o => o.HasRefundRequest);
                     if (refundCount > 0)
                     { <span style="background:#e05555;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:50px;margin-left:4px;">@refundCount</span> }
+                }
+            </a>
+            <a href="@Url.Action("FlaggedReviews","Admin")" class="sidebar-link @(action=="FlaggedReviews"?"active":"")">
+                <i class="fa-solid fa-flag"></i> Reports
+                @{
+                    var flaggedCount = Pawchase.Models.MockData.Reviews.Count(r => r.ReportCount > 0);
+                    if (flaggedCount > 0)
+                    { <span style="background:#e6a520;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:50px;margin-left:4px;">@flaggedCount</span> }
                 }
             </a>
         </nav>

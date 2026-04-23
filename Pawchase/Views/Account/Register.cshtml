@@ -10,7 +10,7 @@
 <section class="auth-section">
     <div class="auth-card">
         <div class="auth-logo">
-            <i class="fa-solid fa-paw"></i>
+            <img src="@Url.Content("~/Content/images/PawV2.png")" alt="PawChase" class="auth-logo-img" />
             <h2>PawChase</h2>
             <p>Create your account</p>
         </div>
@@ -30,11 +30,11 @@
             @Html.AntiForgeryToken()
             <div class="form-group">
                 <label><i class="fa-regular fa-user"></i> Full Name</label>
-                <input type="text" name="fullName" placeholder="Juan dela Cruz" required/>
+                <input type="text" name="fullName" placeholder="Enter your full name" required/>
             </div>
             <div class="form-group">
                 <label><i class="fa-regular fa-envelope"></i> Email Address</label>
-                <input type="email" name="email" placeholder="juan@email.com" required/>
+                <input type="email" name="email" placeholder="Enter your email" required/>
             </div>
             <div class="form-group">
                 <label><i class="fa-solid fa-lock"></i> Password</label>

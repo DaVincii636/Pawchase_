@@ -10,7 +10,7 @@
 <section class="auth-section">
     <div class="auth-card">
         <div class="auth-logo">
-            <i class="fa-solid fa-paw"></i>
+            <img src="@Url.Content("~/Content/images/PawV2.png")" alt="PawChase" class="auth-logo-img" />
             <h2>PawChase</h2>
             <p>Sign in to your account</p>
         </div>
@@ -20,9 +20,9 @@
             <div class="auth-error"><i class="fa-solid fa-circle-exclamation"></i> @ViewBag.Error</div>
         }
 
-    <a href="@Url.Action("GoogleLogin", "Account", new { returnUrl = returnUrl })" class="google-btn">
-        <i class="fa-brands fa-google"></i> Continue with Google
-    </a>
+        <a href="@Url.Action("GoogleLogin", "Account", new { returnUrl = returnUrl })" class="google-btn">
+            <i class="fa-brands fa-google"></i> Continue with Google
+        </a>
 
         <div class="auth-divider"><span>or sign in with email</span></div>
 
@@ -30,7 +30,7 @@
             @Html.AntiForgeryToken()
             <div class="form-group">
                 <label><i class="fa-regular fa-envelope"></i> Email Address</label>
-                <input type="email" name="email" placeholder="juan@email.com" required />
+                <input type="email" name="email" placeholder="Enter your email" required />
             </div>
             <div class="form-group">
                 <label><i class="fa-solid fa-lock"></i> Password</label>
@@ -47,7 +47,7 @@
         </form>
 
         <div class="auth-hint">
-            <strong>Test:</strong> juan@email.com / user123
+            <strong>Test:</strong> alex@email.com / user123
         </div>
 
         <div class="auth-footer">

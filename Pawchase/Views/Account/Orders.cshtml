@@ -4,10 +4,6 @@
     ViewBag.Title = "My Profile";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var tab = ViewBag.Tab as string ?? "Profile";
-    var tabs = new[] { "Profile" };
-    var tabIcons = new Dictionary<string, string> {
-        {"Profile","fa-solid fa-user-pen"}
-    };
     var profileUser = ViewBag.ProfileUser as User;
 }
 @section styles {
@@ -18,6 +14,7 @@
 
 <section class="account-section">
     <div style="max-width:760px;margin:0 auto;width:100%;">
+
         @if (TempData["ProfileSuccess"] != null)
         {
             <div style="background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);color:#1e8449;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;margin-bottom:1.2rem;display:flex;align-items:center;gap:8px;">
@@ -32,6 +29,7 @@
         }
 
         <div class="order-card" style="padding:2rem;">
+            <!-- Profile Header -->
             <div style="display:flex;align-items:center;gap:1rem;padding-bottom:1.2rem;margin-bottom:1.5rem;border-bottom:1px solid rgba(210,196,180,0.4);">
                 <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(145deg,var(--blue),var(--blue-dark));display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 14px rgba(129,166,198,0.35);">
                     <i class="fa-solid fa-user" style="font-size:22px;color:#fff;"></i>
@@ -46,11 +44,12 @@
             {
                 @Html.AntiForgeryToken()
 
+                <!-- Account Information -->
                 <div style="margin-bottom:1.5rem;">
                     <h3 style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:1rem;display:flex;align-items:center;gap:6px;">
                         <i class="fa-solid fa-circle-info" style="color:var(--blue);font-size:12px;"></i> Account Information
                     </h3>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
                         <div>
                             <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Full Name</label>
                             <input type="text" name="fullName" value="@(profileUser?.FullName ?? "")"
@@ -66,8 +65,29 @@
                                    onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'" />
                         </div>
                     </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                        <div>
+                            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Phone Number</label>
+                            <input type="tel" name="phone" value="@(profileUser?.Phone ?? "")"
+                                   maxlength="20" placeholder="e.g. 09171234567"
+                                   style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;"
+                                   onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'" />
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">
+                                GCash Number
+                                <span style="background:rgba(0,119,255,.1);color:#0055bb;font-size:9px;font-weight:700;padding:2px 7px;border-radius:50px;margin-left:4px;vertical-align:middle;">for refunds</span>
+                            </label>
+                            <input type="tel" name="gcashNumber" value="@(profileUser?.GCashNumber ?? "")"
+                                   maxlength="20" placeholder="GCash number"
+                                   style="width:100%;padding:10px 14px;border:1.5px solid rgba(0,119,255,.25);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;background:rgba(0,119,255,.02);"
+                                   onfocus="this.style.borderColor='#0077FF'" onblur="this.style.borderColor='rgba(0,119,255,.25)'" />
+                            <small style="font-size:10px;color:var(--text-light);margin-top:4px;display:block;"><i class="fa-solid fa-circle-info"></i> Used to process approved refunds via GCash.</small>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- Change Password -->
                 <div style="margin-bottom:1.5rem;">
                     <h3 style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.4rem;display:flex;align-items:center;gap:6px;">
                         <i class="fa-solid fa-lock" style="color:var(--blue);font-size:12px;"></i> Change Password
@@ -100,7 +120,7 @@
                                        onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'" />
                                 <button type="button" class="toggle-pw" onclick="togglePw('conf-pw','conf-pw-ic')"><i id="conf-pw-ic" class="fa-regular fa-eye"></i></button>
                             </div>
-                            <span id="pw-match-profile" style="display:none;font-size:11px;color:#e05555;margin-top:4px;display:none;">Passwords do not match.</span>
+                            <span id="pw-match-profile" style="display:none;font-size:11px;color:#e05555;margin-top:4px;">Passwords do not match.</span>
                         </div>
                     </div>
                 </div>
@@ -113,17 +133,16 @@
             }
         </div>
     </div>
-    </div>
 </section>
 
 @section scripts {
     <script src="@Url.Content("~/Scripts/account.js")"></script>
     <script>
         (function () {
-            var newPw = document.getElementById('new-pw');
+            var newPw  = document.getElementById('new-pw');
             var confPw = document.getElementById('conf-pw');
-            var msg = document.getElementById('pw-match-profile');
-            var btn = document.getElementById('save-profile-btn');
+            var msg    = document.getElementById('pw-match-profile');
+            var btn    = document.getElementById('save-profile-btn');
             if (!newPw || !confPw) return;
             function check() {
                 if (!confPw.value && !newPw.value) { msg.style.display = 'none'; btn.disabled = false; return; }

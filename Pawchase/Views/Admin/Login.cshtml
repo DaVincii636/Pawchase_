@@ -8,7 +8,6 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>PawChase Admin</title>
-    
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet"/>
     <link href="@Url.Content("~/Content/css/site.css")" rel="stylesheet"/>
     <link href="@Url.Content("~/Content/css/admin.css")" rel="stylesheet"/>
@@ -16,7 +15,7 @@
 <body class="admin-login-page">
     <div class="admin-login-card">
         <div class="admin-login-logo">
-            <i class="fa-solid fa-paw"></i>
+            <img src="@Url.Content("~/Content/images/PawV2.png")" alt="PawChase" class="admin-logo-img" />
             <h1>PawChase</h1>
             <p>Admin Portal</p>
         </div>
@@ -50,7 +49,7 @@
             <strong>Credentials:</strong><br/>
             admin@pawchase.com / PawChase@Admin2024
         </div>
-        <div class="admin-back"><a href="@Url.Action("Index","Home")">← Back to Store</a></div>
+        <div class="admin-back"><a href="@Url.Action("Index","Home")">Back to Store</a></div>
     </div>
     <script>
     function togglePw(id, iconId) {

@@ -137,7 +137,7 @@ namespace Pawchase.Controllers
             {
                 var email = "googleuser@gmail.com";
                 var user = MockData.Users.FirstOrDefault(u => u.Email == email)
-                         ?? new User { Id = MockData.Users.Count + 1, FullName = "Google User", Email = email };
+                          ?? new User { Id = MockData.Users.Count + 1, FullName = "Google User", Email = email };
                 if (!MockData.Users.Contains(user)) MockData.Users.Add(user);
                 Session["UserId"] = user.Id;
                 Session["UserName"] = user.FullName;
@@ -176,8 +176,11 @@ namespace Pawchase.Controllers
             }
         }
 
+        // ── Updated SaveProfile — now saves Phone and GCashNumber too ──
         [HttpPost, ValidateAntiForgeryToken]
-        public ActionResult SaveProfile(string fullName, string email, string currentPassword, string newPassword, string confirmPassword)
+        public ActionResult SaveProfile(string fullName, string email, string phone,
+                                        string gcashNumber,
+                                        string currentPassword, string newPassword, string confirmPassword)
         {
             try
             {
@@ -198,6 +201,7 @@ namespace Pawchase.Controllers
                     return RedirectToAction("Orders", new { tab = "Profile" });
                 }
 
+                // Password change (optional)
                 if (!string.IsNullOrWhiteSpace(newPassword))
                 {
                     if (user.Password != currentPassword)
@@ -220,6 +224,8 @@ namespace Pawchase.Controllers
 
                 user.FullName = fullName.Trim();
                 user.Email = email.Trim().ToLower();
+                user.Phone = phone?.Trim();
+                user.GCashNumber = gcashNumber?.Trim();
                 Session["UserName"] = user.FullName;
                 Session["UserEmail"] = user.Email;
 
@@ -285,7 +291,6 @@ namespace Pawchase.Controllers
                     TempData["Error"] = "Product not found.";
                     return RedirectToAction("Index", "Product");
                 }
-
                 if (product.Stock <= 0)
                 {
                     TempData["Error"] = "Sorry, this product is out of stock.";
@@ -363,10 +368,8 @@ namespace Pawchase.Controllers
 
                 if (item != null)
                 {
-                    if (quantity <= 0)
-                        cart.Remove(item);
-                    else
-                        item.Quantity = Math.Min(quantity, item.Product.Stock);
+                    if (quantity <= 0) cart.Remove(item);
+                    else item.Quantity = Math.Min(quantity, item.Product.Stock);
                 }
                 Session["Cart"] = cart;
                 return RedirectToAction("Index");
@@ -587,7 +590,6 @@ namespace Pawchase.Controllers
             }
         }
 
-        // NEW: Update the selected variant for an existing cart item
         [HttpPost, ValidateAntiForgeryToken]
         public ActionResult ChangeVariant(int id, string oldVariantLabel, string newVariantLabel)
         {
@@ -603,19 +605,13 @@ namespace Pawchase.Controllers
                 {
                     var product = MockData.Products.FirstOrDefault(p => p.Id == id && !p.IsDeleted);
                     if (product != null && product.Variants != null && !string.IsNullOrEmpty(newVariantLabel))
-                    {
-                        var chosen = product.Variants.FirstOrDefault(v => v.Label == newVariantLabel);
-                        item.SelectedVariant = chosen;
-                    }
+                        item.SelectedVariant = product.Variants.FirstOrDefault(v => v.Label == newVariantLabel);
                     else
-                    {
                         item.SelectedVariant = null;
-                    }
 
                     Session["Cart"] = cart;
                     TempData["Success"] = "Variant updated.";
                 }
-
                 return RedirectToAction("Index");
             }
             catch (Exception ex)
@@ -650,14 +646,12 @@ namespace Pawchase.Controllers
                              (c.SelectedVariant != null && c.SelectedVariant.Label == variant)));
 
                         if (item != null)
-                        {
                             selected.Add(new CartItem
                             {
                                 Product = item.Product,
                                 SelectedVariant = item.SelectedVariant,
                                 Quantity = Math.Min(qty, item.Product.Stock)
                             });
-                        }
                     }
                 }
 
@@ -685,7 +679,8 @@ namespace Pawchase.Controllers
         {
             try
             {
-                if (Session["UserId"] == null) return RedirectToAction("Login", "Account", new { returnUrl = "/Order/Track" });
+                if (Session["UserId"] == null)
+                    return RedirectToAction("Login", "Account", new { returnUrl = "/Order/Track" });
                 var email = Session["UserEmail"]?.ToString();
                 var orders = MockData.Orders.Where(o => o.Email == email).ToList();
                 var currentUserId = 0;
@@ -701,7 +696,6 @@ namespace Pawchase.Controllers
                 return RedirectToAction("Index", "Home");
             }
         }
-
 
         public ActionResult Confirmation(string referenceNumber)
         {
@@ -898,30 +892,16 @@ namespace Pawchase.Controllers
                 if (!IsAdmin) return RedirectToAction("Login");
 
                 if (string.IsNullOrWhiteSpace(product.Name))
-                {
-                    TempData["Error"] = "Product name is required.";
-                    return RedirectToAction("AddProduct");
-                }
+                { TempData["Error"] = "Product name is required."; return RedirectToAction("AddProduct"); }
                 if (product.Price <= 0)
-                {
-                    TempData["Error"] = "Price must be greater than zero.";
-                    return RedirectToAction("AddProduct");
-                }
+                { TempData["Error"] = "Price must be greater than zero."; return RedirectToAction("AddProduct"); }
                 if (product.OriginalPrice.HasValue && product.OriginalPrice.Value > 0
                     && product.OriginalPrice.Value <= product.Price)
-                {
-                    TempData["Error"] = "Original Price must be greater than Sale Price.";
-                    return RedirectToAction("AddProduct");
-                }
+                { TempData["Error"] = "Original Price must be greater than Sale Price."; return RedirectToAction("AddProduct"); }
                 if (product.Stock < 0)
-                {
-                    TempData["Error"] = "Stock cannot be negative.";
-                    return RedirectToAction("AddProduct");
-                }
+                { TempData["Error"] = "Stock cannot be negative."; return RedirectToAction("AddProduct"); }
 
-                product.Id = MockData.Products.Any()
-                    ? MockData.Products.Max(p => p.Id) + 1
-                    : 1;
+                product.Id = MockData.Products.Any() ? MockData.Products.Max(p => p.Id) + 1 : 1;
 
                 if (string.IsNullOrWhiteSpace(product.ImageUrl))
                     product.ImageUrl = "/Content/images/products/placeholder.png";
@@ -961,11 +941,7 @@ namespace Pawchase.Controllers
             {
                 if (!IsAdmin) return RedirectToAction("Login");
                 var p = MockData.Products.FirstOrDefault(x => x.Id == id && !x.IsDeleted);
-                if (p == null)
-                {
-                    TempData["Error"] = "Product not found.";
-                    return RedirectToAction("Products");
-                }
+                if (p == null) { TempData["Error"] = "Product not found."; return RedirectToAction("Products"); }
                 return View(p);
             }
             catch (Exception ex)
@@ -984,28 +960,15 @@ namespace Pawchase.Controllers
                 if (!IsAdmin) return RedirectToAction("Login");
 
                 if (string.IsNullOrWhiteSpace(updated.Name))
-                {
-                    TempData["Error"] = "Product name is required.";
-                    return RedirectToAction("EditProduct", new { id = updated.Id });
-                }
+                { TempData["Error"] = "Product name is required."; return RedirectToAction("EditProduct", new { id = updated.Id }); }
                 if (updated.Price <= 0)
-                {
-                    TempData["Error"] = "Price must be greater than zero.";
-                    return RedirectToAction("EditProduct", new { id = updated.Id });
-                }
+                { TempData["Error"] = "Price must be greater than zero."; return RedirectToAction("EditProduct", new { id = updated.Id }); }
                 if (updated.OriginalPrice.HasValue && updated.OriginalPrice.Value > 0
                     && updated.OriginalPrice.Value <= updated.Price)
-                {
-                    TempData["Error"] = "Original Price must be greater than Sale Price.";
-                    return RedirectToAction("EditProduct", new { id = updated.Id });
-                }
+                { TempData["Error"] = "Original Price must be greater than Sale Price."; return RedirectToAction("EditProduct", new { id = updated.Id }); }
 
                 var p = MockData.Products.FirstOrDefault(x => x.Id == updated.Id);
-                if (p == null)
-                {
-                    TempData["Error"] = "Product not found.";
-                    return RedirectToAction("Products");
-                }
+                if (p == null) { TempData["Error"] = "Product not found."; return RedirectToAction("Products"); }
 
                 p.Name = updated.Name;
                 p.Description = updated.Description;
@@ -1051,15 +1014,8 @@ namespace Pawchase.Controllers
             {
                 if (!IsAdmin) return RedirectToAction("Login");
                 var p = MockData.Products.FirstOrDefault(x => x.Id == id);
-                if (p != null)
-                {
-                    p.IsDeleted = true;
-                    TempData["Success"] = "Product \"" + p.Name + "\" deleted.";
-                }
-                else
-                {
-                    TempData["Error"] = "Product not found.";
-                }
+                if (p != null) { p.IsDeleted = true; TempData["Success"] = "Product \"" + p.Name + "\" deleted."; }
+                else TempData["Error"] = "Product not found.";
                 return RedirectToAction("Products");
             }
             catch (Exception ex)
@@ -1113,23 +1069,22 @@ namespace Pawchase.Controllers
             {
                 if (!IsAdmin) return RedirectToAction("Login");
                 var validStatuses = new[] { "To Ship", "In Transit", "Out for Delivery",
-                                            "Delivered", "To Rate", "Completed", "Refund Requested" };
+                                            "Delivered", "To Rate", "Completed",
+                                            "Refund Requested", "Refund Approved" };
                 if (!validStatuses.Contains(status))
-                {
-                    TempData["Error"] = "Invalid order status.";
-                    return RedirectToAction("Orders");
-                }
+                { TempData["Error"] = "Invalid order status."; return RedirectToAction("Orders"); }
+
                 var o = MockData.Orders.FirstOrDefault(x => x.Id == id);
                 if (o != null)
                 {
                     o.Status = status;
-                    if (status != "Refund Requested") o.HasRefundRequest = false;
+                    // Clear refund flag when approved or declined
+                    if (status == "Refund Approved" || status == "Delivered")
+                        o.HasRefundRequest = false;
                     TempData["Success"] = "Order status updated to \"" + status + "\".";
                 }
-                else
-                {
-                    TempData["Error"] = "Order not found.";
-                }
+                else TempData["Error"] = "Order not found.";
+
                 return RedirectToAction("Orders");
             }
             catch (Exception ex)
@@ -1137,6 +1092,70 @@ namespace Pawchase.Controllers
                 System.Diagnostics.Debug.WriteLine("UpdateOrderStatus Error: " + ex.Message);
                 TempData["Error"] = "Could not update order status.";
                 return RedirectToAction("Orders");
+            }
+        }
+
+        // ── NEW: Flagged / Reported Reviews ──────────────────────────
+        public ActionResult FlaggedReviews()
+        {
+            try
+            {
+                if (!IsAdmin) return RedirectToAction("Login");
+                return View(MockData.Reviews.ToList());
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("FlaggedReviews Error: " + ex.Message);
+                TempData["Error"] = "Could not load flagged reviews.";
+                return RedirectToAction("Dashboard");
+            }
+        }
+
+        // ── NEW: Dismiss all reports on a review (keep the review) ───
+        public ActionResult DismissReport(int id)
+        {
+            try
+            {
+                if (!IsAdmin) return RedirectToAction("Login");
+                var review = MockData.Reviews.FirstOrDefault(r => r.Id == id);
+                if (review != null)
+                {
+                    review.ReportCount = 0;
+                    TempData["Success"] = "Reports dismissed for review #" + id + ".";
+                }
+                else TempData["Error"] = "Review not found.";
+
+                return RedirectToAction("FlaggedReviews");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("DismissReport Error: " + ex.Message);
+                TempData["Error"] = "Could not dismiss report. Please try again.";
+                return RedirectToAction("FlaggedReviews");
+            }
+        }
+
+        // ── NEW: Permanently delete a review from the admin panel ────
+        public ActionResult DeleteReview(int id)
+        {
+            try
+            {
+                if (!IsAdmin) return RedirectToAction("Login");
+                var review = MockData.Reviews.FirstOrDefault(r => r.Id == id);
+                if (review != null)
+                {
+                    MockData.Reviews.Remove(review);
+                    TempData["Success"] = "Review #" + id + " has been deleted.";
+                }
+                else TempData["Error"] = "Review not found.";
+
+                return RedirectToAction("FlaggedReviews");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("DeleteReview Error: " + ex.Message);
+                TempData["Error"] = "Could not delete review. Please try again.";
+                return RedirectToAction("FlaggedReviews");
             }
         }
     }

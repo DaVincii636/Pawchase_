@@ -12,17 +12,8 @@
         gap: 1.2rem;
         align-items: start;
     }
-
-    .ap-left {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .ap-right {
-        display: flex;
-        flex-direction: column;
-        gap: 1.2rem;
-    }
+    .ap-left  { display: flex; flex-direction: column; }
+    .ap-right { display: flex; flex-direction: column; gap: 1.2rem; }
 
     /* ── CARD ────────────────────────────────────── */
     .form-section {
@@ -32,7 +23,6 @@
         padding: 1.8rem;
         box-shadow: var(--shadow-card);
     }
-
     .form-section-title {
         font-size: 13px;
         font-weight: 700;
@@ -44,10 +34,7 @@
         align-items: center;
         gap: 8px;
     }
-
-        .form-section-title i {
-            color: var(--blue);
-        }
+    .form-section-title i { color: var(--blue); }
 
     /* ── MAIN IMAGE UPLOAD ───────────────────────── */
     .main-img-label {
@@ -57,7 +44,6 @@
         display: block;
         margin-bottom: 6px;
     }
-
     .main-img-box {
         width: 100%;
         height: 200px;
@@ -73,19 +59,14 @@
         margin-bottom: 6px;
         box-sizing: border-box;
     }
-
-        .main-img-box:hover {
-            border-color: var(--blue);
-        }
-
-        .main-img-box img {
-            max-height: 198px;
-            max-width: 100%;
-            display: none;
-            object-fit: contain;
-            border-radius: 10px;
-        }
-
+    .main-img-box:hover { border-color: var(--blue); }
+    .main-img-box img {
+        max-height: 198px;
+        max-width: 100%;
+        display: none;
+        object-fit: contain;
+        border-radius: 10px;
+    }
     .upload-placeholder {
         text-align: center;
         color: var(--blue-dark);
@@ -95,32 +76,15 @@
         align-items: center;
         gap: 6px;
     }
-
-        .upload-placeholder .up-icon-wrap {
-            width: 56px;
-            height: 56px;
-            background: rgba(129,166,198,.18);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .upload-placeholder i {
-            font-size: 1.6rem;
-            color: var(--blue);
-        }
-
-        .upload-placeholder span {
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--text);
-        }
-
-        .upload-placeholder small {
-            font-size: 10px;
-            color: var(--text-light);
-        }
+    .upload-placeholder .up-icon-wrap {
+        width: 56px; height: 56px;
+        background: rgba(129,166,198,.18);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .upload-placeholder i    { font-size: 1.6rem; color: var(--blue); }
+    .upload-placeholder span { font-size: 12px; font-weight: 700; color: var(--text); }
+    .upload-placeholder small{ font-size: 10px; color: var(--text-light); }
 
     /* ── VARIANTS SECTION ────────────────────────── */
     .variants-wrap {
@@ -128,7 +92,6 @@
         padding-top: 1.2rem;
         margin-top: 1.2rem;
     }
-
     .variants-label {
         font-size: 12px;
         font-weight: 700;
@@ -136,25 +99,17 @@
         display: block;
         margin-bottom: .75rem;
     }
-
-        .variants-label span {
-            font-size: 10px;
-            font-weight: 400;
-            color: var(--text-light);
-        }
-
+    .variants-label span {
+        font-size: 10px;
+        font-weight: 400;
+        color: var(--text-light);
+    }
     .variants-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: .7rem;
     }
-
-    .variant-item {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-    }
-
+    .variant-item { display: flex; flex-direction: column; gap: 5px; }
     .variant-img-box {
         width: 100%;
         aspect-ratio: 1 / 1;
@@ -168,19 +123,13 @@
         overflow: hidden;
         transition: border-color .2s;
     }
-
-        .variant-img-box:hover {
-            border-color: var(--blue);
-        }
-
-        .variant-img-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: none;
-            pointer-events: none;
-        }
-
+    .variant-img-box:hover { border-color: var(--blue); }
+    .variant-img-box img {
+        width: 100%; height: 100%;
+        object-fit: cover;
+        display: none;
+        pointer-events: none;
+    }
     .variant-placeholder {
         text-align: center;
         color: var(--blue-dark);
@@ -190,16 +139,8 @@
         align-items: center;
         gap: 3px;
     }
-
-        .variant-placeholder i {
-            font-size: 1.2rem;
-        }
-
-        .variant-placeholder span {
-            font-size: 10px;
-            font-weight: 600;
-        }
-
+    .variant-placeholder i    { font-size: 1.2rem; }
+    .variant-placeholder span { font-size: 10px; font-weight: 600; }
     .variant-text-input {
         width: 100%;
         padding: 6px 8px;
@@ -213,10 +154,7 @@
         outline: none;
         transition: border-color .2s;
     }
-
-        .variant-text-input:focus {
-            border-color: var(--blue);
-        }
+    .variant-text-input:focus { border-color: var(--blue); }
 
     /* ── FORM FIELDS ─────────────────────────────── */
     .form-2col {
@@ -225,49 +163,35 @@
         gap: 1rem;
         margin-bottom: 1rem;
     }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-mid);
     }
-
-        .form-group label {
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--text-mid);
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            padding: 10px 13px;
-            border: 1.5px solid var(--border);
-            border-radius: var(--radius-sm);
-            font-size: 13px;
-            font-family: 'Poppins', sans-serif;
-            outline: none;
-            transition: border-color .2s, box-shadow .2s;
-            background: var(--white);
-            color: var(--text);
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-            .form-group input:focus,
-            .form-group select:focus,
-            .form-group textarea:focus {
-                border-color: var(--blue);
-                box-shadow: 0 0 0 3px rgba(129,166,198,.15);
-            }
-
-        .form-group textarea {
-            resize: vertical;
-        }
-
-    .req {
-        color: #e05555;
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 10px 13px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        font-family: 'Poppins', sans-serif;
+        outline: none;
+        transition: border-color .2s, box-shadow .2s;
+        background: var(--white);
+        color: var(--text);
+        width: 100%;
+        box-sizing: border-box;
     }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px rgba(129,166,198,.15);
+    }
+    .form-group textarea { resize: vertical; }
+    .req { color: #e05555; }
 
     /* ── DISCOUNT PREVIEW ────────────────────────── */
     #discount-preview {
@@ -281,10 +205,7 @@
         color: #c0392b;
         font-weight: 700;
     }
-
-        #discount-preview i {
-            margin-right: 4px;
-        }
+    #discount-preview i { margin-right: 4px; }
 
     /* ── ACTION BUTTONS ──────────────────────────── */
     .form-actions {
@@ -295,9 +216,7 @@
 
     /* ── RESPONSIVE ──────────────────────────────── */
     @@media (max-width: 960px) {
-        .ap-grid {
-            grid-template-columns: 1fr;
-        }
+        .ap-grid { grid-template-columns: 1fr; }
     }
 </style>
 
@@ -463,7 +382,7 @@
             var reader = new FileReader();
             reader.onload = function (e) {
                 var preview = document.getElementById("imgPreview" + slot);
-                var icon = document.getElementById("imgIcon" + slot);
+                var icon    = document.getElementById("imgIcon"    + slot);
                 preview.src = e.target.result;
                 preview.style.display = "block";
                 if (icon) icon.style.display = "none";
@@ -481,7 +400,7 @@
             reader.onload = function (e) {
                 var dataUrl = e.target.result;
                 var preview = document.getElementById("imgPreview" + slot);
-                var icon = document.getElementById("imgIcon" + slot);
+                var icon    = document.getElementById("imgIcon"    + slot);
                 preview.src = dataUrl;
                 preview.style.display = "block";
                 if (icon) icon.style.display = "none";
@@ -492,9 +411,9 @@
 
         function calcDiscount() {
             var price = parseFloat(document.getElementById("f-price").value);
-            var orig = parseFloat(document.getElementById("f-orig").value);
+            var orig  = parseFloat(document.getElementById("f-orig").value);
             var preview = document.getElementById("discount-preview");
-            var text = document.getElementById("discount-text");
+            var text    = document.getElementById("discount-text");
             if (price > 0 && orig > price) {
                 var pct = Math.round((orig - price) / orig * 100);
                 preview.style.display = "block";
