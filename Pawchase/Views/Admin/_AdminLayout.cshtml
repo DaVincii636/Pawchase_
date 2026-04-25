@@ -42,35 +42,39 @@
         @{
             var action = ViewContext.RouteData.Values["action"].ToString();
         }
-        <nav class="sidebar-nav">
-            <a href="@Url.Action("Dashboard","Admin")" class="sidebar-link @(action=="Dashboard"?"active":"")">
-                <i class="fa-solid fa-gauge-high"></i> Dashboard
-            </a>
-            <a href="@Url.Action("Products","Admin")" class="sidebar-link @(action=="Products"||action=="AddProduct"||action=="EditProduct"?"active":"")">
-                <i class="fa-solid fa-boxes-stacked"></i> Products
-                @{
-                    var lowStockBadge = Pawchase.Models.MockData.Products.Count(p => !p.IsDeleted && p.Stock == 0);
-                    if (lowStockBadge > 0)
-                    { <span style="background:#e05555;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:50px;margin-left:4px;">@lowStockBadge OOS</span> }
-                }
-            </a>
-            <a href="@Url.Action("Orders","Admin")" class="sidebar-link @(action=="Orders"?"active":"")">
-                <i class="fa-solid fa-receipt"></i> Orders
-                @{
-                    var refundCount = Pawchase.Models.MockData.Orders.Count(o => o.HasRefundRequest);
-                    if (refundCount > 0)
-                    { <span style="background:#e05555;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:50px;margin-left:4px;">@refundCount</span> }
-                }
-            </a>
-            <a href="@Url.Action("FlaggedReviews","Admin")" class="sidebar-link @(action=="FlaggedReviews"?"active":"")">
-                <i class="fa-solid fa-flag"></i> Reports
-                @{
-                    var flaggedCount = Pawchase.Models.MockData.Reviews.Count(r => r.ReportCount > 0);
-                    if (flaggedCount > 0)
-                    { <span style="background:#e6a520;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:50px;margin-left:4px;">@flaggedCount</span> }
-                }
-            </a>
-        </nav>
+    <nav class="sidebar-nav">
+        <a href="@Url.Action("Dashboard","Admin")" class="sidebar-link @(action=="Dashboard"?"active":"")">
+            <i class="fa-solid fa-gauge-high"></i> Dashboard
+        </a>
+        <a href="@Url.Action("Products","Admin")" class="sidebar-link @(action=="Products"||action=="AddProduct"||action=="EditProduct"?"active":"")">
+            <i class="fa-solid fa-boxes-stacked"></i> Products
+            @{
+                var lowStockBadge = Pawchase.Models.MockData.Products.Count(p => !p.IsDeleted && p.Stock == 0);
+                if (lowStockBadge > 0)
+                { <span style="background:#e05555;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:50px;margin-left:4px;">@lowStockBadge OOS</span> }
+            }
+        </a>
+        <a href="@Url.Action("Orders","Admin")" class="sidebar-link @(action=="Orders"?"active":"")">
+            <i class="fa-solid fa-receipt"></i> Orders
+            @{
+                var refundCount = Pawchase.Models.MockData.Orders.Count(o => o.HasRefundRequest);
+                if (refundCount > 0)
+                { <span style="background:#e05555;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:50px;margin-left:4px;">@refundCount</span> }
+            }
+        </a>
+        <a href="@Url.Action("FlaggedReviews","Admin")" class="sidebar-link @(action=="FlaggedReviews"?"active":"")">
+            <i class="fa-solid fa-flag"></i> Reports
+            @{
+                var flaggedCount = Pawchase.Models.MockData.Reviews.Count(r => r.ReportCount > 0);
+                if (flaggedCount > 0)
+                { <span style="background:#e6a520;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:50px;margin-left:4px;">@flaggedCount</span> }
+            }
+        </a>
+
+        <a href="@Url.Action("SalesReport","Admin")" class="sidebar-link @(action=="SalesReport"?"active":"")">
+            <i class="fa-solid fa-chart-line"></i> Sales Report
+        </a>
+    </nav>
         <div class="sidebar-footer">
             <a href="@Url.Action("Index","Home")" class="sidebar-link" target="_blank">
                 <i class="fa-solid fa-store"></i> View Store

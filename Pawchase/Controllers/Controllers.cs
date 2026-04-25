@@ -1158,5 +1158,179 @@ namespace Pawchase.Controllers
                 return RedirectToAction("FlaggedReviews");
             }
         }
+        // ── Paste this action inside AdminController, after SalesReport() ──
+
+        public ActionResult SalesReport()
+        {
+            try
+            {
+                if (!IsAdmin) return RedirectToAction("Login");
+                return View();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("SalesReport Error: " + ex.Message);
+                TempData["Error"] = "Could not load sales report.";
+                return RedirectToAction("Dashboard");
+            }
+        }
+
+        public ActionResult ExportSalesReport(string from, string to)
+        {
+            try
+            {
+                if (!IsAdmin) return RedirectToAction("Login");
+
+                DateTime fromDate, toDate;
+                if (!DateTime.TryParse(from, out fromDate)) fromDate = DateTime.Now.AddDays(-29).Date;
+                if (!DateTime.TryParse(to, out toDate)) toDate = DateTime.Now.Date;
+                toDate = toDate.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+
+                var orders = MockData.Orders
+                    .Where(o => o.OrderDate >= fromDate && o.OrderDate <= toDate)
+                    .OrderByDescending(o => o.OrderDate)
+                    .ToList();
+
+                var periodStr = fromDate.ToString("MMM dd, yyyy") + " \u2013 " + toDate.ToString("MMM dd, yyyy");
+                var generated = DateTime.Now.ToString("MMMM dd, yyyy hh:mm tt");
+
+                // ── Stats ──
+                var totalRevenue = orders.Where(o => o.Status != "Refund Approved").Sum(o => o.Total);
+                var totalOrders = orders.Count;
+                var totalRefunds = orders.Count(o => o.HasRefundRequest || o.Status == "Refund Approved");
+                var refundAmount = orders.Where(o => o.Status == "Refund Approved").Sum(o => o.Total);
+                var netIncome = totalRevenue - refundAmount;
+                var aov = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+                // ── Products sold ──
+                var productsSold = orders
+                    .Where(o => o.Snapshots != null)
+                    .SelectMany(o => o.Snapshots)
+                    .GroupBy(s => new { s.ProductName, s.Category })
+                    .Select(g => new {
+                        Name = g.Key.ProductName,
+                        Category = g.Key.Category,
+                        Qty = g.Sum(s => s.Quantity),
+                        Revenue = g.Sum(s => s.UnitPrice * s.Quantity)
+                    })
+                    .OrderByDescending(x => x.Qty)
+                    .ToList();
+
+                // ── Inventory ──
+                var inventory = MockData.Products
+                    .Where(p => !p.IsDeleted)
+                    .OrderBy(p => p.Category).ThenBy(p => p.Name)
+                    .ToList();
+
+                // ── Refund orders ──
+                var refundOrders = orders.Where(o => o.HasRefundRequest || o.Status == "Refund Approved").ToList();
+
+                // ── Build Excel ──
+                using (var ms = new System.IO.MemoryStream())
+                {
+                    // We use ClosedXML or raw OpenXml — but since this is ASP.NET MVC
+                    // without NuGet we'll output a well-formed CSV-style response.
+                    // If EPPlus / ClosedXML is available, use it; otherwise fall back to TSV download.
+                    // ──────────────────────────────────────────────────────────────────────────────
+                    // NOTE: Replace the CSV section below with EPPlus/ClosedXML calls once you
+                    // add the NuGet package. The structure matches the sample .xlsx exactly.
+                    // ──────────────────────────────────────────────────────────────────────────────
+
+                    var sb = new System.Text.StringBuilder();
+
+                    // ── SHEET 1: Summary ──
+                    sb.AppendLine("PAWCHASE SALES SUMMARY REPORT");
+                    sb.AppendLine("Period:," + periodStr);
+                    sb.AppendLine("Generated:," + generated);
+                    sb.AppendLine();
+                    sb.AppendLine("REVENUE");
+                    sb.AppendLine("Total Revenue,\u20B1" + totalRevenue.ToString("N2"));
+                    sb.AppendLine("Total Refunded Amount,\u20B1" + refundAmount.ToString("N2"));
+                    sb.AppendLine("Net Income,\u20B1" + netIncome.ToString("N2"));
+                    sb.AppendLine();
+                    sb.AppendLine("ORDERS");
+                    sb.AppendLine("Total Orders," + totalOrders);
+                    sb.AppendLine("Average Order Value,\u20B1" + aov.ToString("N2"));
+                    sb.AppendLine("Refund Requests," + totalRefunds);
+                    sb.AppendLine();
+
+                    // Status breakdown
+                    sb.AppendLine("ORDER STATUS BREAKDOWN");
+                    sb.AppendLine("Status,Count");
+                    var allStatuses = new[] { "To Ship", "In Transit", "Out for Delivery", "Delivered", "Refund Approved", "Completed" };
+                    foreach (var s in allStatuses)
+                        sb.AppendLine(s + "," + orders.Count(o => o.Status == s));
+                    sb.AppendLine();
+
+                    // ── SHEET 2: Orders Breakdown ──
+                    sb.AppendLine("ORDERS BREAKDOWN");
+                    sb.AppendLine("Reference No.,Customer,Email,Date,Items,Total,Status,Refund?");
+                    foreach (var o in orders)
+                    {
+                        var itemCount = o.Snapshots != null && o.Snapshots.Any()
+                            ? o.Snapshots.Sum(s => s.Quantity)
+                            : (o.Items != null ? o.Items.Sum(i => i.Quantity) : 0);
+                        sb.AppendLine(string.Format("{0},{1},{2},{3},{4},{5},{6},{7}",
+                            o.ReferenceNumber,
+                            "\"" + o.CustomerName + "\"",
+                            o.Email,
+                            o.OrderDate.ToString("MMM dd, yyyy"),
+                            itemCount,
+                            o.Total.ToString("N2"),
+                            o.Status,
+                            o.HasRefundRequest ? "Yes" : "No"));
+                    }
+                    sb.AppendLine();
+
+                    // ── SHEET 3: Products Sold ──
+                    sb.AppendLine("PRODUCTS SOLD");
+                    sb.AppendLine("Product Name,Category,Units Sold,Revenue");
+                    foreach (var p in productsSold)
+                        sb.AppendLine(string.Format("\"{0}\",{1},{2},{3}",
+                            p.Name, p.Category, p.Qty, p.Revenue.ToString("N2")));
+                    sb.AppendLine();
+
+                    // ── SHEET 4: Inventory ──
+                    sb.AppendLine("INVENTORY SNAPSHOT");
+                    sb.AppendLine("Product Name,Category,Breed Size,Current Stock,Status");
+                    foreach (var p in inventory)
+                    {
+                        var status = p.Stock == 0 ? "Out of Stock" : p.Stock <= 5 ? "Low Stock" : "OK";
+                        sb.AppendLine(string.Format("\"{0}\",{1},{2},{3},{4}",
+                            p.Name, p.Category, p.BreedSize, p.Stock, status));
+                    }
+                    sb.AppendLine();
+
+                    // ── SHEET 5: Refunds ──
+                    sb.AppendLine("REFUNDS");
+                    sb.AppendLine("Reference No.,Customer,Date,Amount,Status");
+                    if (refundOrders.Any())
+                    {
+                        foreach (var o in refundOrders)
+                            sb.AppendLine(string.Format("{0},{1},{2},{3},{4}",
+                                o.ReferenceNumber,
+                                "\"" + o.CustomerName + "\"",
+                                o.OrderDate.ToString("MMM dd, yyyy"),
+                                o.Total.ToString("N2"),
+                                o.Status));
+                    }
+                    else
+                    {
+                        sb.AppendLine("No refund requests in this period.");
+                    }
+
+                    var bytes = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+                    var filename = "PawChase_SalesReport_" + fromDate.ToString("yyyyMMdd") + "_" + toDate.ToString("yyyyMMdd") + ".csv";
+                    return File(bytes, "text/csv", filename);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("ExportSalesReport Error: " + ex.Message);
+                TempData["Error"] = "Could not generate report. Please try again.";
+                return RedirectToAction("SalesReport");
+            }
+        }
     }
 }
+

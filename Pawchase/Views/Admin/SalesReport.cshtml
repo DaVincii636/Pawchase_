@@ -1,0 +1,445 @@
+@{
+    ViewBag.Title = "Sales Report";
+    Layout = "~/Views/Admin/_AdminLayout.cshtml";
+
+    var allOrders = Pawchase.Models.MockData.Orders;
+    var now       = DateTime.Now;
+
+    // Monthly revenue for current year
+    var monthlyRevenue = Enumerable.Range(1, 12).Select(m =>
+        allOrders.Where(o => o.OrderDate.Year == now.Year && o.OrderDate.Month == m && o.Status != "Refund Approved")
+                 .Sum(o => o.Total)).ToList();
+
+    var monthlyOrders = Enumerable.Range(1, 12).Select(m =>
+        allOrders.Count(o => o.OrderDate.Year == now.Year && o.OrderDate.Month == m)).ToList();
+
+    var monthlyRefunds = Enumerable.Range(1, 12).Select(m =>
+        allOrders.Count(o => o.OrderDate.Year == now.Year && o.OrderDate.Month == m && o.HasRefundRequest)).ToList();
+
+    // Top 5 products by quantity sold
+    var topProducts = allOrders
+        .Where(o => o.Snapshots != null)
+        .SelectMany(o => o.Snapshots)
+        .GroupBy(s => s.ProductName)
+        .Select(g => new { Name = g.Key, Qty = g.Sum(s => s.Quantity) })
+        .OrderByDescending(x => x.Qty)
+        .Take(5)
+        .ToList();
+
+    // Status breakdown
+    var statuses     = new[] { "To Ship", "In Transit", "Out for Delivery", "Delivered", "Refund Approved", "Completed" };
+    var statusCounts = statuses.Select(s => allOrders.Count(o => o.Status == s)).ToList();
+
+    // Yearly (last 5 years)
+    var years         = Enumerable.Range(now.Year - 4, 5).ToList();
+    var yearlyRevenue = years.Select(y =>
+        allOrders.Where(o => o.OrderDate.Year == y && o.Status != "Refund Approved")
+                 .Sum(o => o.Total)).ToList();
+
+    // Default date range: last 30 days
+    var defaultFrom = now.AddDays(-29).Date;
+    var defaultTo   = now.Date;
+}
+
+<style>
+    /* ── PAGE HEADER ── */
+    .report-header {
+        display: flex; align-items: flex-start; justify-content: space-between;
+        margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;
+    }
+    .report-title { font-size: 1.75rem; font-weight: 900; color: var(--text); text-transform: uppercase; letter-spacing: .5px; }
+    .report-sub   { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+
+    /* ── DATE RANGE BAR ── */
+    .date-range-bar {
+        background: var(--white); border: 1.5px solid var(--border);
+        border-radius: var(--radius-lg); padding: 1rem 1.3rem;
+        display: flex; align-items: flex-end; gap: 1rem;
+        flex-wrap: wrap; margin-bottom: 1.5rem;
+        box-shadow: var(--shadow-card);
+    }
+    .dr-group { display: flex; flex-direction: column; gap: 5px; }
+    .dr-group label { font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: .5px; }
+    .dr-group input[type="date"] {
+        padding: 9px 13px; border: 1.5px solid var(--border);
+        border-radius: var(--radius-sm); font-size: 13px;
+        font-family: 'Poppins', sans-serif; outline: none;
+        color: var(--text); background: var(--white);
+        transition: border-color .2s;
+    }
+    .dr-group input[type="date"]:focus { border-color: var(--blue); }
+    .btn-apply {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 9px 22px; border-radius: 50px; border: none;
+        background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+        color: #fff; font-size: 13px; font-weight: 700;
+        cursor: pointer; font-family: 'Poppins', sans-serif;
+        transition: all .2s; box-shadow: 0 3px 10px rgba(129,166,198,.35);
+    }
+    .btn-apply:hover { opacity: .9; transform: translateY(-1px); }
+    .btn-export {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 9px 22px; border-radius: 50px;
+        border: 1.5px solid rgba(46,204,113,.4);
+        background: rgba(46,204,113,.08); color: #1e8449;
+        font-size: 13px; font-weight: 700; cursor: pointer;
+        font-family: 'Poppins', sans-serif; transition: all .2s;
+        text-decoration: none;
+    }
+    .btn-export:hover { background: #2ecc71; color: #fff; border-color: #2ecc71; }
+    .dr-active-range {
+        margin-left: auto; font-size: 11px; color: var(--text-light);
+        align-self: center; font-style: italic;
+    }
+    .dr-active-range strong { color: var(--blue-dark); font-style: normal; }
+
+    /* ── STAT CARDS ── */
+    .report-stat-cards {
+        display: grid; grid-template-columns: repeat(4, 1fr);
+        gap: 1rem; margin-bottom: 1.5rem;
+    }
+    .rsc {
+        background: var(--white); border-radius: var(--radius-lg);
+        border: 1.5px solid var(--border); padding: 1.3rem 1.2rem;
+        box-shadow: var(--shadow-card); display: flex; flex-direction: column; gap: .5rem;
+        transition: all .2s;
+    }
+    .rsc:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+    .rsc-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; }
+    .rsc-label { font-size: 11px; color: var(--text-light); }
+    .rsc-value { font-size: 1.4rem; font-weight: 800; color: var(--text); line-height: 1.1; }
+    .rsc-sub   { font-size: 10px; color: var(--text-light); }
+
+    /* ── CHARTS ── */
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+    .chart-card {
+        background: var(--white); border-radius: var(--radius-lg);
+        border: 1.5px solid var(--border); padding: 1.4rem; box-shadow: var(--shadow-card);
+    }
+    .chart-card.full { grid-column: 1 / -1; }
+    .chart-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 1rem; display: flex; align-items: center; gap: 7px; }
+    .chart-title i { color: var(--blue); }
+    .chart-wrap      { position: relative; height: 240px; }
+    .chart-wrap-tall { position: relative; height: 280px; }
+
+    /* ── TABLE ── */
+    .report-table-card {
+        background: var(--white); border-radius: var(--radius-lg);
+        border: 1.5px solid var(--border); overflow: hidden;
+        box-shadow: var(--shadow-card); margin-bottom: 1.5rem;
+    }
+    .rtc-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 1rem 1.4rem; border-bottom: 1px solid var(--border);
+    }
+    .rtc-header h3 { font-size: 14px; font-weight: 700; color: var(--text); }
+    .rtc-header span { font-size: 11px; color: var(--text-light); }
+    .no-data-row td { text-align: center; padding: 2rem; color: var(--text-light); font-size: 13px; }
+
+    /* ── PRINT ── */
+    @@media print {
+        .admin-sidebar, .date-range-bar, .report-header .right-group { display: none !important; }
+        .admin-main { padding: 0 !important; }
+        .charts-grid { grid-template-columns: 1fr !important; }
+        .report-stat-cards { grid-template-columns: repeat(2, 1fr) !important; }
+    }
+</style>
+
+<!-- PAGE HEADER -->
+<div class="report-header">
+    <div>
+        <h1 class="report-title">Sales Report</h1>
+        <p class="report-sub">Generated on @now.ToString("MMMM dd, yyyy hh:mm tt")</p>
+    </div>
+</div>
+
+<!-- DATE RANGE BAR -->
+<div class="date-range-bar">
+    <div class="dr-group">
+        <label><i class="fa-regular fa-calendar"></i> From</label>
+        <input type="date" id="dateFrom" value="@defaultFrom.ToString("yyyy-MM-dd")"
+               max="@defaultTo.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="dr-group">
+        <label><i class="fa-regular fa-calendar"></i> To</label>
+        <input type="date" id="dateTo" value="@defaultTo.ToString("yyyy-MM-dd")"
+               max="@now.ToString("yyyy-MM-dd")" />
+    </div>
+    <button class="btn-apply" onclick="applyDateRange()">
+        <i class="fa-solid fa-magnifying-glass"></i> Apply
+    </button>
+    <a id="exportBtn"
+       href="@Url.Action("ExportSalesReport","Admin")?from=@defaultFrom.ToString("yyyy-MM-dd")&to=@defaultTo.ToString("yyyy-MM-dd")"
+       class="btn-export">
+        <i class="fa-solid fa-file-excel"></i> Export to Excel
+    </a>
+    <span class="dr-active-range">
+        Showing: <strong id="activeRangeLabel">@defaultFrom.ToString("MMM dd") &ndash; @defaultTo.ToString("MMM dd, yyyy")</strong>
+    </span>
+</div>
+
+<!-- STAT CARDS -->
+<div class="report-stat-cards">
+    <div class="rsc">
+        <div class="rsc-icon" style="background:rgba(46,204,113,.12);color:#1e8449;"><i class="fa-solid fa-peso-sign"></i></div>
+        <div class="rsc-label">Total Revenue</div>
+        <div class="rsc-value" id="val-revenue">&#8369;0.00</div>
+        <div class="rsc-sub" id="sub-revenue">Selected period</div>
+    </div>
+    <div class="rsc">
+        <div class="rsc-icon" style="background:rgba(52,152,219,.12);color:#2471a3;"><i class="fa-solid fa-receipt"></i></div>
+        <div class="rsc-label">Total Orders</div>
+        <div class="rsc-value" id="val-orders">0</div>
+        <div class="rsc-sub">Selected period</div>
+    </div>
+    <div class="rsc">
+        <div class="rsc-icon" style="background:rgba(155,89,182,.12);color:#8e44ad;"><i class="fa-solid fa-calculator"></i></div>
+        <div class="rsc-label">Avg. Order Value</div>
+        <div class="rsc-value" id="val-aov">&#8369;0.00</div>
+        <div class="rsc-sub">Per order</div>
+    </div>
+    <div class="rsc">
+        <div class="rsc-icon" style="background:rgba(224,85,85,.12);color:#c0392b;"><i class="fa-solid fa-rotate-left"></i></div>
+        <div class="rsc-label">Refund Requests</div>
+        <div class="rsc-value" id="val-refunds">0</div>
+        <div class="rsc-sub">Selected period</div>
+    </div>
+</div>
+
+<!-- CHARTS -->
+<div class="charts-grid">
+    <div class="chart-card full">
+        <div class="chart-title"><i class="fa-solid fa-chart-column"></i> <span id="revenueChartTitle">Revenue by Day</span></div>
+        <div class="chart-wrap-tall"><canvas id="revenueChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-title"><i class="fa-solid fa-trophy"></i> Top 5 Best-Selling Products</div>
+        <div class="chart-wrap"><canvas id="topProductsChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-title"><i class="fa-solid fa-chart-pie"></i> Orders by Status</div>
+        <div class="chart-wrap"><canvas id="statusChart"></canvas></div>
+    </div>
+    <div class="chart-card full">
+        <div class="chart-title"><i class="fa-solid fa-chart-bar"></i> <span id="ordersChartTitle">Orders and Refunds</span></div>
+        <div class="chart-wrap"><canvas id="ordersChart"></canvas></div>
+    </div>
+</div>
+
+<!-- ORDER TABLE -->
+<div class="report-table-card">
+    <div class="rtc-header">
+        <h3><i class="fa-solid fa-list" style="color:var(--blue);margin-right:6px;"></i> Order Breakdown</h3>
+        <span id="tableLabel">Showing last 30 days</span>
+    </div>
+    <table class="admin-table" id="reportTable">
+        <thead>
+            <tr>
+                <th>Reference</th>
+                <th>Customer</th>
+                <th>Date</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Refund?</th>
+            </tr>
+        </thead>
+        <tbody id="reportTableBody">
+            @foreach (var o in allOrders.OrderByDescending(x => x.OrderDate))
+            {
+                var itemCount = o.Snapshots != null && o.Snapshots.Any()
+                    ? o.Snapshots.Sum(s => s.Quantity)
+                    : (o.Items != null ? o.Items.Sum(i => i.Quantity) : 0);
+                <tr data-date="@o.OrderDate.ToString("yyyy-MM-dd")"
+                    data-total="@o.Total.ToString("F2")"
+                    data-refund="@(o.HasRefundRequest ? "1" : "0")"
+                    data-status="@o.Status">
+                    <td><strong>@o.ReferenceNumber</strong></td>
+                    <td>
+                        @o.CustomerName
+                        <br /><small style="color:var(--text-light);font-size:10px;">@o.Email</small>
+                    </td>
+                    <td>@o.OrderDate.ToString("MMM dd, yyyy")</td>
+                    <td style="text-align:center;">@itemCount item(s)</td>
+                    <td>&#8369;@o.Total.ToString("N2")</td>
+                    <td><span class="status-pill status-@o.Status.ToLower().Replace(" ","-")">@o.Status</span></td>
+                    <td style="text-align:center;">
+                        @if (o.HasRefundRequest)
+                        { <span class="flag-badge"><i class="fa-solid fa-rotate-left"></i> Yes</span> }
+                        else
+                        { <span style="color:#aaa;">No</span> }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section scripts {
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ── RAZOR DATA ─────────────────────────────────────────────────────
+var topProductNames = [@Html.Raw(string.Join(",", topProducts.Select(p => "'" + p.Name.Replace("'", "\\'") + "'")))];
+var topProductQtys  = [@string.Join(",", topProducts.Select(p => p.Qty))];
+var statusLabels    = ['To Ship','In Transit','Out for Delivery','Delivered','Refund Approved','Completed'];
+var statusCounts    = [@string.Join(",", statusCounts)];
+
+Chart.defaults.font.family = "'Poppins', sans-serif";
+Chart.defaults.font.size   = 11;
+Chart.defaults.color       = '#888';
+
+// ── 1. REVENUE CHART ──────────────────────────────────────────────
+var revenueCtx   = document.getElementById('revenueChart').getContext('2d');
+var revenueChart = new Chart(revenueCtx, {
+    type: 'bar',
+    data: { labels: [], datasets: [{ label: 'Revenue', data: [],
+        backgroundColor: 'rgba(129,166,198,0.75)', borderColor: 'rgba(61,107,140,0.9)',
+        borderWidth: 1.5, borderRadius: 6 }] },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false },
+            tooltip: { callbacks: { label: function(c) { return ' \u20B1' + c.parsed.y.toLocaleString('en-PH',{minimumFractionDigits:2}); } } } },
+        scales: {
+            y: { beginAtZero: true, ticks: { callback: function(v) { return '\u20B1' + v.toLocaleString(); } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+            x: { grid: { display: false } }
+        }
+    }
+});
+
+// ── 2. ORDERS + REFUNDS CHART ─────────────────────────────────────
+var ordersCtx   = document.getElementById('ordersChart').getContext('2d');
+var ordersChart = new Chart(ordersCtx, {
+    type: 'bar',
+    data: { labels: [], datasets: [
+        { label: 'Orders', data: [], backgroundColor: 'rgba(129,166,198,0.75)', borderColor: 'rgba(61,107,140,0.9)', borderWidth: 1.5, borderRadius: 5 },
+        { label: 'Refund Requests', data: [], backgroundColor: 'rgba(224,85,85,0.65)', borderColor: 'rgba(200,60,60,0.9)', borderWidth: 1.5, borderRadius: 5 }
+    ]},
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'top' } },
+        scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+            x: { grid: { display: false } }
+        }
+    }
+});
+
+// ── 3. TOP PRODUCTS ───────────────────────────────────────────────
+var topCtx = document.getElementById('topProductsChart').getContext('2d');
+new Chart(topCtx, {
+    type: 'bar',
+    data: { labels: topProductNames, datasets: [{ label: 'Units Sold', data: topProductQtys,
+        backgroundColor: ['rgba(129,166,198,0.85)','rgba(100,140,175,0.85)','rgba(75,120,155,0.85)','rgba(50,100,135,0.85)','rgba(30,80,115,0.85)'],
+        borderRadius: 5 }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.05)' } }, y: { grid: { display: false } } } }
+});
+
+// ── 4. STATUS DONUT ───────────────────────────────────────────────
+var statusCtx = document.getElementById('statusChart').getContext('2d');
+new Chart(statusCtx, {
+    type: 'doughnut',
+    data: { labels: statusLabels, datasets: [{ data: statusCounts,
+        backgroundColor: ['rgba(129,166,198,0.85)','rgba(52,152,219,0.85)','rgba(230,165,32,0.85)',
+                          'rgba(46,204,113,0.85)','rgba(224,85,85,0.85)','rgba(155,89,182,0.85)'],
+        borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'right', labels: { boxWidth: 12, padding: 10, font: { size: 10 } } } },
+        cutout: '62%' }
+});
+
+// ── MAIN FILTER FUNCTION ──────────────────────────────────────────
+function applyDateRange() {
+    var fromVal = document.getElementById('dateFrom').value;
+    var toVal   = document.getElementById('dateTo').value;
+    if (!fromVal || !toVal) return;
+
+    var from = new Date(fromVal); from.setHours(0,0,0,0);
+    var to   = new Date(toVal);   to.setHours(23,59,59,999);
+    if (from > to) { alert('From date cannot be after To date.'); return; }
+
+    // ── Filter table rows ──
+    var rows     = document.querySelectorAll('#reportTableBody tr');
+    var filtered = [];
+    rows.forEach(function(row) {
+        var d = new Date(row.getAttribute('data-date'));
+        var show = d >= from && d <= to;
+        row.style.display = show ? '' : 'none';
+        if (show) filtered.push(row);
+    });
+
+    // ── Compute stats ──
+    var totalRev    = 0, totalOrders = 0, totalRefunds = 0;
+    filtered.forEach(function(row) {
+        var total  = parseFloat(row.getAttribute('data-total')) || 0;
+        var status = row.getAttribute('data-status');
+        if (status !== 'Refund Approved') totalRev += total;
+        totalOrders++;
+        if (row.getAttribute('data-refund') === '1') totalRefunds++;
+    });
+    var aov = totalOrders > 0 ? totalRev / totalOrders : 0;
+    document.getElementById('val-revenue').innerHTML  = '\u20B1' + totalRev.toLocaleString('en-PH',{minimumFractionDigits:2});
+    document.getElementById('val-orders').textContent = totalOrders;
+    document.getElementById('val-aov').innerHTML      = '\u20B1' + aov.toLocaleString('en-PH',{minimumFractionDigits:2});
+    document.getElementById('val-refunds').textContent= totalRefunds;
+
+    // ── Build day-by-day labels for charts ──
+    var dayMap = {}; // date string -> {rev, orders, refunds}
+    var cur = new Date(from);
+    while (cur <= to) {
+        dayMap[cur.toISOString().slice(0,10)] = { rev: 0, orders: 0, refunds: 0 };
+        cur.setDate(cur.getDate() + 1);
+    }
+    filtered.forEach(function(row) {
+        var key    = row.getAttribute('data-date');
+        var total  = parseFloat(row.getAttribute('data-total')) || 0;
+        var status = row.getAttribute('data-status');
+        var refund = row.getAttribute('data-refund') === '1';
+        if (dayMap[key]) {
+            if (status !== 'Refund Approved') dayMap[key].rev += total;
+            dayMap[key].orders++;
+            if (refund) dayMap[key].refunds++;
+        }
+    });
+
+    var dayKeys    = Object.keys(dayMap).sort();
+    var revData    = dayKeys.map(function(k) { return dayMap[k].rev; });
+    var orderData  = dayKeys.map(function(k) { return dayMap[k].orders; });
+    var refundData = dayKeys.map(function(k) { return dayMap[k].refunds; });
+
+    // Format labels nicely
+    var chartLabels = dayKeys.map(function(k) {
+        var d = new Date(k);
+        return (d.getMonth()+1) + '/' + d.getDate();
+    });
+
+    // Revenue chart
+    revenueChart.data.labels   = chartLabels;
+    revenueChart.data.datasets[0].data = revData;
+    revenueChart.update();
+    document.getElementById('revenueChartTitle').textContent = 'Revenue by Day';
+
+    // Orders chart
+    ordersChart.data.labels   = chartLabels;
+    ordersChart.data.datasets[0].data = orderData;
+    ordersChart.data.datasets[1].data = refundData;
+    ordersChart.update();
+    document.getElementById('ordersChartTitle').textContent = 'Orders and Refunds by Day';
+
+    // Active range label
+    var opts = { month: 'short', day: 'numeric', year: 'numeric' };
+    document.getElementById('activeRangeLabel').textContent =
+        from.toLocaleDateString('en-PH', opts) + ' \u2013 ' + to.toLocaleDateString('en-PH', opts);
+    document.getElementById('tableLabel').textContent =
+        filtered.length + ' order' + (filtered.length !== 1 ? 's' : '') + ' in range';
+
+    // Update export link
+    document.getElementById('exportBtn').href =
+        '@Url.Action("ExportSalesReport","Admin")?from=' + fromVal + '&to=' + toVal;
+}
+
+// Run on load with default range
+applyDateRange();
+</script>
+}
