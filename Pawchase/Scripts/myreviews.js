@@ -278,6 +278,9 @@ function openEditModal(id, stars, comment) {
     document.getElementById('edit-stars').value = stars;
     document.getElementById('edit-comment').value = comment;
     setEditStar(stars);
+    // Store originals to detect changes later
+    originalEditValues.stars = String(stars);
+    originalEditValues.comment = comment;
     document.getElementById('edit-modal-overlay').classList.add('open');
     document.body.style.overflow = 'hidden';
 }
@@ -306,3 +309,78 @@ function setEditStar(val) {
     if (updated) setTimeout(function () { updated.style.display = 'none'; }, 5000);
     if (deleted) setTimeout(function () { deleted.style.display = 'none'; }, 5000);
 })();
+
+// ── DELETE MODAL ──────────────────────────────────────────────────────────
+var pendingDeleteId = null;
+var originalEditValues = { stars: null, comment: null };
+
+function openDeleteModal(reviewId) {
+    pendingDeleteId = reviewId;
+    // Close edit modal if somehow open
+    document.getElementById('edit-modal-overlay').classList.remove('open');
+    document.getElementById('deleteModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeDeleteModal() {
+    pendingDeleteId = null;
+    document.getElementById('deleteModal').classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+function submitDeleteForm() {
+    if (!pendingDeleteId) return;
+    var form = document.getElementById('delete-form-' + pendingDeleteId);
+    if (form) form.submit();
+}
+
+// ── SAVE MODAL ────────────────────────────────────────────────────────────
+function openSaveModal() {
+    var comment = document.getElementById('edit-comment')?.value || '';
+    var stars = document.getElementById('edit-stars')?.value || '';
+    // Always close the edit modal first — no stacking
+    document.getElementById('edit-modal-overlay').classList.remove('open');
+    // Check if anything actually changed
+    if (comment === originalEditValues.comment && stars === originalEditValues.stars) {
+        openNoChangesModal();
+        return;
+    }
+    var preview = comment.length > 60 ? comment.substring(0, 60) + '...' : comment;
+    var msgEl = document.getElementById('saveModalText');
+    if (msgEl) msgEl.textContent = 'Save your updated review: "' + preview + '"?';
+    document.getElementById('saveModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeSaveModal() {
+    document.getElementById('saveModal').classList.remove('open');
+    // Reopen the edit modal so the user doesn't lose their changes
+    document.getElementById('edit-modal-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function submitEditForm() {
+    var overlay = document.getElementById('edit-modal-overlay');
+    var form = overlay ? overlay.querySelector('form') : null;
+    if (form) form.submit();
+}
+
+// ── NO CHANGES MODAL ──────────────────────────────────────────────────────
+function openNoChangesModal() {
+    // edit-modal-overlay is already closed before this is called
+    document.getElementById('noChangesModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeNoChangesModal() {
+    document.getElementById('noChangesModal').classList.remove('open');
+    // Return to edit modal so user can keep editing
+    document.getElementById('edit-modal-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function cancelNoChangesModal() {
+    // Cancel: just close the modal entirely, do not reopen the edit modal
+    document.getElementById('noChangesModal').classList.remove('open');
+    document.body.style.overflow = '';
+}
