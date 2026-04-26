@@ -1175,10 +1175,15 @@ namespace Pawchase.Controllers
             }
         }
 
+        // ── Replace your ExportSalesReport() action in AdminController with this ──
+        // Requires: EPPlus NuGet package (EPPlusSoftware, v8+)
+
         public ActionResult ExportSalesReport(string from, string to)
         {
             try
             {
+                OfficeOpenXml.ExcelPackage.License.SetNonCommercialOrganization("PawChase");
+
                 if (!IsAdmin) return RedirectToAction("Login");
 
                 DateTime fromDate, toDate;
@@ -1191,18 +1196,16 @@ namespace Pawchase.Controllers
                     .OrderByDescending(o => o.OrderDate)
                     .ToList();
 
-                var periodStr = fromDate.ToString("MMM dd, yyyy") + " \u2013 " + toDate.ToString("MMM dd, yyyy");
+                // ── Computed stats ──
+                var periodStr = fromDate.ToString("MMMM dd, yyyy") + "  \u2013  " + toDate.ToString("MMMM dd, yyyy");
                 var generated = DateTime.Now.ToString("MMMM dd, yyyy hh:mm tt");
-
-                // ── Stats ──
                 var totalRevenue = orders.Where(o => o.Status != "Refund Approved").Sum(o => o.Total);
-                var totalOrders = orders.Count;
-                var totalRefunds = orders.Count(o => o.HasRefundRequest || o.Status == "Refund Approved");
                 var refundAmount = orders.Where(o => o.Status == "Refund Approved").Sum(o => o.Total);
                 var netIncome = totalRevenue - refundAmount;
-                var aov = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+                var totalOrders = orders.Count;
+                var refundCount = orders.Count(o => o.HasRefundRequest || o.Status == "Refund Approved");
+                var aov = totalOrders > 0 ? totalRevenue / totalOrders : 0m;
 
-                // ── Products sold ──
                 var productsSold = orders
                     .Where(o => o.Snapshots != null)
                     .SelectMany(o => o.Snapshots)
@@ -1211,117 +1214,370 @@ namespace Pawchase.Controllers
                         Name = g.Key.ProductName,
                         Category = g.Key.Category,
                         Qty = g.Sum(s => s.Quantity),
+                        Price = g.First().UnitPrice,
                         Revenue = g.Sum(s => s.UnitPrice * s.Quantity)
                     })
-                    .OrderByDescending(x => x.Qty)
-                    .ToList();
+                    .OrderByDescending(x => x.Qty).ToList();
 
-                // ── Inventory ──
                 var inventory = MockData.Products
                     .Where(p => !p.IsDeleted)
-                    .OrderBy(p => p.Category).ThenBy(p => p.Name)
-                    .ToList();
+                    .OrderBy(p => p.Category).ThenBy(p => p.Name).ToList();
 
-                // ── Refund orders ──
-                var refundOrders = orders.Where(o => o.HasRefundRequest || o.Status == "Refund Approved").ToList();
+                var refundOrders = orders
+                    .Where(o => o.HasRefundRequest || o.Status == "Refund Approved").ToList();
 
-                // ── Build Excel ──
-                using (var ms = new System.IO.MemoryStream())
+                var statusList = new[] {
+            "To Ship","In Transit","Out for Delivery",
+            "Delivered","Refund Approved","Completed"
+        };
+
+                // ── Colours ──
+                var DARK_NAVY = System.Drawing.Color.FromArgb(0x1E, 0x2A, 0x33);
+                var MID_BLUE = System.Drawing.Color.FromArgb(0x81, 0xA6, 0xC6);
+                var PALE_BLUE = System.Drawing.Color.FromArgb(0xD6, 0xE8, 0xF4);
+                var WHITE = System.Drawing.Color.White;
+                var LGRAY = System.Drawing.Color.FromArgb(0xF7, 0xF9, 0xFB);
+                var TEXT_MID = System.Drawing.Color.FromArgb(0x44, 0x44, 0x44);
+                var TEXT_LIGHT = System.Drawing.Color.FromArgb(0x88, 0x88, 0x88);
+                var BLUE_FG = System.Drawing.Color.FromArgb(0x1E, 0x4D, 0x78);
+                var GREEN_BG = System.Drawing.Color.FromArgb(0xE8, 0xF5, 0xE9);
+                var GREEN_FG = System.Drawing.Color.FromArgb(0x1B, 0x5E, 0x20);
+                var RED_BG = System.Drawing.Color.FromArgb(0xFF, 0xEB, 0xEE);
+                var RED_FG = System.Drawing.Color.FromArgb(0xB7, 0x1C, 0x1C);
+                var AMBER_BG = System.Drawing.Color.FromArgb(0xFF, 0xF8, 0xE1);
+                var AMBER_FG = System.Drawing.Color.FromArgb(0xE6, 0x51, 0x00);
+
+                const string FONT = "Poppins";
+
+                using (var pkg = new OfficeOpenXml.ExcelPackage())
                 {
-                    // We use ClosedXML or raw OpenXml — but since this is ASP.NET MVC
-                    // without NuGet we'll output a well-formed CSV-style response.
-                    // If EPPlus / ClosedXML is available, use it; otherwise fall back to TSV download.
-                    // ──────────────────────────────────────────────────────────────────────────────
-                    // NOTE: Replace the CSV section below with EPPlus/ClosedXML calls once you
-                    // add the NuGet package. The structure matches the sample .xlsx exactly.
-                    // ──────────────────────────────────────────────────────────────────────────────
+                    // ── Helpers ────────────────────────────────────────────
+                    Action<OfficeOpenXml.ExcelWorksheet, int, int, string, bool, int, System.Drawing.Color, System.Drawing.Color?, string, string>
+                    C = (ws, row, col, val, bold, size, fg, bg, align, fmt) => {
+                        var c = ws.Cells[row, col];
+                        c.Value = val;
+                        c.Style.Font.Name = FONT;
+                        c.Style.Font.Bold = bold;
+                        c.Style.Font.Size = size;
+                        c.Style.Font.Color.SetColor(fg);
+                        if (bg.HasValue) c.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        if (bg.HasValue) c.Style.Fill.BackgroundColor.SetColor(bg.Value);
+                        c.Style.HorizontalAlignment = align == "center"
+                            ? OfficeOpenXml.Style.ExcelHorizontalAlignment.Center
+                            : align == "right"
+                            ? OfficeOpenXml.Style.ExcelHorizontalAlignment.Right
+                            : OfficeOpenXml.Style.ExcelHorizontalAlignment.Left;
+                        c.Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Center;
+                        if (!string.IsNullOrEmpty(fmt)) c.Style.Numberformat.Format = fmt;
+                    };
 
-                    var sb = new System.Text.StringBuilder();
+                    Action<OfficeOpenXml.ExcelWorksheet, int, int, decimal, bool, System.Drawing.Color, System.Drawing.Color?, string, string>
+                    CN = (ws, row, col, val, bold, fg, bg, align, fmt) => {
+                        var c = ws.Cells[row, col];
+                        c.Value = val;
+                        c.Style.Font.Name = FONT;
+                        c.Style.Font.Bold = bold;
+                        c.Style.Font.Size = 10;
+                        c.Style.Font.Color.SetColor(fg);
+                        if (bg.HasValue) c.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        if (bg.HasValue) c.Style.Fill.BackgroundColor.SetColor(bg.Value);
+                        c.Style.HorizontalAlignment = align == "right"
+                            ? OfficeOpenXml.Style.ExcelHorizontalAlignment.Right
+                            : align == "center"
+                            ? OfficeOpenXml.Style.ExcelHorizontalAlignment.Center
+                            : OfficeOpenXml.Style.ExcelHorizontalAlignment.Left;
+                        c.Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Center;
+                        if (!string.IsNullOrEmpty(fmt)) c.Style.Numberformat.Format = fmt;
+                    };
 
-                    // ── SHEET 1: Summary ──
-                    sb.AppendLine("PAWCHASE SALES SUMMARY REPORT");
-                    sb.AppendLine("Period:," + periodStr);
-                    sb.AppendLine("Generated:," + generated);
-                    sb.AppendLine();
-                    sb.AppendLine("REVENUE");
-                    sb.AppendLine("Total Revenue,\u20B1" + totalRevenue.ToString("N2"));
-                    sb.AppendLine("Total Refunded Amount,\u20B1" + refundAmount.ToString("N2"));
-                    sb.AppendLine("Net Income,\u20B1" + netIncome.ToString("N2"));
-                    sb.AppendLine();
-                    sb.AppendLine("ORDERS");
-                    sb.AppendLine("Total Orders," + totalOrders);
-                    sb.AppendLine("Average Order Value,\u20B1" + aov.ToString("N2"));
-                    sb.AppendLine("Refund Requests," + totalRefunds);
-                    sb.AppendLine();
+                    Action<OfficeOpenXml.ExcelWorksheet, int, int, int, string>
+                    CN2 = (ws, row, col, val, fmt) => {
+                        var c = ws.Cells[row, col];
+                        c.Value = val;
+                        c.Style.Font.Name = FONT; c.Style.Font.Size = 10;
+                        c.Style.Font.Color.SetColor(DARK_NAVY);
+                        c.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                        c.Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Center;
+                        if (!string.IsNullOrEmpty(fmt)) c.Style.Numberformat.Format = fmt;
+                    };
 
-                    // Status breakdown
-                    sb.AppendLine("ORDER STATUS BREAKDOWN");
-                    sb.AppendLine("Status,Count");
-                    var allStatuses = new[] { "To Ship", "In Transit", "Out for Delivery", "Delivered", "Refund Approved", "Completed" };
-                    foreach (var s in allStatuses)
-                        sb.AppendLine(s + "," + orders.Count(o => o.Status == s));
-                    sb.AppendLine();
+                    Action<OfficeOpenXml.ExcelWorksheet, string, int> LogoRow = (ws, title, ncols) => {
+                        ws.Row(1).Height = 36;
+                        ws.Cells[1, 1, 1, ncols].Merge = true;
+                        C(ws, 1, 1, "PAWCHASE", true, 18, WHITE, DARK_NAVY, "left", "");
+                        ws.Row(2).Height = 22;
+                        ws.Cells[2, 1, 2, ncols].Merge = true;
+                        C(ws, 2, 1, title, true, 12, BLUE_FG, PALE_BLUE, "left", "");
+                    };
 
-                    // ── SHEET 2: Orders Breakdown ──
-                    sb.AppendLine("ORDERS BREAKDOWN");
-                    sb.AppendLine("Reference No.,Customer,Email,Date,Items,Total,Status,Refund?");
-                    foreach (var o in orders)
+                    Action<OfficeOpenXml.ExcelWorksheet, int, string, int> SectionHdr = (ws, row, label, ncols) => {
+                        ws.Row(row).Height = 22;
+                        ws.Cells[row, 1, row, ncols].Merge = true;
+                        C(ws, row, 1, "  " + label, true, 10, DARK_NAVY, MID_BLUE, "left", "");
+                    };
+
+                    Action<OfficeOpenXml.ExcelWorksheet, int, int, string> ColHdr = (ws, row, col, val) => {
+                        ws.Row(row).Height = 20;
+                        C(ws, row, col, val, true, 9, DARK_NAVY, PALE_BLUE, "center", "");
+                        ws.Cells[row, col].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin,
+                            System.Drawing.Color.FromArgb(0xC5, 0xD9, 0xE8));
+                    };
+
+                    Action<OfficeOpenXml.ExcelWorksheet, int, string, int> Spacer = (ws, row, h, ncols) => {
+                        ws.Row(row).Height = string.IsNullOrEmpty(h) ? 10 : int.Parse(h);
+                    };
+
+                    // ════════════════════════════════════════════════
+                    //  TAB 1 — SUMMARY
+                    // ════════════════════════════════════════════════
+                    var ws1 = pkg.Workbook.Worksheets.Add("Summary");
+                    ws1.Column(1).Width = 32; ws1.Column(2).Width = 24;
+                    ws1.Column(3).Width = 16; ws1.Column(4).Width = 16;
+                    LogoRow(ws1, "Sales Summary Report", 4);
+                    ws1.Row(3).Height = 19; ws1.Row(4).Height = 19;
+                    C(ws1, 3, 1, "Period:", true, 9, TEXT_LIGHT, null, "left", "");
+                    C(ws1, 3, 2, periodStr, false, 9, TEXT_MID, null, "left", "");
+                    C(ws1, 4, 1, "Generated:", true, 9, TEXT_LIGHT, null, "left", "");
+                    C(ws1, 4, 2, generated, false, 9, TEXT_MID, null, "left", "");
+                    Spacer(ws1, 5, "10", 4);
+
+                    SectionHdr(ws1, 6, "REVENUE", 4);
+                    // Label col A, value col B
+                    int[] kvRows = { 7, 8, 9 };
+                    string[] kvLabels = { "Total Revenue", "Total Refunded Amount", "Net Income" };
+                    decimal[] kvVals = { totalRevenue, refundAmount, netIncome };
+                    for (int i = 0; i < 3; i++)
                     {
-                        var itemCount = o.Snapshots != null && o.Snapshots.Any()
+                        ws1.Row(kvRows[i]).Height = 20;
+                        C(ws1, kvRows[i], 1, kvLabels[i], false, 10, TEXT_MID, null, "left", "");
+                        ws1.Cells[kvRows[i], 1].Style.Border.Bottom.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                        ws1.Cells[kvRows[i], 1].Style.Border.Bottom.Color.SetColor(System.Drawing.Color.FromArgb(0xCC, 0xCC, 0xCC));
+                        CN(ws1, kvRows[i], 2, kvVals[i], true, DARK_NAVY, null, "left", "\u20B1#,##0.00");
+                        ws1.Cells[kvRows[i], 2].Style.Border.Bottom.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                        ws1.Cells[kvRows[i], 2].Style.Border.Bottom.Color.SetColor(System.Drawing.Color.FromArgb(0xCC, 0xCC, 0xCC));
+                    }
+                    Spacer(ws1, 10, "10", 4);
+
+                    SectionHdr(ws1, 11, "ORDERS", 4);
+                    string[] oLabels = { "Total Orders", "Average Order Value", "Refund Requests" };
+                    for (int i = 0; i < 3; i++)
+                    {
+                        int r = 12 + i;
+                        ws1.Row(r).Height = 20;
+                        C(ws1, r, 1, oLabels[i], false, 10, TEXT_MID, null, "left", "");
+                        ws1.Cells[r, 1].Style.Border.Bottom.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                    }
+                    CN(ws1, 12, 2, totalRevenue > 0 ? totalOrders : 0, false, DARK_NAVY, null, "left", "#,##0");
+                    ws1.Cells[12, 2].Value = totalOrders;
+                    CN(ws1, 13, 2, aov, true, DARK_NAVY, null, "left", "\u20B1#,##0.00");
+                    ws1.Cells[14, 2].Value = refundCount;
+                    ws1.Cells[14, 2].Style.Font.Name = FONT; ws1.Cells[14, 2].Style.Font.Bold = true;
+                    ws1.Cells[14, 2].Style.Font.Color.SetColor(DARK_NAVY);
+                    Spacer(ws1, 15, "10", 4);
+
+                    SectionHdr(ws1, 16, "ORDER STATUS BREAKDOWN", 4);
+                    ColHdr(ws1, 17, 1, "Status"); ColHdr(ws1, 17, 2, "Count"); ColHdr(ws1, 17, 3, "% of Total");
+                    int totalS = orders.Count;
+                    for (int i = 0; i < statusList.Length; i++)
+                    {
+                        int r = 18 + i;
+                        var bg = i % 2 == 0 ? (System.Drawing.Color?)LGRAY : WHITE;
+                        ws1.Row(r).Height = 19;
+                        int cnt = orders.Count(o => o.Status == statusList[i]);
+                        C(ws1, r, 1, statusList[i], false, 10, TEXT_MID, bg, "left", "");
+                        CN2(ws1, r, 2, cnt, "#,##0");
+                        if (bg.HasValue) { ws1.Cells[r, 2].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid; ws1.Cells[r, 2].Style.Fill.BackgroundColor.SetColor(bg.Value); }
+                        double pct = totalS > 0 ? (double)cnt / totalS : 0;
+                        ws1.Cells[r, 3].Value = pct;
+                        ws1.Cells[r, 3].Style.Numberformat.Format = "0.0%";
+                        ws1.Cells[r, 3].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                        ws1.Cells[r, 3].Style.Font.Name = FONT;
+                        if (bg.HasValue) { ws1.Cells[r, 3].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid; ws1.Cells[r, 3].Style.Fill.BackgroundColor.SetColor(bg.Value); }
+                        for (int cc = 1; cc <= 3; cc++)
+                            ws1.Cells[r, cc].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin,
+                                System.Drawing.Color.FromArgb(0xDD, 0xDD, 0xDD));
+                    }
+
+                    // ════════════════════════════════════════════════
+                    //  TAB 2 — ORDERS BREAKDOWN
+                    // ════════════════════════════════════════════════
+                    var ws2 = pkg.Workbook.Worksheets.Add("Orders Breakdown");
+                    ws2.Column(1).Width = 16; ws2.Column(2).Width = 20; ws2.Column(3).Width = 24;
+                    ws2.Column(4).Width = 14; ws2.Column(5).Width = 8; ws2.Column(6).Width = 14;
+                    ws2.Column(7).Width = 20; ws2.Column(8).Width = 10;
+                    LogoRow(ws2, "Orders Breakdown   |   " + periodStr, 8);
+                    C(ws2, 3, 1, "Period:", true, 9, TEXT_LIGHT, null, "left", "");
+                    C(ws2, 3, 2, periodStr, false, 9, TEXT_MID, null, "left", "");
+                    ws2.Row(4).Height = 8;
+                    string[] h2 = { "Reference No.", "Customer", "Email", "Date", "Items", "Total (₱)", "Status", "Refund?" };
+                    for (int i = 0; i < h2.Length; i++) ColHdr(ws2, 5, i + 1, h2[i]);
+
+                    for (int idx = 0; idx < orders.Count; idx++)
+                    {
+                        var o = orders[idx];
+                        int r = 6 + idx;
+                        var bg = idx % 2 == 0 ? (System.Drawing.Color?)LGRAY : WHITE;
+                        var items = o.Snapshots != null && o.Snapshots.Any()
                             ? o.Snapshots.Sum(s => s.Quantity)
-                            : (o.Items != null ? o.Items.Sum(i => i.Quantity) : 0);
-                        sb.AppendLine(string.Format("{0},{1},{2},{3},{4},{5},{6},{7}",
-                            o.ReferenceNumber,
-                            "\"" + o.CustomerName + "\"",
-                            o.Email,
-                            o.OrderDate.ToString("MMM dd, yyyy"),
-                            itemCount,
-                            o.Total.ToString("N2"),
-                            o.Status,
-                            o.HasRefundRequest ? "Yes" : "No"));
+                            : (o.Items != null ? o.Items.Sum(i2 => i2.Quantity) : 0);
+                        ws2.Row(r).Height = 20;
+                        C(ws2, r, 1, o.ReferenceNumber, true, 10, DARK_NAVY, bg, "left", "");
+                        C(ws2, r, 2, o.CustomerName, false, 10, TEXT_MID, bg, "left", "");
+                        C(ws2, r, 3, o.Email, false, 9, TEXT_LIGHT, bg, "left", "");
+                        C(ws2, r, 4, o.OrderDate.ToString("MMM dd, yyyy"), false, 10, TEXT_MID, bg, "center", "");
+                        CN2(ws2, r, 5, items, "#,##0");
+                        if (bg.HasValue) { ws2.Cells[r, 5].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid; ws2.Cells[r, 5].Style.Fill.BackgroundColor.SetColor(bg.Value); }
+                        CN(ws2, r, 6, (decimal)o.Total, false, DARK_NAVY, bg, "right", "\u20B1#,##0.00");
+
+                        // Status coloured cell
+                        System.Drawing.Color sbg, sfg;
+                        if (o.Status == "Delivered" || o.Status == "Completed") { sbg = GREEN_BG; sfg = GREEN_FG; }
+                        else if (o.Status.Contains("Refund")) { sbg = RED_BG; sfg = RED_FG; }
+                        else if (o.Status == "To Ship") { sbg = PALE_BLUE; sfg = BLUE_FG; }
+                        else { sbg = AMBER_BG; sfg = AMBER_FG; }
+                        var sc = ws2.Cells[r, 7];
+                        sc.Value = o.Status;
+                        sc.Style.Font.Name = FONT; sc.Style.Font.Bold = true; sc.Style.Font.Size = 9;
+                        sc.Style.Font.Color.SetColor(sfg);
+                        sc.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        sc.Style.Fill.BackgroundColor.SetColor(sbg);
+                        sc.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                        sc.Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Center;
+
+                        bool refund = o.HasRefundRequest;
+                        C(ws2, r, 8, refund ? "Yes" : "No", refund, 10, refund ? RED_FG : TEXT_LIGHT, bg, "center", "");
+                        for (int cc = 1; cc <= 8; cc++)
+                            ws2.Cells[r, cc].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin,
+                                System.Drawing.Color.FromArgb(0xDD, 0xDD, 0xDD));
                     }
-                    sb.AppendLine();
 
-                    // ── SHEET 3: Products Sold ──
-                    sb.AppendLine("PRODUCTS SOLD");
-                    sb.AppendLine("Product Name,Category,Units Sold,Revenue");
-                    foreach (var p in productsSold)
-                        sb.AppendLine(string.Format("\"{0}\",{1},{2},{3}",
-                            p.Name, p.Category, p.Qty, p.Revenue.ToString("N2")));
-                    sb.AppendLine();
+                    // Totals row
+                    int tr2 = 6 + orders.Count;
+                    ws2.Row(tr2).Height = 22;
+                    ws2.Cells[tr2, 1, tr2, 5].Merge = true;
+                    C(ws2, tr2, 1, "TOTAL", true, 10, DARK_NAVY, PALE_BLUE, "right", "");
+                    CN(ws2, tr2, 6, (decimal)orders.Sum(o => o.Total), true, DARK_NAVY, PALE_BLUE, "right", "\u20B1#,##0.00");
 
-                    // ── SHEET 4: Inventory ──
-                    sb.AppendLine("INVENTORY SNAPSHOT");
-                    sb.AppendLine("Product Name,Category,Breed Size,Current Stock,Status");
-                    foreach (var p in inventory)
+                    // ════════════════════════════════════════════════
+                    //  TAB 3 — PRODUCTS SOLD
+                    // ════════════════════════════════════════════════
+                    var ws3 = pkg.Workbook.Worksheets.Add("Products Sold");
+                    ws3.Column(1).Width = 32; ws3.Column(2).Width = 18;
+                    ws3.Column(3).Width = 14; ws3.Column(4).Width = 16; ws3.Column(5).Width = 16;
+                    LogoRow(ws3, "Products Sold   |   " + periodStr, 5);
+                    C(ws3, 3, 1, "Period:", true, 9, TEXT_LIGHT, null, "left", "");
+                    C(ws3, 3, 2, periodStr, false, 9, TEXT_MID, null, "left", "");
+                    ws3.Row(4).Height = 8;
+                    string[] h3 = { "Product Name", "Category", "Units Sold", "Unit Price (₱)", "Revenue (₱)" };
+                    for (int i = 0; i < h3.Length; i++) ColHdr(ws3, 5, i + 1, h3[i]);
+
+                    int start3 = 6;
+                    for (int idx = 0; idx < productsSold.Count; idx++)
                     {
-                        var status = p.Stock == 0 ? "Out of Stock" : p.Stock <= 5 ? "Low Stock" : "OK";
-                        sb.AppendLine(string.Format("\"{0}\",{1},{2},{3},{4}",
-                            p.Name, p.Category, p.BreedSize, p.Stock, status));
+                        var p = productsSold[idx]; int r = start3 + idx;
+                        var bg = idx % 2 == 0 ? (System.Drawing.Color?)LGRAY : WHITE;
+                        ws3.Row(r).Height = 20;
+                        C(ws3, r, 1, p.Name, true, 10, DARK_NAVY, bg, "left", "");
+                        C(ws3, r, 2, p.Category, false, 10, TEXT_MID, bg, "left", "");
+                        CN2(ws3, r, 3, p.Qty, "#,##0");
+                        if (bg.HasValue) { ws3.Cells[r, 3].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid; ws3.Cells[r, 3].Style.Fill.BackgroundColor.SetColor(bg.Value); }
+                        CN(ws3, r, 4, p.Price, false, DARK_NAVY, bg, "right", "\u20B1#,##0.00");
+                        CN(ws3, r, 5, p.Revenue, false, DARK_NAVY, bg, "right", "\u20B1#,##0.00");
+                        for (int cc = 1; cc <= 5; cc++) ws3.Cells[r, cc].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin, System.Drawing.Color.FromArgb(0xDD, 0xDD, 0xDD));
                     }
-                    sb.AppendLine();
+                    int tr3 = start3 + productsSold.Count; ws3.Row(tr3).Height = 22;
+                    ws3.Cells[tr3, 1, tr3, 2].Merge = true;
+                    C(ws3, tr3, 1, "TOTAL", true, 10, DARK_NAVY, PALE_BLUE, "right", "");
+                    CN2(ws3, tr3, 3, productsSold.Sum(p => p.Qty), "#,##0");
+                    ws3.Cells[tr3, 3].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    ws3.Cells[tr3, 3].Style.Fill.BackgroundColor.SetColor(PALE_BLUE);
+                    ws3.Cells[tr3, 3].Style.Font.Bold = true; ws3.Cells[tr3, 3].Style.Font.Color.SetColor(DARK_NAVY);
+                    CN(ws3, tr3, 5, (decimal)productsSold.Sum(p => p.Revenue), true, DARK_NAVY, PALE_BLUE, "right", "\u20B1#,##0.00");
 
-                    // ── SHEET 5: Refunds ──
-                    sb.AppendLine("REFUNDS");
-                    sb.AppendLine("Reference No.,Customer,Date,Amount,Status");
+                    // ════════════════════════════════════════════════
+                    //  TAB 4 — INVENTORY SNAPSHOT
+                    // ════════════════════════════════════════════════
+                    var ws4 = pkg.Workbook.Worksheets.Add("Inventory Snapshot");
+                    ws4.Column(1).Width = 32; ws4.Column(2).Width = 18;
+                    ws4.Column(3).Width = 14; ws4.Column(4).Width = 16; ws4.Column(5).Width = 16;
+                    LogoRow(ws4, "Inventory Snapshot", 5);
+                    C(ws4, 3, 1, "As of:", true, 9, TEXT_LIGHT, null, "left", "");
+                    C(ws4, 3, 2, generated, false, 9, TEXT_MID, null, "left", "");
+                    ws4.Row(4).Height = 8;
+                    string[] h4 = { "Product Name", "Category", "Breed Size", "Current Stock", "Status" };
+                    for (int i = 0; i < h4.Length; i++) ColHdr(ws4, 5, i + 1, h4[i]);
+
+                    int start4 = 6;
+                    for (int idx = 0; idx < inventory.Count; idx++)
+                    {
+                        var p = inventory[idx]; int r = start4 + idx;
+                        var bg = idx % 2 == 0 ? (System.Drawing.Color?)LGRAY : WHITE;
+                        ws4.Row(r).Height = 20;
+                        C(ws4, r, 1, p.Name, true, 10, DARK_NAVY, bg, "left", "");
+                        C(ws4, r, 2, p.Category, false, 10, TEXT_MID, bg, "left", "");
+                        C(ws4, r, 3, p.BreedSize, false, 10, TEXT_MID, bg, "center", "");
+                        CN2(ws4, r, 4, p.Stock, "#,##0");
+                        if (bg.HasValue) { ws4.Cells[r, 4].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid; ws4.Cells[r, 4].Style.Fill.BackgroundColor.SetColor(bg.Value); }
+
+                        System.Drawing.Color sbg, sfg; string slabel;
+                        if (p.Stock == 0) { sbg = RED_BG; sfg = RED_FG; slabel = "Out of Stock"; }
+                        else if (p.Stock <= 5) { sbg = AMBER_BG; sfg = AMBER_FG; slabel = "Low Stock"; }
+                        else { sbg = GREEN_BG; sfg = GREEN_FG; slabel = "OK"; }
+                        var sc = ws4.Cells[r, 5]; sc.Value = slabel;
+                        sc.Style.Font.Name = FONT; sc.Style.Font.Bold = true; sc.Style.Font.Size = 9;
+                        sc.Style.Font.Color.SetColor(sfg);
+                        sc.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        sc.Style.Fill.BackgroundColor.SetColor(sbg);
+                        sc.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                        sc.Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Center;
+                        for (int cc = 1; cc <= 5; cc++) ws4.Cells[r, cc].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin, System.Drawing.Color.FromArgb(0xDD, 0xDD, 0xDD));
+                    }
+
+                    // ════════════════════════════════════════════════
+                    //  TAB 5 — REFUNDS
+                    // ════════════════════════════════════════════════
+                    var ws5 = pkg.Workbook.Worksheets.Add("Refunds");
+                    ws5.Column(1).Width = 16; ws5.Column(2).Width = 22;
+                    ws5.Column(3).Width = 14; ws5.Column(4).Width = 16; ws5.Column(5).Width = 20;
+                    LogoRow(ws5, "Refund Report   |   " + periodStr, 5);
+                    C(ws5, 3, 1, "Period:", true, 9, TEXT_LIGHT, null, "left", "");
+                    C(ws5, 3, 2, periodStr, false, 9, TEXT_MID, null, "left", "");
+                    ws5.Row(4).Height = 8;
+                    string[] h5 = { "Reference No.", "Customer", "Date", "Amount (₱)", "Status" };
+                    for (int i = 0; i < h5.Length; i++) ColHdr(ws5, 5, i + 1, h5[i]);
+
                     if (refundOrders.Any())
                     {
-                        foreach (var o in refundOrders)
-                            sb.AppendLine(string.Format("{0},{1},{2},{3},{4}",
-                                o.ReferenceNumber,
-                                "\"" + o.CustomerName + "\"",
-                                o.OrderDate.ToString("MMM dd, yyyy"),
-                                o.Total.ToString("N2"),
-                                o.Status));
+                        for (int idx = 0; idx < refundOrders.Count; idx++)
+                        {
+                            var o = refundOrders[idx]; int r = 6 + idx;
+                            var bg = idx % 2 == 0 ? (System.Drawing.Color?)LGRAY : WHITE;
+                            ws5.Row(r).Height = 20;
+                            C(ws5, r, 1, o.ReferenceNumber, true, 10, DARK_NAVY, bg, "left", "");
+                            C(ws5, r, 2, o.CustomerName, false, 10, TEXT_MID, bg, "left", "");
+                            C(ws5, r, 3, o.OrderDate.ToString("MMM dd, yyyy"), false, 10, TEXT_MID, bg, "center", "");
+                            CN(ws5, r, 4, (decimal)o.Total, false, DARK_NAVY, bg, "right", "\u20B1#,##0.00");
+                            C(ws5, r, 5, o.Status, false, 9, RED_FG, RED_BG, "center", "");
+                            for (int cc = 1; cc <= 5; cc++) ws5.Cells[r, cc].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin, System.Drawing.Color.FromArgb(0xDD, 0xDD, 0xDD));
+                        }
                     }
                     else
                     {
-                        sb.AppendLine("No refund requests in this period.");
+                        ws5.Row(6).Height = 20;
+                        C(ws5, 6, 1, "—", false, 10, TEXT_LIGHT, null, "center", "");
+                        ws5.Cells[6, 2, 6, 5].Merge = true;
+                        C(ws5, 6, 2, "No refund requests in this period.", false, 10, TEXT_LIGHT, null, "left", "");
+                        ws5.Cells[6, 2].Style.Font.Italic = true;
                     }
 
-                    var bytes = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
-                    var filename = "PawChase_SalesReport_" + fromDate.ToString("yyyyMMdd") + "_" + toDate.ToString("yyyyMMdd") + ".csv";
-                    return File(bytes, "text/csv", filename);
+                    // ── Return as .xlsx ──
+                    var bytes = pkg.GetAsByteArray();
+                    var filename = "PawChase_SalesReport_"
+                                 + fromDate.ToString("yyyyMMdd") + "_"
+                                 + toDate.ToString("yyyyMMdd") + ".xlsx";
+                    return File(bytes,
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        filename);
                 }
             }
             catch (Exception ex)
