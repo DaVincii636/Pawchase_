@@ -35,7 +35,7 @@
         <p>Find the right products based on your dog's size</p>
     </div>
     <div class="breed-grid">
-        <a href="@Url.Action("Index","Product", new{size="Small"})" class="breed-card">
+        <a href="@Url.Action("Index","Product", new{size="Small",fromHome=1})" class="breed-card">
             <div class="breed-card-top">
                 <img src="/Content/images/small-dog.png" alt="Small dog" class="breed-img" />
                 <span class="breed-size-tag">Small</span>
@@ -51,7 +51,7 @@
                 <span class="view-link">Shop Small Breeds <i class="fa-solid fa-arrow-right"></i></span>
             </div>
         </a>
-        <a href="@Url.Action("Index","Product", new{size="Medium"})" class="breed-card breed-card--featured">
+        <a href="@Url.Action("Index","Product", new{size="Medium",fromHome=1})" class="breed-card breed-card--featured">
             <div class="breed-card-top">
                 <img src="/Content/images/medium-dog.png" alt="Medium dog" class="breed-img" />
                 <span class="breed-size-tag">Medium</span>
@@ -68,7 +68,7 @@
                 <span class="view-link">Shop Medium Breeds <i class="fa-solid fa-arrow-right"></i></span>
             </div>
         </a>
-        <a href="@Url.Action("Index","Product", new{size="Large"})" class="breed-card">
+        <a href="@Url.Action("Index","Product", new{size="Large",fromHome=1})" class="breed-card">
             <div class="breed-card-top">
                 <img src="/Content/images/large-dog.png" alt="Large dog" class="breed-img" />
                 <span class="breed-size-tag">Large</span>
@@ -94,23 +94,23 @@
         <p>Everything your dog needs, organized just for you</p>
     </div>
     <div class="categories-grid">
-        <a href="@Url.Action("Index","Product",new{category="Treats"})" class="category-card cat-treats">
+        <a href="@Url.Action("Index","Product",new{category="Treats",fromHome=1})" class="category-card cat-treats">
             <div class="cat-icon-wrap"><i class="fa-solid fa-bone"></i></div>
             <div class="cat-label"><h3>Treats</h3><span>View All</span></div>
         </a>
-        <a href="@Url.Action("Index","Product",new{category="Toys"})" class="category-card cat-toys">
+        <a href="@Url.Action("Index","Product",new{category="Toys",fromHome=1})" class="category-card cat-toys">
             <div class="cat-icon-wrap"><i class="fa-regular fa-circle-dot"></i></div>
             <div class="cat-label"><h3>Toys</h3><span>View All</span></div>
         </a>
-        <a href="@Url.Action("Index","Product",new{category="Accessories"})" class="category-card cat-acc">
+        <a href="@Url.Action("Index","Product",new{category="Accessories",fromHome=1})" class="category-card cat-acc">
             <div class="cat-icon-wrap"><i class="fa-solid fa-tag"></i></div>
             <div class="cat-label"><h3>Accessories</h3><span>View All</span></div>
         </a>
-        <a href="@Url.Action("Index","Product",new{category="Health"})" class="category-card cat-health">
+        <a href="@Url.Action("Index","Product",new{category="Health",fromHome=1})" class="category-card cat-health">
             <div class="cat-icon-wrap"><i class="fa-solid fa-pills"></i></div>
             <div class="cat-label"><h3>Health &amp; Care</h3><span>View All</span></div>
         </a>
-        <a href="@Url.Action("Index","Product",new{category="Others"})" class="category-card cat-others">
+        <a href="@Url.Action("Index","Product",new{category="Others",fromHome=1})" class="category-card cat-others">
             <div class="cat-icon-wrap"><i class="fa-solid fa-ellipsis"></i></div>
             <div class="cat-label"><h3>Others</h3><span>View All</span></div>
         </a>
@@ -138,12 +138,12 @@
             </h2>
             <p class="promo-tagline">Don&rsquo;t miss out &mdash; these prices are going fast!</p>
         </div>
-        <a href="@Url.Action("Index","Product",new{onSale=true})" class="promo-view-all">
+        <a href="@Url.Action("Index","Product",new{onSale=true,fromHome=1})" class="promo-view-all">
             View All Deals <i class="fa-solid fa-arrow-right"></i>
         </a>
     </div>
     <div class="promo-grid">
-        <a href="@Url.Action("Index","Product",new{category="Treats",onSale=true})" class="promo-card promo-card--imgbg promo-card--treats">
+        <a href="@Url.Action("Index","Product",new{category="Treats",onSale=true,fromHome=1})" class="promo-card promo-card--imgbg promo-card--treats">
             <div class="promo-imgbg-layer" style="background-image:url('/Content/images/promo1-bg.png');"></div>
             <div class="promo-imgbg-overlay promo-overlay--treats"></div>
             <div class="promo-imgbg-content">
@@ -160,7 +160,7 @@
                 </div>
             </div>
         </a>
-        <a href="@Url.Action("Index","Product",new{category="Toys",onSale=true})" class="promo-card promo-card--imgbg promo-card--toys promo-card--star">
+        <a href="@Url.Action("Index","Product",new{category="Toys",onSale=true,fromHome=1})" class="promo-card promo-card--imgbg promo-card--toys promo-card--star">
             <div class="promo-imgbg-layer" style="background-image: url('/Content/images/promo2-bg.png');"></div>
             <div class="promo-imgbg-overlay promo-overlay--toys"></div>
             <div class="promo-imgbg-content">
@@ -177,7 +177,7 @@
                 </div>
             </div>
         </a>
-        <a href="@Url.Action("Index","Product",new{category="Health",onSale=true})" class="promo-card promo-card--imgbg promo-card--health">
+        <a href="@Url.Action("Index","Product",new{category="Health",onSale=true,fromHome=1})" class="promo-card promo-card--imgbg promo-card--health">
             <div class="promo-imgbg-layer" style="background-image: url('/Content/images/promo3-bg.png');"></div>
             <div class="promo-imgbg-overlay promo-overlay--health"></div>
             <div class="promo-imgbg-content">

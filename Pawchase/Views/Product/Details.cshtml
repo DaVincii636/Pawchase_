@@ -12,6 +12,7 @@
 }
 @section styles {
     <link href="@Url.Content("~/Content/css/product.css")" rel="stylesheet" />
+    <link href="@Url.Content("~/Content/reviews.css")" rel="stylesheet" />
 }
 
 <section class="product-detail-section">
@@ -226,21 +227,62 @@
     </div>
 
     <!-- REVIEWS -->
-    <!-- REVIEWS -->
     <div class="related-section" style="border-top:1px solid var(--border);padding-top:2rem;">
-        <h2><i class="fa-regular fa-star" style="color:#E6A520;"></i> Customer Reviews</h2>
+        <h2><i class="fa-regular fa-star" style="color:#E6A520;"></i> Customer Reviews
+            @if (reviewCount > 0)
+            {<span style="font-size:14px;font-weight:400;color:var(--text-light);margin-left:8px;">(@reviewCount review@(reviewCount != 1 ? "s" : ""))</span>}
+        </h2>
         @if (reviews != null && reviews.Any())
         {
             <div class="products-grid" style="margin-top:1rem;">
-                @foreach (var r in reviews)
+                @{
+                    var revColors = new[] { "#ffe8d6", "#ddeaf3", "#f3e3d0", "#d4eadd", "#ecddd0", "#d4e4f0" };
+                    var revIcons  = new[] { "fa-dog", "fa-paw", "fa-bone", "fa-dog", "fa-paw", "fa-bone" };
+                }
+                @for (int ri = 0; ri < reviews.Count; ri++)
                 {
-                    <div style="background:var(--white);border-radius:var(--radius);border:1.5px solid var(--border);padding:1.2rem;box-shadow:var(--shadow-card);">
-                        <div style="display:flex;gap:3px;color:#E6A520;margin-bottom:.5rem;">
-                            @for (int i = 1; i <= 5; i++)
-                            {<i class="@(i<=r.Stars?"fa-solid":"fa-regular") fa-star" style="font-size:13px;"></i>}
+                    var r = reviews[ri];
+                    var rColor = revColors[ri % revColors.Length];
+                    var rIcon  = revIcons[ri % revIcons.Length];
+                    <div class="review-card @(r.IsTextOnly ? "without-photo" : "with-photo")" id="review-@r.Id" onclick="openModal(@ri)" style="cursor:pointer;">
+                        @if (!r.IsTextOnly)
+                        {
+                            <div class="review-card-photo" style="background:@rColor;">
+                                @if (!string.IsNullOrWhiteSpace(r.PhotoUrl))
+                                {
+                                    <img src="@Url.Content(r.PhotoUrl)" alt="Review photo" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';" />
+                                }
+                                <i class="fa-solid @rIcon" style="font-size:3rem;color:rgba(0,0,0,.12);display:@(string.IsNullOrWhiteSpace(r.PhotoUrl) ? "inline-flex" : "none")"></i>
+                            </div>
+                        }
+                        <div class="review-card-body">
+                            <div class="review-card-header">
+                                <div class="review-avatar">@((r.CustomerName ?? "A")[0])</div>
+                                <div>
+                                    <div class="review-name">@r.CustomerName</div>
+                                    <div class="review-meta">@r.DatePosted.ToString("MMM dd, yyyy") · Verified Buyer</div>
+                                </div>
+                            </div>
+                            <div class="review-stars">
+                                @for (int s = 1; s <= 5; s++)
+                                {<i class="@(s <= r.Stars ? "fa-solid" : "fa-regular") fa-star"></i>}
+                            </div>
+                            <p class="review-caption">"@r.Comment"</p>
+                            <div class="review-actions">
+                                <button class="review-action" data-review-id="@r.Id" onclick="event.stopPropagation();toggleLike(@r.Id,this)">
+                                    <i class="fa-regular fa-heart"></i>
+                                    <span>@r.Likes</span>
+                                </button>
+                                <button class="review-action" data-comment-review-id="@r.Id" onclick="event.stopPropagation();openModalComments(@ri)">
+                                    <i class="fa-regular fa-comment"></i>
+                                    <span>@(r.Comments?.Count ?? 0)</span>
+                                </button>
+                                <button class="review-action" data-report-review-id="@r.Id" onclick="event.stopPropagation();openReportModal(@r.Id)">
+                                    <i class="fa-regular fa-flag"></i>
+                                    <span>@r.ReportCount</span>
+                                </button>
+                            </div>
                         </div>
-                        <p style="font-size:13px;color:var(--text-mid);line-height:1.6;">"@r.Comment"</p>
-                        <small style="font-size:11px;color:var(--text-light);margin-top:.4rem;display:block;">&mdash; @r.CustomerName &middot; Verified Buyer</small>
                     </div>
                 }
             </div>
@@ -249,6 +291,82 @@
         {
             <p style="color:var(--text-light);font-size:13px;margin-top:1rem;">No reviews yet. Be the first to review this product!</p>
         }
+    </div>
+
+    <!-- REVIEW MODAL -->
+    <div class="review-modal-overlay" id="review-modal-overlay" onclick="if(event.target===this)closeModal()">
+        <div class="review-modal" id="review-modal">
+            <div class="modal-photo-wrap">
+                <div class="modal-photo" id="modal-photo"></div>
+            </div>
+            <div class="modal-info">
+                <div class="modal-header">
+                    <div class="modal-avatar" id="modal-avatar"></div>
+                    <div>
+                        <div class="modal-name-text" id="modal-name"></div>
+                        <div class="modal-date-text" id="modal-date"></div>
+                        <div id="modal-edited" class="modal-edited" style="display:none;"></div>
+                    </div>
+                    <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-times"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-stars" id="modal-stars"></div>
+                    <p class="modal-caption" id="modal-caption"></p>
+                    <div class="modal-product" id="modal-product"></div>
+                </div>
+                <div class="modal-actions">
+                    <button class="review-action" id="modal-like-btn" data-review-id="0" onclick="toggleLike(activeReview.id,this)">
+                        <i class="fa-regular fa-heart"></i>
+                        <span id="modal-likes"></span>
+                    </button>
+                    <button class="review-action" onclick="toggleCommentPanel()">
+                        <i class="fa-regular fa-comment"></i>
+                        <span id="modal-comment-count"></span>
+                    </button>
+                    <button class="review-action" id="modal-report-btn" data-report-review-id="0" onclick="openReportModal(activeReview.id)">
+                        <i class="fa-regular fa-flag"></i>
+                        <span id="modal-reports"></span>
+                    </button>
+                    <a class="view-product-link" id="modal-product-link" href="#">View Product</a>
+                </div>
+                <div class="modal-comments" id="modal-comments-panel">
+                    <div class="modal-comments-head">
+                        <strong class="modal-comments-title">Comments</strong>
+                    </div>
+                    <div class="modal-comments-list" id="modal-comments-list"></div>
+                    @using (Html.BeginForm("AddComment", "Reviews", FormMethod.Post, new { @class = "comment-form", id = "modal-comment-form" }))
+                    {
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="reviewId" id="comment-review-id" />
+                        <input type="hidden" name="returnUrl" id="comment-return-url" value="@Request.RawUrl" />
+                        <input type="text" class="comment-input" name="commentText" maxlength="180" placeholder="Write a comment..." required />
+                        <button type="submit" class="comment-submit">Send</button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REPORT MODAL -->
+    <div class="report-modal-overlay" id="report-modal-overlay" onclick="if(event.target===this)closeReportModal()">
+        <div class="report-modal">
+            <h3>Help us understand the issue with this review.</h3>
+            <div class="report-options" id="report-options">
+                <label class="report-option"><input type="radio" name="report-reason" value="Inappropriate content" onchange="toggleOtherInput(this)" /> Inappropriate content</label>
+                <label class="report-option"><input type="radio" name="report-reason" value="Spam" onchange="toggleOtherInput(this)" /> Spam</label>
+                <label class="report-option"><input type="radio" name="report-reason" value="Misleading or inaccurate information" onchange="toggleOtherInput(this)" /> Misleading or inaccurate information</label>
+                <label class="report-option"><input type="radio" name="report-reason" value="Offensive or abusive language" onchange="toggleOtherInput(this)" /> Offensive or abusive language</label>
+                <label class="report-option"><input type="radio" name="report-reason" value="Irrelevant content" onchange="toggleOtherInput(this)" /> Irrelevant content</label>
+                <label class="report-option"><input type="radio" name="report-reason" value="Other" onchange="toggleOtherInput(this)" /> Other</label>
+            </div>
+            <input type="text" id="report-other-input" maxlength="150" placeholder="Please describe the issue..."
+                   style="display:none;width:100%;margin-top:8px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Poppins',sans-serif;font-size:12px;box-sizing:border-box;" />
+            <div class="report-error" id="report-error"></div>
+            <div class="report-actions">
+                <button type="button" class="report-cancel" onclick="closeReportModal()">Cancel</button>
+                <button type="button" class="report-submit" onclick="submitReport()">Submit</button>
+            </div>
+        </div>
     </div>
 
     <!-- RECENTLY VIEWED -->
@@ -323,6 +441,46 @@
 
 @section scripts {
     <script src="@Url.Content("~/Scripts/product.js")"></script>
+    <script>
+        // ── Reviews data for the interactive modal (mirrors Reviews/Index pattern) ──
+        window.reviewsData = {
+            isLoggedIn: @(Session["UserId"] != null ? "true" : "false"),
+            currentFilters: { sortBy: '', category: '', photoFilter: '' },
+            urls: {
+                index: '@Url.Action("Index", "Reviews")',
+                like: '@Url.Action("Like", "Reviews")',
+                report: '@Url.Action("Report", "Reviews")'
+            },
+            openReviewId: 0,
+            reviews: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(
+                (reviews ?? new List<Pawchase.Models.Review>()).Select((r, i) => new {
+                    id = r.Id,
+                    name = r.CustomerName,
+                    stars = r.Stars,
+                    comment = r.Comment,
+                    date = r.DatePosted.ToString("MMM dd, yyyy"),
+                    productName = Model.Name,
+                    productId = Model.Id,
+                    likes = r.Likes,
+                    reportCount = r.ReportCount,
+                    isReported = false,
+                    isTextOnly = r.IsTextOnly,
+                    isEdited = r.IsEdited,
+                    editedAt = r.LastEditedAt.HasValue ? r.LastEditedAt.Value.ToString("o") : (string)null,
+                    photoUrl = r.PhotoUrl,
+                    resolvedPhotoUrl = string.IsNullOrWhiteSpace(r.PhotoUrl) ? "" : Url.Content(r.PhotoUrl),
+                    color = new[] { "#ffe8d6","#ddeaf3","#f3e3d0","#d4eadd","#ecddd0","#d4e4f0" }[i % 6],
+                    icon = new[] { "fa-dog","fa-paw","fa-bone","fa-dog","fa-paw","fa-bone" }[i % 6],
+                    comments = (r.Comments ?? new List<Pawchase.Models.ReviewComment>()).Select(c => new {
+                        userName = c.UserName,
+                        text = c.Text,
+                        date = c.DatePosted.ToString("MMM dd, yyyy hh:mm tt")
+                    }).ToList()
+                }).ToList()
+            ))
+        };
+    </script>
+    <script src="@Url.Content("~/Scripts/reviews.js")"></script>
     <script>
         // ── State ──────────────────────────────────────────────────────────
         var selectedVariantLabel = null;   // variant highlighted on main page

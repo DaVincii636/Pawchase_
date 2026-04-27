@@ -8,9 +8,10 @@
     var curMin = ViewBag.MinPrice != null ? (int)ViewBag.MinPrice : globalMin;
     var curMax = ViewBag.MaxPrice != null ? (int)ViewBag.MaxPrice : globalMax;
     bool onSale = ViewBag.OnSale == true;
-    bool hasFilters = ViewBag.Category != null || ViewBag.Size != null ||
+    bool fromHome = Request.QueryString["fromHome"] == "1";
+    bool hasFilters = !fromHome && (ViewBag.Category != null || ViewBag.Size != null ||
                       ViewBag.Search != null || onSale ||
-                      ViewBag.MinPrice != null || ViewBag.MaxPrice != null;
+                      ViewBag.MinPrice != null || ViewBag.MaxPrice != null);
 }
 @section styles {
     <link href="@Url.Content("~/Content/css/product.css")" rel="stylesheet" />
