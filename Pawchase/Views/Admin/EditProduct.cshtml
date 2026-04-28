@@ -329,7 +329,8 @@
                                        class="variant-text-input" />
                                 <input type="number" id="evStock@(vi)" name="VariantStocks"
                                        placeholder="Stock" min="0"
-                                       value=""
+                                       value="@(ev != null ? ev.Stock.ToString() : "")"
+                                       oninput="syncVariantStock()"
                                        class="variant-text-input" />
                             </div>
                         }
@@ -373,7 +374,7 @@
                     </div>
                     <div class="form-group">
                         <label><i class="fa-solid fa-boxes-stacked"></i> Stock <span class="req">*</span></label>
-                        <input type="number" name="Stock" min="0" value="@Model.Stock" required />
+                        <input type="number" id="generalStock" name="Stock" placeholder="Stock" min="0" value="@Model.Stock" required />
                     </div>
                 </div>
                 <div class="form-group">
@@ -472,7 +473,39 @@
             reader.readAsDataURL(input.files[0]);
         }
 
-        // ── Save modal ──
+        // ── Variant stock sync: auto-sum variant stocks → general Stock field ──
+        function syncVariantStock() {
+            var total = 0;
+            var hasAny = false;
+            for (var i = 1; i <= 6; i++) {
+                var el = document.getElementById('evStock' + i);
+                if (el) {
+                    var val = parseInt(el.value, 10);
+                    if (!isNaN(val) && val > 0) {
+                        total += val;
+                        hasAny = true;
+                    }
+                }
+            }
+            var gs = document.getElementById('generalStock');
+            if (!gs) return;
+            if (hasAny) {
+                gs.value = total;
+                gs.readOnly = true;
+                gs.style.background = 'var(--peach, #f8ede3)';
+                gs.style.color = 'var(--text-mid, #888)';
+                gs.title = 'Auto-calculated from variant stocks';
+            } else {
+                gs.readOnly = false;
+                gs.style.background = '';
+                gs.style.color = '';
+                gs.title = '';
+            }
+        }
+        // Run on load so existing variants immediately lock the field
+        document.addEventListener('DOMContentLoaded', syncVariantStock);
+
+                // ── Save modal ──
         function openSaveModal() {
             var name = document.getElementById('editProductName').value.trim() || 'this product';
             document.getElementById('saveModalText').textContent =

@@ -285,6 +285,7 @@
                                        class="variant-text-input" />
                                 <input type="number" id="vStock@(vi)" name="VariantStocks"
                                        placeholder="Stock" min="0"
+                                       oninput="syncVariantStock()"
                                        class="variant-text-input" />
                             </div>
                         }
@@ -330,7 +331,7 @@
                     </div>
                     <div class="form-group">
                         <label>Stock <span class="req">*</span></label>
-                        <input type="number" name="Stock" min="0" placeholder="50" required />
+                        <input type="number" id="generalStock" name="Stock" placeholder="Stock" min="0" required />
                     </div>
                 </div>
                 <div class="form-group">
@@ -411,6 +412,39 @@
             };
             reader.readAsDataURL(input.files[0]);
         }
+
+
+        // ── Variant stock sync: auto-sum variant stocks → general Stock field ──
+        function syncVariantStock() {
+            var total = 0;
+            var hasAny = false;
+            for (var i = 1; i <= 6; i++) {
+                var el = document.getElementById('vStock' + i);
+                if (el) {
+                    var val = parseInt(el.value, 10);
+                    if (!isNaN(val) && val > 0) {
+                        total += val;
+                        hasAny = true;
+                    }
+                }
+            }
+            var gs = document.getElementById('generalStock');
+            if (!gs) return;
+            if (hasAny) {
+                gs.value = total;
+                gs.readOnly = true;
+                gs.style.background = 'var(--peach, #f8ede3)';
+                gs.style.color = 'var(--text-mid, #888)';
+                gs.title = 'Auto-calculated from variant stocks';
+            } else {
+                gs.readOnly = false;
+                gs.style.background = '';
+                gs.style.color = '';
+                gs.title = '';
+            }
+        }
+        // Run on page load in case of browser back-fill
+        document.addEventListener('DOMContentLoaded', syncVariantStock);
 
         function calcDiscount() {
             var price = parseFloat(document.getElementById("f-price").value);

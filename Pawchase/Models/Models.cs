@@ -7,6 +7,7 @@ namespace Pawchase.Models
     {
         public string ImageUrl { get; set; }
         public string Label { get; set; }
+        public int Stock { get; set; }
     }
 
     public class Product

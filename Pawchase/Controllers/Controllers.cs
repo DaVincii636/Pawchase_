@@ -291,17 +291,24 @@ namespace Pawchase.Controllers
                     TempData["Error"] = "Product not found.";
                     return RedirectToAction("Index", "Product");
                 }
-                if (product.Stock <= 0)
-                {
-                    TempData["Error"] = "Sorry, this product is out of stock.";
-                    return RedirectToAction("Details", "Product", new { id = id });
-                }
 
                 if (qty < 1) qty = 1;
 
                 ProductVariant chosen = null;
                 if (!string.IsNullOrEmpty(variantLabel) && product.Variants != null)
                     chosen = product.Variants.FirstOrDefault(v => v.Label == variantLabel);
+
+                // Effective stock: variant stock if a variant was chosen, otherwise product stock.
+                // For products with variants, product.Stock is the sum of all variant stocks.
+                int effectiveStock = (chosen != null) ? chosen.Stock : product.Stock;
+
+                if (effectiveStock <= 0)
+                {
+                    TempData["Error"] = chosen != null
+                        ? "Sorry, this variant is out of stock."
+                        : "Sorry, this product is out of stock.";
+                    return RedirectToAction("Details", "Product", new { id = id });
+                }
 
                 var cart = GetCart();
                 var existing = cart.FirstOrDefault(c =>
@@ -311,12 +318,12 @@ namespace Pawchase.Controllers
                       c.SelectedVariant.Label == chosen.Label)));
 
                 if (existing != null)
-                    existing.Quantity = Math.Min(existing.Quantity + qty, product.Stock);
+                    existing.Quantity = Math.Min(existing.Quantity + qty, effectiveStock);
                 else
                     cart.Add(new CartItem
                     {
                         Product = product,
-                        Quantity = Math.Min(qty, product.Stock),
+                        Quantity = Math.Min(qty, effectiveStock),
                         SelectedVariant = chosen
                     });
 
@@ -369,7 +376,14 @@ namespace Pawchase.Controllers
                 if (item != null)
                 {
                     if (quantity <= 0) cart.Remove(item);
-                    else item.Quantity = Math.Min(quantity, item.Product.Stock);
+                    else
+                    {
+                        // Use variant stock if a variant is selected, otherwise product stock
+                        int effectiveStock = (item.SelectedVariant != null)
+                            ? item.SelectedVariant.Stock
+                            : item.Product.Stock;
+                        item.Quantity = Math.Min(quantity, effectiveStock);
+                    }
                 }
                 Session["Cart"] = cart;
                 return RedirectToAction("Index");
@@ -421,18 +435,25 @@ namespace Pawchase.Controllers
                     TempData["Error"] = "Product not found.";
                     return RedirectToAction("Index", "Product");
                 }
-                if (product.Stock <= 0)
-                {
-                    TempData["Error"] = "Sorry, this product is out of stock.";
-                    return RedirectToAction("Details", "Product", new { id = id });
-                }
 
                 if (qty < 1) qty = 1;
-                qty = Math.Min(qty, product.Stock);
 
                 ProductVariant chosen = null;
                 if (!string.IsNullOrEmpty(variantLabel) && product.Variants != null)
                     chosen = product.Variants.FirstOrDefault(v => v.Label == variantLabel);
+
+                // Effective stock: variant stock if a variant was chosen, otherwise product stock.
+                int effectiveStock = (chosen != null) ? chosen.Stock : product.Stock;
+
+                if (effectiveStock <= 0)
+                {
+                    TempData["Error"] = chosen != null
+                        ? "Sorry, this variant is out of stock."
+                        : "Sorry, this product is out of stock.";
+                    return RedirectToAction("Details", "Product", new { id = id });
+                }
+
+                qty = Math.Min(qty, effectiveStock);
 
                 var buyNowItem = new CartItem
                 {
@@ -506,7 +527,21 @@ namespace Pawchase.Controllers
                 MockData.Orders.Add(order);
 
                 var p = MockData.Products.FirstOrDefault(x => x.Id == buyNowItem.Product.Id);
-                if (p != null) p.Stock = Math.Max(0, p.Stock - buyNowItem.Quantity);
+                if (p != null)
+                {
+                    // Deduct from the chosen variant's stock if applicable
+                    if (buyNowItem.SelectedVariant != null && p.Variants != null)
+                    {
+                        var variant = p.Variants.FirstOrDefault(v => v.Label == buyNowItem.SelectedVariant.Label);
+                        if (variant != null)
+                            variant.Stock = Math.Max(0, variant.Stock - buyNowItem.Quantity);
+                    }
+                    // Always keep product.Stock in sync as the sum of variant stocks
+                    // (or deduct directly if no variants)
+                    p.Stock = p.Variants != null && p.Variants.Any()
+                        ? p.Variants.Sum(v => v.Stock)
+                        : Math.Max(0, p.Stock - buyNowItem.Quantity);
+                }
 
                 Session["BuyNowItem"] = null;
                 return RedirectToAction("Confirmation", "Order",
@@ -575,7 +610,20 @@ namespace Pawchase.Controllers
                 foreach (var item in cart)
                 {
                     var p = MockData.Products.FirstOrDefault(x => x.Id == item.Product.Id);
-                    if (p != null) p.Stock = Math.Max(0, p.Stock - item.Quantity);
+                    if (p != null)
+                    {
+                        // Deduct from the chosen variant's stock if applicable
+                        if (item.SelectedVariant != null && p.Variants != null)
+                        {
+                            var variant = p.Variants.FirstOrDefault(v => v.Label == item.SelectedVariant.Label);
+                            if (variant != null)
+                                variant.Stock = Math.Max(0, variant.Stock - item.Quantity);
+                        }
+                        // Keep product.Stock in sync as the sum of variant stocks
+                        p.Stock = p.Variants != null && p.Variants.Any()
+                            ? p.Variants.Sum(v => v.Stock)
+                            : Math.Max(0, p.Stock - item.Quantity);
+                    }
                 }
 
                 Session["Cart"] = new List<CartItem>();
@@ -759,7 +807,20 @@ namespace Pawchase.Controllers
                     foreach (var snap in order.Snapshots)
                     {
                         var product = MockData.Products.FirstOrDefault(p => p.Id == snap.ProductId);
-                        if (product != null) product.Stock += snap.Quantity;
+                        if (product != null)
+                        {
+                            // Restore variant stock if applicable
+                            if (!string.IsNullOrEmpty(snap.VariantLabel) && product.Variants != null)
+                            {
+                                var variant = product.Variants.FirstOrDefault(v => v.Label == snap.VariantLabel);
+                                if (variant != null)
+                                    variant.Stock += snap.Quantity;
+                            }
+                            // Sync product.Stock as sum of variants (or add back directly)
+                            product.Stock = product.Variants != null && product.Variants.Any()
+                                ? product.Variants.Sum(v => v.Stock)
+                                : product.Stock + snap.Quantity;
+                        }
                     }
                 }
 
@@ -946,7 +1007,7 @@ namespace Pawchase.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public ActionResult AddProduct(Product product, string[] VariantImagePaths, string[] VariantLabels)
+        public ActionResult AddProduct(Product product, string[] VariantImagePaths, string[] VariantLabels, int[] VariantStocks)
         {
             try
             {
@@ -976,12 +1037,20 @@ namespace Pawchase.Controllers
                 {
                     var img = (VariantImagePaths != null && i < VariantImagePaths.Length) ? VariantImagePaths[i] : null;
                     var label = (VariantLabels != null && i < VariantLabels.Length) ? VariantLabels[i] : null;
+                    var stock = (VariantStocks != null && i < VariantStocks.Length) ? VariantStocks[i] : 0;  // ← ADD
                     if (!string.IsNullOrWhiteSpace(img) || !string.IsNullOrWhiteSpace(label))
                         product.Variants.Add(new ProductVariant
                         {
                             ImageUrl = string.IsNullOrWhiteSpace(img) ? null : img,
-                            Label = label
+                            Label = label,
+                            Stock = stock    // ← ADD
                         });
+                }
+
+                // If the product has variants, override the general Stock with the sum
+                // of all variant stocks so it's always accurate.
+                if (product.Variants.Any())
+                    product.Stock = product.Variants.Sum(v => v.Stock);
 
                 MockData.Products.Add(product);
                 TempData["Success"] = "Product \"" + product.Name + "\" added!";
@@ -1013,7 +1082,7 @@ namespace Pawchase.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public ActionResult EditProduct(Product updated, string[] VariantImagePaths, string[] VariantLabels)
+        public ActionResult EditProduct(Product updated, string[] VariantImagePaths, string[] VariantLabels, int[] VariantStocks)
         {
             try
             {
@@ -1049,13 +1118,20 @@ namespace Pawchase.Controllers
                 {
                     var img = (VariantImagePaths != null && i < VariantImagePaths.Length) ? VariantImagePaths[i] : null;
                     var label = (VariantLabels != null && i < VariantLabels.Length) ? VariantLabels[i] : null;
+                    var stock = (VariantStocks != null && i < VariantStocks.Length) ? VariantStocks[i] : 0;  // ← ADD
                     if (!string.IsNullOrWhiteSpace(img) || !string.IsNullOrWhiteSpace(label))
                         p.Variants.Add(new ProductVariant
                         {
                             ImageUrl = string.IsNullOrWhiteSpace(img) ? null : img,
-                            Label = label
+                            Label = label,
+                            Stock = stock    // ← ADD
                         });
                 }
+
+                // If the product has variants, set product.Stock = sum of variant stocks.
+                // This keeps the general stock count always accurate.
+                if (p.Variants.Any())
+                    p.Stock = p.Variants.Sum(v => v.Stock);
 
                 TempData["Success"] = "Product \"" + updated.Name + "\" updated!";
                 return RedirectToAction("Products");
