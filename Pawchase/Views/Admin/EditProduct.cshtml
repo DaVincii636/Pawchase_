@@ -324,8 +324,12 @@
                                 <input type="hidden" id="evPath@(vi)" name="VariantImagePaths"
                                        value="@(ev != null ? ev.ImageUrl : "")" />
                                 <input type="text" id="evLabel@(vi)" name="VariantLabels"
-                                       placeholder="e.g. Red, Blue, Yellow"
+                                       placeholder="e.g. Red, Blue"
                                        value="@(ev != null ? ev.Label : "")"
+                                       class="variant-text-input" />
+                                <input type="number" id="evStock@(vi)" name="VariantStocks"
+                                       placeholder="Stock" min="0"
+                                       value=""
                                        class="variant-text-input" />
                             </div>
                         }

@@ -414,23 +414,37 @@
                 <textarea id="rr-other-text" rows="2" placeholder="Tell us more…" style="padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;resize:vertical;outline:none;width:100%;margin-top:5px;"></textarea>
             </div>
 
-            <!-- Evidence image -->
+            <!-- Evidence Photo -->
             <div class="form-group">
-                <label style="font-size:13px;font-weight:600;color:var(--text-mid);display:flex;align-items:center;gap:6px;">
-                    <i class="fa-solid fa-image" style="color:var(--blue);"></i>
-                    Evidence Photo <span style="font-size:11px;font-weight:400;color:var(--text-light);">(optional)</span>
+                <label style="font-size:13px;font-weight:600;color:var(--text-mid);display:flex;align-items:center;justify-content:space-between;">
+                    <span style="display:flex;align-items:center;gap:6px;">
+                        <i class="fa-solid fa-camera" style="color:var(--blue);"></i>
+                        Evidence Photo
+                        <span style="font-size:11px;font-weight:400;color:var(--text-light);">(optional)</span>
+                    </span>
+                    <button id="rr-remove-btn" onclick="removeRRImage()" type="button"
+                            style="display:none;background:none;border:none;font-size:11px;font-weight:700;color:#e05555;cursor:pointer;font-family:'Poppins',sans-serif;padding:0;display:none;align-items:center;gap:4px;">
+                        <i class="fa-solid fa-trash"></i> Remove
+                    </button>
                 </label>
-                <div id="rr-img-box" onclick="document.getElementById('rr-img-input').click()"
-                     style="height:100px;background:linear-gradient(145deg,var(--peach),#eedfd0);border-radius:10px;border:2px dashed rgba(129,166,198,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;transition:border-color .2s;margin-top:5px;">
-                    <img id="rr-img-preview" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;" />
-                    <div id="rr-img-placeholder" style="text-align:center;color:var(--blue-dark);pointer-events:none;">
-                        <i class="fa-regular fa-image" style="font-size:1.5rem;display:block;margin-bottom:4px;"></i>
-                        <span style="font-size:11px;font-weight:600;">Click to upload photo</span>
+                <div id="rr-img-box" onclick="rrImgBoxClick()"
+                     style="width:100%;height:140px;background:#fafafa;border-radius:10px;border:2px dashed #dcdcdc;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;position:relative;transition:.2s;margin-top:6px;">
+
+                    <img id="rr-img-preview" src="" alt=""
+                         style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:10px;" />
+
+                    <div id="rr-img-placeholder"
+                         style="display:flex;flex-direction:column;align-items:center;gap:6px;color:#777;pointer-events:none;">
+
+                        <i class="fa-solid fa-camera" style="font-size:22px;color:#aaa;"></i>
+                        <span style="font-size:13px;">Click to upload a photo of the product</span>
+
                     </div>
                 </div>
-                <input type="file" id="rr-img-input" accept="image/*" style="display:none;" onchange="previewRRImage(this)" />
-            </div>
 
+                <input type="file" id="rr-img-input" accept="image/*" style="display:none;" onchange="previewRRImage(this)" />
+
+            </div>
             <!-- GCash Number -->
             <div class="form-group">
                 <label style="font-size:13px;font-weight:600;color:var(--text-mid);display:flex;align-items:center;gap:6px;">
@@ -639,10 +653,7 @@
             document.getElementById('rr-other-wrap').style.display = 'none';
             document.getElementById('rr-reason-error').style.display = 'none';
             document.getElementById('rr-gcash-error').style.display = 'none';
-            document.getElementById('rr-img-preview').style.display = 'none';
-            document.getElementById('rr-img-preview').src = '';
-            document.getElementById('rr-img-placeholder').style.display = 'flex';
-            document.getElementById('rr-img-input').value = '';
+            removeRRImage();
             document.getElementById('return-refund-modal').style.display = 'flex';
             document.body.style.overflow = 'hidden';
         }
@@ -654,6 +665,11 @@
             document.getElementById('rr-other-wrap').style.display = val === 'Other' ? 'block' : 'none';
             if (val) document.getElementById('rr-reason-error').style.display = 'none';
         }
+        function rrImgBoxClick() {
+            // If a photo is already loaded, clicking the box does nothing (use Remove button)
+            if (document.getElementById('rr-img-preview').style.display === 'block') return;
+            document.getElementById('rr-img-input').click();
+        }
         function previewRRImage(input) {
             if (!input.files || !input.files[0]) return;
             var reader = new FileReader();
@@ -661,8 +677,22 @@
                 document.getElementById('rr-img-preview').src = e.target.result;
                 document.getElementById('rr-img-preview').style.display = 'block';
                 document.getElementById('rr-img-placeholder').style.display = 'none';
+                document.getElementById('rr-img-box').style.cursor = 'default';
+                document.getElementById('rr-img-box').style.borderStyle = 'solid';
+                document.getElementById('rr-img-box').style.borderColor = 'rgba(129,166,198,0.5)';
+                document.getElementById('rr-remove-btn').style.display = 'inline-flex';
             };
             reader.readAsDataURL(input.files[0]);
+        }
+        function removeRRImage() {
+            document.getElementById('rr-img-preview').src = '';
+            document.getElementById('rr-img-preview').style.display = 'none';
+            document.getElementById('rr-img-placeholder').style.display = 'flex';
+            document.getElementById('rr-img-box').style.cursor = 'pointer';
+            document.getElementById('rr-img-box').style.borderStyle = 'dashed';
+            document.getElementById('rr-img-box').style.borderColor = 'rgba(129,166,198,0.4)';
+            document.getElementById('rr-remove-btn').style.display = 'none';
+            document.getElementById('rr-img-input').value = '';
         }
         function submitReturnRefund() {
             var reason = document.getElementById('rr-reason').value;
@@ -778,8 +808,9 @@
             transform: scale(1.2) translateY(-2px) !important;
         }
 
-        #rr-img-box:hover, #review-img-box:hover {
-            border-color: var(--blue);
+        #rr-img-box:hover {
+            border-color: #4da6ff !important;
+            background: #f5faff !important;
         }
 
         /* Cancelled pill — add to your order.css if not already there */
