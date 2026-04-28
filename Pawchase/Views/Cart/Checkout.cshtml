@@ -8,6 +8,58 @@
 }
 @section styles {
     <link href="@Url.Content("~/Content/css/cart.css")" rel="stylesheet" />
+    <style>
+        /* ?? CHECKOUT CONFIRMATION MODAL ?? */
+        .pc-modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.45); z-index: 1000;
+            align-items: center; justify-content: center;
+        }
+        .pc-modal-box {
+            background: var(--white); border-radius: var(--radius-lg);
+            padding: 2rem; max-width: 420px; width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2); text-align: center;
+        }
+        .pc-modal-icon {
+            width: 58px; height: 58px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 1rem; font-size: 1.5rem;
+        }
+        .pc-modal-title {
+            font-size: 1.1rem; font-weight: 700;
+            color: var(--text); margin-bottom: .5rem;
+        }
+        .pc-modal-body {
+            font-size: 13px; color: var(--text-mid);
+            margin-bottom: 1.5rem; line-height: 1.6;
+        }
+        .pc-modal-btns {
+            display: flex; gap: 10px; justify-content: center;
+        }
+        .pc-modal-cancel {
+            padding: 9px 22px; border-radius: 50px;
+            font-size: 13px; font-weight: 600;
+            border: 1.5px solid var(--border);
+            background: var(--white); color: var(--text-mid);
+            cursor: pointer; font-family: 'Poppins', sans-serif;
+            transition: all .2s;
+        }
+        .pc-modal-cancel:hover {
+            background: var(--border);
+        }
+        .pc-modal-confirm-blue {
+            padding: 9px 22px; border-radius: 50px;
+            font-size: 13px; font-weight: 700;
+            background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+            color: #fff; border: none;
+            cursor: pointer; font-family: 'Poppins', sans-serif;
+            transition: all .2s;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .pc-modal-confirm-blue:hover {
+            opacity: .9; transform: translateY(-1px);
+        }
+    </style>
 }
 
 <div class="page-hero">
@@ -20,7 +72,7 @@
         <div>
             <div class="checkout-form-wrap">
                 <h2><i class="fa-solid fa-location-dot"></i> Delivery Information</h2>
-                <form method="post" action="@Url.Action("PlaceOrder","Cart")">
+                <form id="checkoutForm" method="post" action="@Url.Action("PlaceOrder","Cart")">
                     @Html.AntiForgeryToken()
 
                     @* Hidden inputs for selected items: PlaceOrder accepts arrays selectedId/selectedVariantLabel/selectedQty *@
@@ -67,7 +119,7 @@
                         </label>
                     </div>
 
-                    <button type="submit" class="btn-primary place-order-btn">
+                    <button type="button" class="btn-primary place-order-btn" onclick="openConfirmModal(event)">
                         <i class="fa-solid fa-circle-check"></i> Place Order
                     </button>
                 </form>
@@ -110,6 +162,56 @@
     </div>
 </section>
 
+<!-- ?? CHECKOUT CONFIRMATION MODAL ?? -->
+<div id="confirmOrderModal" class="pc-modal-overlay">
+    <div class="pc-modal-box">
+        <div class="pc-modal-icon" style="background:rgba(129,166,198,.12);">
+            <i class="fa-solid fa-circle-check" style="color:var(--blue);"></i>
+        </div>
+        <div class="pc-modal-title">Confirm Order?</div>
+        <div class="pc-modal-body">Are you sure you want to place this order? Please review your delivery details and payment method before confirming.</div>
+        <div class="pc-modal-btns">
+            <button class="pc-modal-cancel" onclick="closeConfirmModal()">Cancel</button>
+            <button class="pc-modal-confirm-blue" onclick="submitCheckoutForm()">
+               Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
 @section scripts {
     <script src="@Url.Content("~/Scripts/cart.js")"></script>
+    <script>
+        function openConfirmModal(event) {
+            event.preventDefault();
+            // Validate form before showing modal
+            var form = document.getElementById('checkoutForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            document.getElementById('confirmOrderModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmOrderModal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        function submitCheckoutForm() {
+            var form = document.getElementById('checkoutForm');
+            form.submit();
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('confirmOrderModal').addEventListener('click', function(e) {
+            if (e.target === this) closeConfirmModal();
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeConfirmModal();
+        });
+    </script>
 }
