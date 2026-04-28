@@ -982,7 +982,6 @@ namespace Pawchase.Controllers
                             ImageUrl = string.IsNullOrWhiteSpace(img) ? null : img,
                             Label = label
                         });
-                }
 
                 MockData.Products.Add(product);
                 TempData["Success"] = "Product \"" + product.Name + "\" added!";
