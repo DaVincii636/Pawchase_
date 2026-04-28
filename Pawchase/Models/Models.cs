@@ -77,6 +77,9 @@ namespace Pawchase.Models
         public DateTime OrderDate { get; set; }
         public string Status { get; set; }
         public bool HasRefundRequest { get; set; }
+        public string CancelReason { get; set; }
+        public string RefundReason { get; set; }
+        public string GCashNumber { get; set; }
     }
 
     public class Review

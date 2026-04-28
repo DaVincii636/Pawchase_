@@ -714,38 +714,101 @@ namespace Pawchase.Controllers
             }
         }
 
+        // ── Mark order as Completed (skipping To Rate) ───────────────
         public ActionResult MarkReceived(string referenceNumber)
         {
             try
             {
                 var order = MockData.Orders.FirstOrDefault(o => o.ReferenceNumber == referenceNumber);
-                if (order != null) order.Status = "To Rate";
-                return RedirectToAction("Orders", "Account");
+                if (order != null) order.Status = "Completed";
+                TempData["Success"] = "Order marked as received!";
+                return RedirectToAction("Track", "Order", new { tab = "Completed" });
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("MarkReceived Error: " + ex.Message);
                 TempData["Error"] = "Could not update order. Please try again.";
-                return RedirectToAction("Orders", "Account");
+                return RedirectToAction("Track", "Order", new { tab = "Out for Delivery" });
             }
         }
 
-        public ActionResult RequestRefund(string referenceNumber)
+        // ── Cancel order (only allowed on To Ship) ───────────────────
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult CancelOrder(string referenceNumber, string cancelReason)
         {
             try
             {
                 var order = MockData.Orders.FirstOrDefault(o => o.ReferenceNumber == referenceNumber);
-                if (order != null) { order.Status = "Refund Requested"; order.HasRefundRequest = true; }
-                return RedirectToAction("Orders", "Account");
+                if (order == null)
+                {
+                    TempData["Error"] = "Order not found.";
+                    return RedirectToAction("Track", "Order", new { tab = "To Ship" });
+                }
+                if (order.Status != "To Ship")
+                {
+                    TempData["Error"] = "Order can no longer be cancelled.";
+                    return RedirectToAction("Track", "Order", new { tab = order.Status });
+                }
+
+                order.Status = "Cancelled";
+                order.CancelReason = cancelReason;
+
+                // Restore stock
+                if (order.Snapshots != null)
+                {
+                    foreach (var snap in order.Snapshots)
+                    {
+                        var product = MockData.Products.FirstOrDefault(p => p.Id == snap.ProductId);
+                        if (product != null) product.Stock += snap.Quantity;
+                    }
+                }
+
+                TempData["Success"] = "Your order has been cancelled.";
+                return RedirectToAction("Track", "Order", new { tab = "Cancelled" });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("CancelOrder Error: " + ex.Message);
+                TempData["Error"] = "Could not cancel order. Please try again.";
+                return RedirectToAction("Track", "Order", new { tab = "To Ship" });
+            }
+        }
+
+        // ── Request Return/Refund (GCash-based) ──────────────────────
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult RequestRefund(string referenceNumber, string refundReason, string gcashNumber)
+        {
+            try
+            {
+                var order = MockData.Orders.FirstOrDefault(o => o.ReferenceNumber == referenceNumber);
+                var fallbackTab = order?.Status ?? "Out for Delivery";
+
+                if (string.IsNullOrWhiteSpace(gcashNumber) || gcashNumber.Trim().Length != 11 || !gcashNumber.Trim().All(char.IsDigit))
+                {
+                    TempData["Error"] = "Please enter a valid 11-digit GCash number.";
+                    return RedirectToAction("Track", "Order", new { tab = fallbackTab });
+                }
+
+                if (order != null)
+                {
+                    order.Status = "Return/Refund";
+                    order.HasRefundRequest = true;
+                    order.RefundReason = refundReason;
+                    order.GCashNumber = gcashNumber.Trim();
+                }
+
+                TempData["Success"] = "Your return/refund request has been submitted.";
+                return RedirectToAction("Track", "Order", new { tab = "Return/Refund" });
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("RequestRefund Error: " + ex.Message);
                 TempData["Error"] = "Could not submit refund request. Please try again.";
-                return RedirectToAction("Orders", "Account");
+                return RedirectToAction("Track", "Order", new { tab = "Out for Delivery" });
             }
         }
 
+        // ── Submit Review from Completed tab ─────────────────────────
         [HttpPost, ValidateAntiForgeryToken]
         public ActionResult SubmitReview(int productId, string referenceNumber, int stars, string comment)
         {
@@ -754,12 +817,12 @@ namespace Pawchase.Controllers
                 if (string.IsNullOrWhiteSpace(comment))
                 {
                     TempData["Error"] = "Please write a review comment.";
-                    return RedirectToAction("Orders", "Account", new { tab = "To Rate" });
+                    return RedirectToAction("Track", "Order", new { tab = "Completed" });
                 }
                 if (stars < 1 || stars > 5)
                 {
                     TempData["Error"] = "Please select a star rating.";
-                    return RedirectToAction("Orders", "Account", new { tab = "To Rate" });
+                    return RedirectToAction("Track", "Order", new { tab = "Completed" });
                 }
 
                 var userId = 0;
@@ -778,17 +841,15 @@ namespace Pawchase.Controllers
                 };
                 MockData.Reviews.Add(review);
 
-                var order = MockData.Orders.FirstOrDefault(o => o.ReferenceNumber == referenceNumber);
-                if (order != null) order.Status = "Completed";
-
+                // Order stays Completed after rating
                 TempData["Success"] = "Thank you for your review!";
-                return RedirectToAction("Orders", "Account", new { tab = "Completed" });
+                return RedirectToAction("Track", "Order", new { tab = "Completed" });
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("SubmitReview Error: " + ex.Message);
                 TempData["Error"] = "Could not submit review. Please try again.";
-                return RedirectToAction("Orders", "Account", new { tab = "To Rate" });
+                return RedirectToAction("Track", "Order", new { tab = "Completed" });
             }
         }
     }
@@ -1070,6 +1131,7 @@ namespace Pawchase.Controllers
                 if (!IsAdmin) return RedirectToAction("Login");
                 var validStatuses = new[] { "To Ship", "In Transit", "Out for Delivery",
                                             "Delivered", "To Rate", "Completed",
+                                            "Cancelled", "Return/Refund",
                                             "Refund Requested", "Refund Approved" };
                 if (!validStatuses.Contains(status))
                 { TempData["Error"] = "Invalid order status."; return RedirectToAction("Orders"); }
@@ -1078,8 +1140,8 @@ namespace Pawchase.Controllers
                 if (o != null)
                 {
                     o.Status = status;
-                    // Clear refund flag when approved or declined
-                    if (status == "Refund Approved" || status == "Delivered")
+                    // Clear refund flag when approved or when declining (returned to Completed)
+                    if (status == "Refund Approved" || status == "Completed")
                         o.HasRefundRequest = false;
                     TempData["Success"] = "Order status updated to \"" + status + "\".";
                 }

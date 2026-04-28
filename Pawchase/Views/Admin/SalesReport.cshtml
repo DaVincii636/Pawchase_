@@ -279,20 +279,24 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 // ── RAZOR DATA ─────────────────────────────────────────────────────
-var topProductNames = [@Html.Raw(string.Join(",", topProducts.Select(p => "'" + p.Name.Replace("'", "\\'") + "'")))];
-var topProductQtys  = [@string.Join(",", topProducts.Select(p => p.Qty))];
-var statusLabels    = ['To Ship','In Transit','Out for Delivery','Delivered','Refund Approved','Completed'];
-var statusCounts    = [@string.Join(",", statusCounts)];
+var topProductNames  = [@Html.Raw(string.Join(",", topProducts.Select(p => "'" + p.Name.Replace("'", "\\'") + "'")))];
+var topProductQtys   = [@string.Join(",", topProducts.Select(p => p.Qty))];
+var statusLabels     = ['To Ship','In Transit','Out for Delivery','Delivered','Refund Approved','Completed'];
+var statusCounts     = [@string.Join(",", statusCounts)];
+var monthLabels      = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var monthlyRevenue   = [@string.Join(",", monthlyRevenue)];
+var monthlyOrders    = [@string.Join(",", monthlyOrders)];
+var monthlyRefunds   = [@string.Join(",", monthlyRefunds)];
 
 Chart.defaults.font.family = "'Poppins', sans-serif";
 Chart.defaults.font.size   = 11;
 Chart.defaults.color       = '#888';
 
-// ── 1. REVENUE CHART ──────────────────────────────────────────────
+// ── 1. REVENUE CHART (starts with monthly year view) ─────────────
 var revenueCtx   = document.getElementById('revenueChart').getContext('2d');
 var revenueChart = new Chart(revenueCtx, {
     type: 'bar',
-    data: { labels: [], datasets: [{ label: 'Revenue', data: [],
+    data: { labels: monthLabels, datasets: [{ label: 'Revenue', data: monthlyRevenue,
         backgroundColor: 'rgba(129,166,198,0.75)', borderColor: 'rgba(61,107,140,0.9)',
         borderWidth: 1.5, borderRadius: 6 }] },
     options: {
@@ -305,14 +309,15 @@ var revenueChart = new Chart(revenueCtx, {
         }
     }
 });
+document.getElementById('revenueChartTitle').textContent = 'Revenue by Month (@DateTime.Now.Year)';
 
-// ── 2. ORDERS + REFUNDS CHART ─────────────────────────────────────
+// ── 2. ORDERS + REFUNDS CHART (starts with monthly year view) ─────
 var ordersCtx   = document.getElementById('ordersChart').getContext('2d');
 var ordersChart = new Chart(ordersCtx, {
     type: 'bar',
-    data: { labels: [], datasets: [
-        { label: 'Orders', data: [], backgroundColor: 'rgba(129,166,198,0.75)', borderColor: 'rgba(61,107,140,0.9)', borderWidth: 1.5, borderRadius: 5 },
-        { label: 'Refund Requests', data: [], backgroundColor: 'rgba(224,85,85,0.65)', borderColor: 'rgba(200,60,60,0.9)', borderWidth: 1.5, borderRadius: 5 }
+    data: { labels: monthLabels, datasets: [
+        { label: 'Orders', data: monthlyOrders, backgroundColor: 'rgba(129,166,198,0.75)', borderColor: 'rgba(61,107,140,0.9)', borderWidth: 1.5, borderRadius: 5 },
+        { label: 'Refund Requests', data: monthlyRefunds, backgroundColor: 'rgba(224,85,85,0.65)', borderColor: 'rgba(200,60,60,0.9)', borderWidth: 1.5, borderRadius: 5 }
     ]},
     options: {
         responsive: true, maintainAspectRatio: false,
@@ -323,6 +328,7 @@ var ordersChart = new Chart(ordersCtx, {
         }
     }
 });
+document.getElementById('ordersChartTitle').textContent = 'Orders and Refunds by Month (@DateTime.Now.Year)';
 
 // ── 3. TOP PRODUCTS ───────────────────────────────────────────────
 var topCtx = document.getElementById('topProductsChart').getContext('2d');
@@ -349,6 +355,26 @@ new Chart(statusCtx, {
         cutout: '62%' }
 });
 
+// ── STAT CARDS: init with full-dataset totals ─────────────────────
+(function initStatCards() {
+    var rows = document.querySelectorAll('#reportTableBody tr');
+    var totalRev = 0, totalOrders = 0, totalRefunds = 0;
+    rows.forEach(function(row) {
+        var status = row.getAttribute('data-status');
+        var total  = parseFloat(row.getAttribute('data-total')) || 0;
+        if (status !== 'Refund Approved') totalRev += total;
+        totalOrders++;
+        if (row.getAttribute('data-refund') === '1') totalRefunds++;
+    });
+    var aov = totalOrders > 0 ? totalRev / totalOrders : 0;
+    document.getElementById('val-revenue').innerHTML   = '\u20B1' + totalRev.toLocaleString('en-PH',{minimumFractionDigits:2});
+    document.getElementById('val-orders').textContent  = totalOrders;
+    document.getElementById('val-aov').innerHTML       = '\u20B1' + aov.toLocaleString('en-PH',{minimumFractionDigits:2});
+    document.getElementById('val-refunds').textContent = totalRefunds;
+    document.getElementById('activeRangeLabel').textContent = 'All orders (@DateTime.Now.Year)';
+    document.getElementById('tableLabel').textContent = totalOrders + ' order' + (totalOrders !== 1 ? 's' : '') + ' total';
+})();
+
 // ── MAIN FILTER FUNCTION ──────────────────────────────────────────
 function applyDateRange() {
     var fromVal = document.getElementById('dateFrom').value;
@@ -370,7 +396,7 @@ function applyDateRange() {
     });
 
     // ── Compute stats ──
-    var totalRev    = 0, totalOrders = 0, totalRefunds = 0;
+    var totalRev = 0, totalOrders = 0, totalRefunds = 0;
     filtered.forEach(function(row) {
         var total  = parseFloat(row.getAttribute('data-total')) || 0;
         var status = row.getAttribute('data-status');
@@ -379,13 +405,13 @@ function applyDateRange() {
         if (row.getAttribute('data-refund') === '1') totalRefunds++;
     });
     var aov = totalOrders > 0 ? totalRev / totalOrders : 0;
-    document.getElementById('val-revenue').innerHTML  = '\u20B1' + totalRev.toLocaleString('en-PH',{minimumFractionDigits:2});
-    document.getElementById('val-orders').textContent = totalOrders;
-    document.getElementById('val-aov').innerHTML      = '\u20B1' + aov.toLocaleString('en-PH',{minimumFractionDigits:2});
-    document.getElementById('val-refunds').textContent= totalRefunds;
+    document.getElementById('val-revenue').innerHTML   = '\u20B1' + totalRev.toLocaleString('en-PH',{minimumFractionDigits:2});
+    document.getElementById('val-orders').textContent  = totalOrders;
+    document.getElementById('val-aov').innerHTML       = '\u20B1' + aov.toLocaleString('en-PH',{minimumFractionDigits:2});
+    document.getElementById('val-refunds').textContent = totalRefunds;
 
     // ── Build day-by-day labels for charts ──
-    var dayMap = {}; // date string -> {rev, orders, refunds}
+    var dayMap = {};
     var cur = new Date(from);
     while (cur <= to) {
         dayMap[cur.toISOString().slice(0,10)] = { rev: 0, orders: 0, refunds: 0 };
@@ -408,38 +434,30 @@ function applyDateRange() {
     var orderData  = dayKeys.map(function(k) { return dayMap[k].orders; });
     var refundData = dayKeys.map(function(k) { return dayMap[k].refunds; });
 
-    // Format labels nicely
     var chartLabels = dayKeys.map(function(k) {
-        var d = new Date(k);
+        var d = new Date(k + 'T00:00:00');
         return (d.getMonth()+1) + '/' + d.getDate();
     });
 
-    // Revenue chart
-    revenueChart.data.labels   = chartLabels;
+    revenueChart.data.labels = chartLabels;
     revenueChart.data.datasets[0].data = revData;
     revenueChart.update();
     document.getElementById('revenueChartTitle').textContent = 'Revenue by Day';
 
-    // Orders chart
-    ordersChart.data.labels   = chartLabels;
+    ordersChart.data.labels = chartLabels;
     ordersChart.data.datasets[0].data = orderData;
     ordersChart.data.datasets[1].data = refundData;
     ordersChart.update();
     document.getElementById('ordersChartTitle').textContent = 'Orders and Refunds by Day';
 
-    // Active range label
     var opts = { month: 'short', day: 'numeric', year: 'numeric' };
     document.getElementById('activeRangeLabel').textContent =
         from.toLocaleDateString('en-PH', opts) + ' \u2013 ' + to.toLocaleDateString('en-PH', opts);
     document.getElementById('tableLabel').textContent =
         filtered.length + ' order' + (filtered.length !== 1 ? 's' : '') + ' in range';
 
-    // Update export link
     document.getElementById('exportBtn').href =
         '@Url.Action("ExportSalesReport","Admin")?from=' + fromVal + '&to=' + toVal;
 }
-
-// Run on load with default range
-applyDateRange();
 </script>
 }

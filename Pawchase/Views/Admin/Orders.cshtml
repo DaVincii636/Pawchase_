@@ -175,7 +175,7 @@
                                 {
                                     <div class="status-btns">
                                         <button type="button" class="approve-btn"
-                                                onclick="openApproveModal(@o.Id, '@o.ReferenceNumber', '@o.CustomerName', '@o.Total.ToString("N2")', '@o.Phone')">
+                                                onclick="openApproveModal(@o.Id, '@o.ReferenceNumber', '@o.CustomerName', '@o.Total.ToString("N2")', '@(string.IsNullOrWhiteSpace(o.GCashNumber) ? o.Phone : o.GCashNumber)')">
                                             <i class="fa-solid fa-check"></i> Approve
                                         </button>
                                         <button type="button" class="decline-btn"
@@ -235,11 +235,18 @@
                         <div class="refund-info-item"><label>Email</label><span>@o.Email</span></div>
                         <div class="refund-info-item"><label>Phone</label><span>@o.Phone</span></div>
                     </div>
+                    @if (!string.IsNullOrWhiteSpace(o.RefundReason))
+                    {
+                        <div style="background:rgba(224,85,85,0.06);border:1px solid rgba(224,85,85,0.18);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text-mid);line-height:1.6;margin-bottom:.5rem;">
+                            <i class="fa-solid fa-circle-question" style="color:#e05555;margin-right:5px;"></i>
+                            <strong>Reason:</strong> @o.RefundReason
+                        </div>
+                    }
                     <div class="gcash-box">
                         <div class="gcash-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
                         <div class="gcash-info">
                             <label>GCash Refund To</label>
-                            <div class="gcash-number">@o.Phone</div>
+                            <div class="gcash-number">@(string.IsNullOrWhiteSpace(o.GCashNumber) ? o.Phone : o.GCashNumber)</div>
                             <div class="gcash-name">@o.CustomerName</div>
                         </div>
                         <div class="gcash-amount">
@@ -249,7 +256,7 @@
                     </div>
                     <div class="refund-actions">
                         <button type="button" class="btn-approve"
-                                onclick="openApproveModal(@o.Id, '@o.ReferenceNumber', '@o.CustomerName', '@o.Total.ToString("N2")', '@o.Phone')">
+                                onclick="openApproveModal(@o.Id, '@o.ReferenceNumber', '@o.CustomerName', '@o.Total.ToString("N2")', '@(string.IsNullOrWhiteSpace(o.GCashNumber) ? o.Phone : o.GCashNumber)')">
                             <i class="fa-solid fa-check"></i> Approve Refund
                         </button>
                         <button type="button" class="btn-decline"
@@ -353,9 +360,9 @@
         // ── Decline refund modal ──
         function openDeclineModal(id, ref, name) {
             document.getElementById('declineModalText').textContent =
-                'Decline ' + name + '\'s refund request for order ' + ref + '? The order status will be set back to Delivered.';
+                'Decline ' + name + '\'s refund request for order ' + ref + '? The order will be returned to Completed.';
             document.getElementById('declineConfirmLink').href =
-                '@Url.Action("UpdateOrderStatus","Admin")?id=' + id + '&status=Delivered';
+                '@Url.Action("UpdateOrderStatus","Admin")?id=' + id + '&status=Completed';
             document.getElementById('declineModal').style.display = 'flex';
         }
         function closeDeclineModal() { document.getElementById('declineModal').style.display = 'none'; }

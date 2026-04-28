@@ -1,14 +1,18 @@
-@using Pawchase.Models
+﻿@using Pawchase.Models
 @model List<Pawchase.Models.Order>
 @{
     ViewBag.Title = "My Orders";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var tab = ViewBag.Tab as string ?? "All";
-    var tabs = new[] { "All", "To Ship", "In Transit", "Out for Delivery", "To Rate", "Completed" };
+    var tabs = new[] { "All", "To Ship", "In Transit", "Out for Delivery", "Completed", "Cancelled", "Return/Refund" };
     var tabIcons = new Dictionary<string, string> {
-        {"All","fa-solid fa-list-check"},{"To Ship","fa-solid fa-box"},{"In Transit","fa-solid fa-truck"},
-        {"Out for Delivery","fa-solid fa-location-dot"},{"To Rate","fa-regular fa-star"},
-        {"Completed","fa-solid fa-circle-check"}
+        {"All","fa-solid fa-list-check"},
+        {"To Ship","fa-solid fa-box"},
+        {"In Transit","fa-solid fa-truck"},
+        {"Out for Delivery","fa-solid fa-location-dot"},
+        {"Completed","fa-solid fa-circle-check"},
+        {"Cancelled","fa-solid fa-ban"},
+        {"Return/Refund","fa-solid fa-rotate-left"}
     };
     var filtered = tab == "All" ? Model : Model.Where(o => o.Status == tab).ToList();
 }
@@ -66,16 +70,39 @@
                 string pillClass = order.Status == "To Ship" ? "sp-ship"
                                  : order.Status == "In Transit" ? "sp-transit"
                                  : order.Status == "Out for Delivery" ? "sp-delivery"
-                                 : order.Status == "To Rate" ? "sp-rate"
                                  : order.Status == "Completed" ? "sp-done"
-                                 : "sp-refund";
+                                 : order.Status == "Cancelled" ? "sp-cancel"
+                                 : order.Status == "Return/Refund" ? "sp-refund"
+                                 : "sp-ship";
+
+                var snapList = order.Snapshots != null && order.Snapshots.Any()
+                    ? order.Snapshots
+                    : (order.Items != null
+                        ? order.Items.Select(i => new Pawchase.Models.OrderItemSnapshot
+                        {
+                            ProductId = i.Product.Id,
+                            ProductName = i.Product.Name,
+                            ProductImageUrl = i.Product.ImageUrl,
+                            VariantImageUrl = i.SelectedVariant?.ImageUrl,
+                            Quantity = i.Quantity,
+                            UnitPrice = i.Product.Price
+                        }).ToList()
+                        : new List<Pawchase.Models.OrderItemSnapshot>());
+
+                var firstProductId = snapList.Any() ? snapList.First().ProductId : 0;
+                var firstProductName = snapList.Any() ? snapList.First().ProductName : "";
+
                 <div class="order-card">
                     <div class="order-card-head">
-                        <div><strong>@order.ReferenceNumber</strong><small>@order.OrderDate.ToString("MMMM dd, yyyy")</small></div>
+                        <div>
+                            <strong>@order.ReferenceNumber</strong>
+                            <small>@order.OrderDate.ToString("MMMM dd, yyyy")</small>
+                        </div>
                         <span class="status-pill @pillClass">@order.Status</span>
                     </div>
+
+                    <!-- Thumbnails -->
                     <div class="order-items-row">
-                        @{ var snapList = order.Snapshots != null && order.Snapshots.Any() ? order.Snapshots : (order.Items != null ? order.Items.Select(i => new Pawchase.Models.OrderItemSnapshot { ProductName = i.Product.Name, ProductImageUrl = i.Product.ImageUrl, VariantImageUrl = i.SelectedVariant?.ImageUrl, Quantity = i.Quantity, UnitPrice = i.Product.Price }).ToList() : new List<Pawchase.Models.OrderItemSnapshot>()); }
                         @foreach (var snap in snapList.Take(3))
                         {
                             var thumbImg = !string.IsNullOrEmpty(snap.VariantImageUrl) ? snap.VariantImageUrl : snap.ProductImageUrl;
@@ -94,27 +121,66 @@
                             </div>
                         }
                         @if (snapList.Count > 3)
-                        {<span style="font-size:11px;color:var(--text-light);align-self:center">+@(snapList.Count-3) more</span>}
+                        {
+                            <span style="font-size:11px;color:var(--text-light);align-self:center">+@(snapList.Count - 3) more</span>
+                        }
                     </div>
+
+                    <!-- Footer -->
                     <div class="order-card-foot">
                         <span class="order-total">Total: &#8369;@order.Total.ToString("N2")</span>
                         <div class="order-actions">
-                            <button class="btn-sm outline" onclick="openDetails('@order.ReferenceNumber')"><i class="fa-solid fa-receipt"></i> See Details</button>
+
+                            <!-- Always: See Details -->
+                            <button class="btn-sm outline" onclick="openDetails('@order.ReferenceNumber')">
+                                <i class="fa-solid fa-receipt"></i> See Details
+                            </button>
+
+                            @* ── TO SHIP: Cancel button ── *@
+                            @if (order.Status == "To Ship")
+                            {
+                                <button class="btn-sm danger"
+                                        onclick="openCancelModal('@order.ReferenceNumber')">
+                                    <i class="fa-solid fa-ban"></i> Cancel Order
+                                </button>
+                            }
+
+                            @* ── OUT FOR DELIVERY: Received + Return/Refund ── *@
                             @if (order.Status == "Out for Delivery")
                             {
-                                <a href="@Url.Action("MarkReceived","Order",new{referenceNumber=order.ReferenceNumber})" class="btn-sm primary" onclick="return confirm('Confirm received?')"><i class="fa-solid fa-check"></i> Received</a>
-                                <a href="@Url.Action("RequestRefund","Order",new{referenceNumber=order.ReferenceNumber})" class="btn-sm danger" onclick="return confirm('Request refund?')"><i class="fa-solid fa-rotate-left"></i> Refund</a>
+                                <button class="btn-sm primary"
+                                        onclick="openReceivedModal('@order.ReferenceNumber')">
+                                    <i class="fa-solid fa-check"></i> Received
+                                </button>
+                                if (!order.HasRefundRequest)
+                                {
+                                    <button class="btn-sm danger"
+                                            onclick="openReturnRefundModal('@order.ReferenceNumber','@order.Total.ToString("N2")')">
+                                        <i class="fa-solid fa-rotate-left"></i> Return/Refund
+                                    </button>
+                                }
                             }
-                            @if (order.Status == "To Rate")
-                            {
-                                <button class="btn-sm primary" onclick="toggleReview('@order.ReferenceNumber')"><i class="fa-regular fa-star"></i> Write Review</button>
-                            }
+
+                            @* ── COMPLETED: Rate + Return/Refund ── *@
                             @if (order.Status == "Completed")
-                            {<a href="@Url.Action("Index","Product")" class="btn-sm outline">Buy Again</a>}
+                            {
+                                <button class="btn-sm primary"
+                                        onclick="openReviewModal('@order.ReferenceNumber','@firstProductId','@Html.Raw(firstProductName.Replace("'","\\'"))')">
+                                    <i class="fa-regular fa-star"></i> Rate
+                                </button>
+                                if (!order.HasRefundRequest)
+                                {
+                                    <button class="btn-sm danger"
+                                            onclick="openReturnRefundModal('@order.ReferenceNumber','@order.Total.ToString("N2")')">
+                                        <i class="fa-solid fa-rotate-left"></i> Return/Refund
+                                    </button>
+                                }
+                            }
+
                         </div>
                     </div>
 
-
+                    <!-- Hidden data block for See Details modal -->
                     <div id="details-@order.ReferenceNumber" class="order-detail-data" style="display:none"
                          data-ref="@order.ReferenceNumber"
                          data-date="@order.OrderDate.ToString("MMMM dd, yyyy")"
@@ -126,117 +192,567 @@
                             {
                                 <div class="detail-item"
                                      data-name="@snap.ProductName"
-                                     data-qty="@(snap.Quantity)"
+                                     data-qty="@snap.Quantity"
                                      data-subtotal="&#8369;@((snap.UnitPrice * snap.Quantity).ToString("N2"))">
                                 </div>
                             }
                         </div>
                     </div>
-                    @if (order.Status == "To Rate")
+
+                    @* ── CANCEL hidden POST form ── *@
+                    @if (order.Status == "To Ship")
                     {
-                        <div id="review-@order.ReferenceNumber" class="review-modal" style="display:none;background:rgba(243,227,208,0.3);border-radius:var(--radius);border:1.5px solid var(--lblue);padding:1.2rem;margin-top:.75rem">
-                            @using (Html.BeginForm("SubmitReview", "Order", FormMethod.Post))
-                            {
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="productId" value="@(order.Snapshots != null && order.Snapshots.Any() ? order.Snapshots.First().ProductId : order.Items.First().Product.Id)" />
-                                <input type="hidden" name="referenceNumber" value="@order.ReferenceNumber" />
-                                <p style="font-size:13px;font-weight:700;margin-bottom:.5rem">Rate this order</p>
-                                <div class="stars-select">
-                                    @for (int si = 1; si <= 5; si++)
-                                    {<i class="fa-solid fa-star" data-val="@si" style="color:#E6A520;cursor:pointer;font-size:1.4rem" onclick="setStars(this,@si,'stars-@order.ReferenceNumber')"></i>}
-                                </div>
-                                <input type="hidden" name="stars" id="stars-@order.ReferenceNumber" value="5" />
-                                <div class="form-group" style="margin-top:.75rem"><textarea name="comment" rows="3" placeholder="Share your experience..." required style="border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:13px;width:100%;outline:none;font-family:'Poppins',sans-serif"></textarea></div>
-                                <div style="display:flex;gap:8px;margin-top:.75rem">
-                                    <button type="submit" class="btn-primary" style="padding:8px 18px;font-size:12px">Submit</button>
-                                    <button type="button" class="btn-outline" style="padding:8px 18px;font-size:12px" onclick="toggleReview('@order.ReferenceNumber')">Cancel</button>
-                                </div>
-                            }
-                        </div>
+                        using (Html.BeginForm("CancelOrder", "Order", FormMethod.Post, new { id = "cancel-form-" + order.ReferenceNumber, style = "display:none" }))
+                        {
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="referenceNumber" value="@order.ReferenceNumber" />
+                            <input type="hidden" name="cancelReason" id="cancel-reason-val-@order.ReferenceNumber" />
+                        }
                     }
+
+                    @* ── RECEIVED hidden GET link ── *@
+                    @if (order.Status == "Out for Delivery")
+                    {
+                        <a id="received-link-@order.ReferenceNumber"
+                           href="@Url.Action("MarkReceived","Order",new{referenceNumber=order.ReferenceNumber})"
+                           style="display:none"></a>
+                    }
+
+                    @* ── REFUND hidden POST form ── *@
+                    @if (order.Status == "Out for Delivery" || order.Status == "Completed")
+                    {
+                        using (Html.BeginForm("RequestRefund", "Order", FormMethod.Post, new { id = "refund-form-" + order.ReferenceNumber, style = "display:none" }))
+                        {
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="referenceNumber" value="@order.ReferenceNumber" />
+                            <input type="hidden" name="refundReason" id="refund-reason-val-@order.ReferenceNumber" />
+                            <input type="hidden" name="gcashNumber" id="refund-gcash-val-@order.ReferenceNumber" />
+                        }
+                    }
+
+                    @* ── REVIEW hidden POST form ── *@
+                    @if (order.Status == "Completed")
+                    {
+                        using (Html.BeginForm("SubmitReview", "Order", FormMethod.Post, new { id = "review-form-" + order.ReferenceNumber, style = "display:none" }))
+                        {
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="productId" id="review-productId-@order.ReferenceNumber" value="@firstProductId" />
+                            <input type="hidden" name="referenceNumber" value="@order.ReferenceNumber" />
+                            <input type="hidden" name="stars" id="review-stars-@order.ReferenceNumber" value="5" />
+                            <input type="hidden" name="comment" id="review-comment-@order.ReferenceNumber" />
+                        }
+                    }
+
                 </div>
             }
         </div>
     </div>
 </section>
 
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SEE DETAILS MODAL                           -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="order-detail-modal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(30,24,18,0.55);padding:1rem;" onclick="if(event.target===this)closeDetails()">
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:520px;box-shadow:0 20px 60px rgba(0,0,0,0.2);overflow:hidden;animation:modalIn .2s ease;">
+        <div style="background:linear-gradient(135deg,#6b93b8,#4a7399);padding:1.2rem 1.5rem;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <i class="fa-solid fa-receipt" style="color:#fff;font-size:16px;"></i>
+                <span style="color:#fff;font-weight:700;font-size:15px;">Order Details</span>
+            </div>
+            <button onclick="closeDetails()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div style="padding:1.5rem;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;padding-bottom:1.2rem;border-bottom:1px solid rgba(210,196,180,0.4);margin-bottom:1.2rem;">
+                <div>
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:3px;">Reference Number</div>
+                    <div id="modal-ref" style="font-size:13px;font-weight:700;color:#3a3226;"></div>
+                </div>
+                <div>
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:3px;">Order Date</div>
+                    <div id="modal-date" style="font-size:13px;font-weight:700;color:#3a3226;"></div>
+                </div>
+                <div>
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:3px;">Customer</div>
+                    <div id="modal-customer" style="font-size:13px;font-weight:700;color:#3a3226;"></div>
+                </div>
+                <div>
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:3px;">Delivery Address</div>
+                    <div id="modal-address" style="font-size:13px;font-weight:700;color:#3a3226;"></div>
+                </div>
+            </div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:.6rem;">Items Ordered</div>
+            <div id="modal-items" style="margin-bottom:1rem;"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.75rem;border-top:2px solid rgba(210,196,180,0.5);">
+                <span style="font-size:13px;font-weight:700;color:#3a3226;">Total Paid</span>
+                <span id="modal-total" style="font-size:16px;font-weight:800;color:#4a7399;"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- CANCEL ORDER MODAL                          -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="cancel-modal" onclick="if(event.target===this)closeCancelModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+    <div style="background:#fff;border-radius:20px;width:90%;max-width:460px;box-shadow:0 24px 70px rgba(0,0,0,0.2);overflow:hidden;animation:modalIn .2s ease;">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:36px;height:36px;border-radius:50%;background:rgba(224,85,85,0.1);display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(224,85,85,0.2);">
+                    <i class="fa-solid fa-ban" style="font-size:13px;color:#e05555;"></i>
+                </div>
+                <div>
+                    <strong style="font-size:14px;color:var(--text);">Cancel Order</strong>
+                    <div id="cancel-ref-label" style="font-size:11px;color:var(--text-light);"></div>
+                </div>
+            </div>
+            <button onclick="closeCancelModal()" style="margin-left:auto;background:none;border:none;color:var(--text-light);font-size:18px;cursor:pointer;"><i class="fa-solid fa-times"></i></button>
+        </div>
+        <!-- Body -->
+        <div style="padding:18px;display:flex;flex-direction:column;gap:1rem;">
+            <div class="form-group">
+                <label style="font-size:13px;font-weight:600;color:var(--text-mid);display:flex;align-items:center;gap:6px;">
+                    <i class="fa-solid fa-circle-question" style="color:var(--blue);"></i>
+                    Reason for Cancellation <span style="color:#e05555;">*</span>
+                </label>
+                <select id="cancel-reason-select" style="padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;color:var(--text);outline:none;width:100%;background:#fff;appearance:none;">
+                    <option value="">— Select a reason —</option>
+                    <option value="Changed my mind">Changed my mind</option>
+                    <option value="Ordered by mistake">Ordered by mistake</option>
+                    <option value="Found a better price">Found a better price</option>
+                    <option value="Delivery too slow">Delivery too slow</option>
+                    <option value="Other">Other</option>
+                </select>
+                <div id="cancel-reason-error" style="font-size:11px;color:#e05555;display:none;margin-top:3px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Please select a reason.
+                </div>
+            </div>
+            <div style="background:rgba(224,85,85,0.06);border:1px solid rgba(224,85,85,0.15);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--text-mid);line-height:1.65;">
+                <i class="fa-solid fa-circle-info" style="color:#e05555;margin-right:4px;"></i>
+                Orders can only be cancelled while in <strong>To Ship</strong> status. Once your order is in transit, cancellation is no longer possible.
+            </div>
+        </div>
+        <!-- Footer -->
+        <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;background:#fdfcfb;">
+            <button onclick="closeCancelModal()" style="padding:10px 22px;border-radius:50px;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);cursor:pointer;font-family:'Poppins',sans-serif;">Keep Order</button>
+            <button onclick="confirmCancel()" style="padding:10px 22px;border-radius:50px;font-size:13px;font-weight:700;background:linear-gradient(135deg,#e05555,#c0392b);color:#fff;border:none;cursor:pointer;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;gap:7px;box-shadow:0 4px 14px rgba(224,85,85,0.3);">
+                <i class="fa-solid fa-ban"></i> Confirm Cancellation
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- RECEIVED CONFIRMATION MODAL                 -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="received-modal" onclick="if(event.target===this)closeReceivedModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+    <div style="background:#fff;border-radius:20px;padding:2rem;max-width:420px;width:90%;box-shadow:0 24px 70px rgba(61,107,140,0.2);text-align:center;animation:modalIn .2s ease;">
+        <div style="width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,rgba(46,204,113,0.15),rgba(46,204,113,0.05));display:flex;align-items:center;justify-content:center;margin:0 auto 1.1rem;border:2px solid rgba(46,204,113,0.2);">
+            <i class="fa-solid fa-box-open" style="font-size:1.5rem;color:#1e8449;"></i>
+        </div>
+        <div style="font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:.4rem;">Item Received?</div>
+        <div style="font-size:13px;color:var(--text-mid);margin-bottom:1.5rem;line-height:1.65;">
+            Confirm that you've received your order. It will be moved to <strong>Completed</strong>.
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+            <button onclick="closeReceivedModal()" style="padding:10px 24px;border-radius:50px;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);cursor:pointer;font-family:'Poppins',sans-serif;">Not Yet</button>
+            <button onclick="confirmReceived()" style="padding:10px 24px;border-radius:50px;font-size:13px;font-weight:700;background:linear-gradient(135deg,#2ecc71,#1e8449);color:#fff;border:none;cursor:pointer;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;gap:7px;box-shadow:0 4px 14px rgba(46,204,113,0.35);">
+                <i class="fa-solid fa-check"></i> Yes, Received!
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- RETURN / REFUND MODAL                       -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="return-refund-modal" onclick="if(event.target===this)closeReturnRefundModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+    <div style="max-width:520px;width:90%;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.35);display:flex;flex-direction:column;animation:modalIn .2s ease;">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:36px;height:36px;border-radius:50%;background:rgba(224,85,85,0.1);display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(224,85,85,0.2);">
+                    <i class="fa-solid fa-rotate-left" style="font-size:13px;color:#e05555;"></i>
+                </div>
+                <div>
+                    <strong style="font-size:14px;color:var(--text);">Return / Refund Request</strong>
+                    <div id="rr-order-ref-label" style="font-size:11px;color:var(--text-light);"></div>
+                </div>
+            </div>
+            <button onclick="closeReturnRefundModal()" style="margin-left:auto;background:none;border:none;color:var(--text-light);font-size:18px;cursor:pointer;"><i class="fa-solid fa-times"></i></button>
+        </div>
+        <!-- Body -->
+        <div style="padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:1rem;">
+
+            <!-- Reason -->
+            <div class="form-group">
+                <label style="font-size:13px;font-weight:600;color:var(--text-mid);display:flex;align-items:center;gap:6px;">
+                    <i class="fa-solid fa-circle-question" style="color:var(--blue);"></i>
+                    Reason for Return / Refund <span style="color:#e05555;">*</span>
+                </label>
+                <select id="rr-reason" style="padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;color:var(--text);outline:none;width:100%;background:#fff;appearance:none;" onchange="handleReasonChange(this.value)">
+                    <option value="">— Select a reason —</option>
+                    <option value="Wrong item delivered">Wrong item delivered</option>
+                    <option value="Item damaged or defective">Item damaged or defective</option>
+                    <option value="Item not as described">Item not as described</option>
+                    <option value="Missing items in order">Missing items in order</option>
+                    <option value="Changed my mind">Changed my mind</option>
+                    <option value="Other">Other (please specify)</option>
+                </select>
+                <div id="rr-reason-error" style="font-size:11px;color:#e05555;display:none;margin-top:3px;"><i class="fa-solid fa-triangle-exclamation"></i> Please select a reason.</div>
+            </div>
+
+            <!-- Other reason -->
+            <div id="rr-other-wrap" style="display:none;">
+                <label style="font-size:13px;font-weight:600;color:var(--text-mid);">Specify reason</label>
+                <textarea id="rr-other-text" rows="2" placeholder="Tell us more…" style="padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;resize:vertical;outline:none;width:100%;margin-top:5px;"></textarea>
+            </div>
+
+            <!-- Evidence image -->
+            <div class="form-group">
+                <label style="font-size:13px;font-weight:600;color:var(--text-mid);display:flex;align-items:center;gap:6px;">
+                    <i class="fa-solid fa-image" style="color:var(--blue);"></i>
+                    Evidence Photo <span style="font-size:11px;font-weight:400;color:var(--text-light);">(optional)</span>
+                </label>
+                <div id="rr-img-box" onclick="document.getElementById('rr-img-input').click()"
+                     style="height:100px;background:linear-gradient(145deg,var(--peach),#eedfd0);border-radius:10px;border:2px dashed rgba(129,166,198,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;transition:border-color .2s;margin-top:5px;">
+                    <img id="rr-img-preview" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;" />
+                    <div id="rr-img-placeholder" style="text-align:center;color:var(--blue-dark);pointer-events:none;">
+                        <i class="fa-regular fa-image" style="font-size:1.5rem;display:block;margin-bottom:4px;"></i>
+                        <span style="font-size:11px;font-weight:600;">Click to upload photo</span>
+                    </div>
+                </div>
+                <input type="file" id="rr-img-input" accept="image/*" style="display:none;" onchange="previewRRImage(this)" />
+            </div>
+
+            <!-- GCash Number -->
+            <div class="form-group">
+                <label style="font-size:13px;font-weight:600;color:var(--text-mid);display:flex;align-items:center;gap:6px;">
+                    <i class="fa-solid fa-mobile-screen" style="color:var(--blue);"></i>
+                    GCash Number <span style="color:#e05555;">*</span>
+                </label>
+                <input type="text" id="rr-gcash" maxlength="11" placeholder="09XXXXXXXXX"
+                       oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                       style="padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;width:100%;box-sizing:border-box;margin-top:5px;" />
+                <div id="rr-gcash-error" style="font-size:11px;color:#e05555;display:none;margin-top:3px;"><i class="fa-solid fa-triangle-exclamation"></i> Please enter a valid 11-digit GCash number.</div>
+            </div>
+
+            <!-- Refund amount -->
+            <div style="background:linear-gradient(135deg,rgba(243,227,208,0.6),rgba(237,221,207,0.4));border:1px solid var(--taupe);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <i class="fa-solid fa-peso-sign" style="color:var(--blue-dark);font-size:14px;"></i>
+                    <span style="font-size:12px;font-weight:600;color:var(--text-mid);">Estimated Refund Amount</span>
+                </div>
+                <span id="rr-amount-display" style="font-size:15px;font-weight:800;color:var(--blue-dark);"></span>
+            </div>
+
+            <!-- Info note -->
+            <div style="background:rgba(129,166,198,0.08);border:1px solid rgba(129,166,198,0.2);border-radius:var(--radius-sm);padding:10px 14px;font-size:11px;color:var(--text-light);line-height:1.65;">
+                <i class="fa-solid fa-circle-info" style="color:var(--blue);margin-right:4px;"></i>
+                Refund requests are reviewed within <strong>1–3 business days</strong>. Approved refunds will be sent to your GCash number.
+            </div>
+        </div>
+        <!-- Footer -->
+        <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;background:#fdfcfb;">
+            <button onclick="closeReturnRefundModal()" style="padding:10px 22px;border-radius:50px;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);cursor:pointer;font-family:'Poppins',sans-serif;">Cancel</button>
+            <button onclick="submitReturnRefund()" style="padding:10px 22px;border-radius:50px;font-size:13px;font-weight:700;background:linear-gradient(135deg,#e05555,#c0392b);color:#fff;border:none;cursor:pointer;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;gap:7px;box-shadow:0 4px 14px rgba(224,85,85,0.3);">
+                <i class="fa-solid fa-paper-plane"></i> Submit Request
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- WRITE REVIEW MODAL (from Completed tab)     -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="review-modal" onclick="if(event.target===this)closeReviewModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+    <div style="max-width:500px;width:90%;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.35);display:flex;flex-direction:column;animation:modalIn .2s ease;">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,rgba(230,165,32,0.2),rgba(230,165,32,0.08));display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(230,165,32,0.3);">
+                    <i class="fa-solid fa-star" style="font-size:13px;color:#E6A520;"></i>
+                </div>
+                <div>
+                    <strong style="font-size:14px;color:var(--text);">Write a Review</strong>
+                    <div id="review-modal-product-name" style="font-size:11px;color:var(--text-light);"></div>
+                </div>
+            </div>
+            <button onclick="closeReviewModal()" style="margin-left:auto;background:none;border:none;color:var(--text-light);font-size:18px;cursor:pointer;"><i class="fa-solid fa-times"></i></button>
+        </div>
+        <!-- Body -->
+        <div style="padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:1rem;">
+
+            <!-- Stars -->
+            <div class="form-group">
+                <label style="font-size:13px;font-weight:600;color:var(--text-mid);">Your Rating <span style="color:#e05555;">*</span></label>
+                <div id="review-modal-stars-ui" style="display:flex;gap:8px;margin-top:4px;">
+                    @for (int s = 1; s <= 5; s++)
+                    {
+                        <i class="fa-solid fa-star" style="font-size:1.6rem;color:#E6A520;cursor:pointer;transition:transform .15s;"
+                           onclick="setReviewModalStar(@s)"
+                           onmouseover="hoverReviewStar(@s)"
+                           onmouseout="resetReviewStarHover()"></i>
+                    }
+                </div>
+                <div id="review-modal-star-label" style="font-size:11px;color:var(--text-light);margin-top:4px;">5 stars — Excellent</div>
+                <div id="review-stars-error" style="font-size:11px;color:#e05555;display:none;margin-top:3px;"><i class="fa-solid fa-triangle-exclamation"></i> Please select a rating.</div>
+            </div>
+
+            <!-- Review text -->
+            <div class="form-group">
+                <label style="font-size:13px;font-weight:600;color:var(--text-mid);display:flex;align-items:center;gap:6px;">
+                    <i class="fa-solid fa-comment" style="color:var(--blue);"></i>
+                    Your Review <span style="color:#e05555;">*</span>
+                </label>
+                <textarea id="review-modal-comment" rows="4" placeholder="Share your experience with this product…"
+                          style="padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;resize:vertical;outline:none;width:100%;min-height:90px;margin-top:5px;"></textarea>
+                <div id="review-comment-error" style="font-size:11px;color:#e05555;display:none;margin-top:3px;"><i class="fa-solid fa-triangle-exclamation"></i> Please write your review.</div>
+            </div>
+
+            <!-- Photo upload -->
+            <div class="form-group">
+                <label style="font-size:13px;font-weight:600;color:var(--text-mid);display:flex;align-items:center;gap:6px;">
+                    <i class="fa-solid fa-image" style="color:var(--blue);"></i>
+                    Add a Photo <span style="font-size:11px;font-weight:400;color:var(--text-light);">(optional)</span>
+                </label>
+                <div id="review-img-box" onclick="document.getElementById('review-img-input').click()"
+                     style="height:100px;background:linear-gradient(145deg,var(--peach),#eedfd0);border-radius:10px;border:2px dashed rgba(129,166,198,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;transition:border-color .2s;margin-top:5px;">
+                    <img id="review-img-preview" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;" />
+                    <div id="review-img-placeholder" style="text-align:center;color:var(--blue-dark);pointer-events:none;">
+                        <i class="fa-regular fa-image" style="font-size:1.5rem;display:block;margin-bottom:4px;"></i>
+                        <span style="font-size:11px;font-weight:600;">Click to upload photo</span>
+                    </div>
+                </div>
+                <input type="file" id="review-img-input" accept="image/*" style="display:none;" onchange="previewReviewImage(this)" />
+            </div>
+        </div>
+        <!-- Footer -->
+        <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;background:#fdfcfb;">
+            <button onclick="closeReviewModal()" style="padding:10px 22px;border-radius:50px;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);cursor:pointer;font-family:'Poppins',sans-serif;">Cancel</button>
+            <button onclick="submitReviewModal()" style="padding:10px 22px;border-radius:50px;font-size:13px;font-weight:700;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;border:none;cursor:pointer;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;gap:7px;box-shadow:0 4px 14px rgba(129,166,198,0.4);">
+                <i class="fa-solid fa-paper-plane"></i> Submit Review
+            </button>
+        </div>
+    </div>
+</div>
+
+
 @section scripts {
     <script src="@Url.Content("~/Scripts/account.js")"></script>
     <script>
+
+        /* ─────────────────────────────────────────────
+           SEE DETAILS
+        ───────────────────────────────────────────── */
         function openDetails(ref) {
             var data = document.getElementById('details-' + ref);
             if (!data) return;
-
-            var items = data.querySelectorAll('.detail-item');
             var itemsHtml = '';
-            items.forEach(function (item) {
-                itemsHtml += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px dashed rgba(210,196,180,0.35);">' +
+            data.querySelectorAll('.detail-item').forEach(function (item) {
+                itemsHtml += '<div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px dashed rgba(210,196,180,0.35);">' +
                     '<span style="color:#3a3226;">' + item.dataset.name + ' <span style="color:#a89880;">x' + item.dataset.qty + '</span></span>' +
-                    '<span style="font-weight:600;color:#3a3226;">' + item.dataset.subtotal + '</span>' +
-                    '</div>';
+                    '<span style="font-weight:600;color:#3a3226;">' + item.dataset.subtotal + '</span></div>';
             });
-
             document.getElementById('modal-ref').textContent = data.dataset.ref;
             document.getElementById('modal-date').textContent = data.dataset.date;
             document.getElementById('modal-customer').textContent = data.dataset.customer;
             document.getElementById('modal-address').textContent = data.dataset.address;
             document.getElementById('modal-items').innerHTML = itemsHtml;
             document.getElementById('modal-total').textContent = data.dataset.total;
-
             document.getElementById('order-detail-modal').style.display = 'flex';
             document.body.style.overflow = 'hidden';
         }
-
         function closeDetails() {
             document.getElementById('order-detail-modal').style.display = 'none';
             document.body.style.overflow = '';
         }
 
+        /* ─────────────────────────────────────────────
+           CANCEL ORDER
+        ───────────────────────────────────────────── */
+        var _cancelRef = null;
+        function openCancelModal(ref) {
+            _cancelRef = ref;
+            document.getElementById('cancel-ref-label').textContent = 'Order: ' + ref;
+            document.getElementById('cancel-reason-select').value = '';
+            document.getElementById('cancel-reason-error').style.display = 'none';
+            document.getElementById('cancel-modal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        function closeCancelModal() {
+            document.getElementById('cancel-modal').style.display = 'none';
+            document.body.style.overflow = '';
+            _cancelRef = null;
+        }
+        function confirmCancel() {
+            var reason = document.getElementById('cancel-reason-select').value;
+            if (!reason) {
+                document.getElementById('cancel-reason-error').style.display = 'block';
+                return;
+            }
+            var reasonInput = document.getElementById('cancel-reason-val-' + _cancelRef);
+            var form = document.getElementById('cancel-form-' + _cancelRef);
+            if (!reasonInput || !form) return;
+            reasonInput.value = reason;
+            form.submit();
+        }
+
+        /* ─────────────────────────────────────────────
+           RECEIVED
+        ───────────────────────────────────────────── */
+        var _receivedRef = null;
+        function openReceivedModal(ref) {
+            _receivedRef = ref;
+            document.getElementById('received-modal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        function closeReceivedModal() {
+            document.getElementById('received-modal').style.display = 'none';
+            document.body.style.overflow = '';
+            _receivedRef = null;
+        }
+        function confirmReceived() {
+            if (!_receivedRef) return;
+            var link = document.getElementById('received-link-' + _receivedRef);
+            if (link) window.location.href = link.href;
+        }
+
+        /* ─────────────────────────────────────────────
+           RETURN / REFUND
+        ───────────────────────────────────────────── */
+        var _refundRef = null;
+        function openReturnRefundModal(ref, amount) {
+            _refundRef = ref;
+            document.getElementById('rr-order-ref-label').textContent = 'Order: ' + ref;
+            document.getElementById('rr-amount-display').textContent = '₱' + amount;
+            document.getElementById('rr-reason').value = '';
+            document.getElementById('rr-gcash').value = '';
+            document.getElementById('rr-other-text').value = '';
+            document.getElementById('rr-other-wrap').style.display = 'none';
+            document.getElementById('rr-reason-error').style.display = 'none';
+            document.getElementById('rr-gcash-error').style.display = 'none';
+            document.getElementById('rr-img-preview').style.display = 'none';
+            document.getElementById('rr-img-preview').src = '';
+            document.getElementById('rr-img-placeholder').style.display = 'flex';
+            document.getElementById('rr-img-input').value = '';
+            document.getElementById('return-refund-modal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        function closeReturnRefundModal() {
+            document.getElementById('return-refund-modal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+        function handleReasonChange(val) {
+            document.getElementById('rr-other-wrap').style.display = val === 'Other' ? 'block' : 'none';
+            if (val) document.getElementById('rr-reason-error').style.display = 'none';
+        }
+        function previewRRImage(input) {
+            if (!input.files || !input.files[0]) return;
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('rr-img-preview').src = e.target.result;
+                document.getElementById('rr-img-preview').style.display = 'block';
+                document.getElementById('rr-img-placeholder').style.display = 'none';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+        function submitReturnRefund() {
+            var reason = document.getElementById('rr-reason').value;
+            var gcash = document.getElementById('rr-gcash').value.trim();
+            var valid = true;
+            if (!reason) { document.getElementById('rr-reason-error').style.display = 'block'; valid = false; }
+            if (gcash.length !== 11 || !/^\d{11}$/.test(gcash)) { document.getElementById('rr-gcash-error').style.display = 'block'; valid = false; }
+            if (!valid) return;
+            var finalReason = reason === 'Other'
+                ? (document.getElementById('rr-other-text').value.trim() || 'Other')
+                : reason;
+            var reasonInput = document.getElementById('refund-reason-val-' + _refundRef);
+            var gcashInput = document.getElementById('refund-gcash-val-' + _refundRef);
+            var form = document.getElementById('refund-form-' + _refundRef);
+            if (!form) return;
+            reasonInput.value = finalReason;
+            gcashInput.value = gcash;
+            form.submit();
+        }
+
+        /* ─────────────────────────────────────────────
+           WRITE REVIEW
+        ───────────────────────────────────────────── */
+        var _reviewRef = null;
+        var _reviewStars = 5;
+        var _starLabels = ['', '1 star — Poor', '2 stars — Fair', '3 stars — Good', '4 stars — Very Good', '5 stars — Excellent'];
+
+        function openReviewModal(ref, productId, productName) {
+            _reviewRef = ref;
+            _reviewStars = 5;
+            document.getElementById('review-modal-product-name').textContent = productName;
+            document.getElementById('review-modal-comment').value = '';
+            document.getElementById('review-stars-error').style.display = 'none';
+            document.getElementById('review-comment-error').style.display = 'none';
+            document.getElementById('review-img-preview').style.display = 'none';
+            document.getElementById('review-img-preview').src = '';
+            document.getElementById('review-img-placeholder').style.display = 'flex';
+            document.getElementById('review-img-input').value = '';
+            updateReviewStarUI(5);
+            document.getElementById('review-modal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        function closeReviewModal() {
+            document.getElementById('review-modal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+        function setReviewModalStar(val) { _reviewStars = val; updateReviewStarUI(val); document.getElementById('review-stars-error').style.display = 'none'; }
+        function hoverReviewStar(val) { updateReviewStarUI(val, true); }
+        function resetReviewStarHover() { updateReviewStarUI(_reviewStars); }
+        function updateReviewStarUI(val, isHover) {
+            document.getElementById('review-modal-stars-ui').querySelectorAll('i').forEach(function (s, i) {
+                s.className = i < val ? 'fa-solid fa-star' : 'fa-regular fa-star';
+                s.style.color = '#E6A520';
+                s.style.opacity = i < val ? '1' : '0.4';
+                s.style.transform = (i < val && !isHover) ? 'scale(1.1)' : '';
+            });
+            document.getElementById('review-modal-star-label').textContent = _starLabels[val] || '';
+        }
+        function previewReviewImage(input) {
+            if (!input.files || !input.files[0]) return;
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('review-img-preview').src = e.target.result;
+                document.getElementById('review-img-preview').style.display = 'block';
+                document.getElementById('review-img-placeholder').style.display = 'none';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+        function submitReviewModal() {
+            var comment = document.getElementById('review-modal-comment').value.trim();
+            var valid = true;
+            if (_reviewStars < 1) { document.getElementById('review-stars-error').style.display = 'block'; valid = false; }
+            if (!comment) { document.getElementById('review-comment-error').style.display = 'block'; valid = false; }
+            if (!valid) return;
+            var form = document.getElementById('review-form-' + _reviewRef);
+            if (!form) return;
+            document.getElementById('review-stars-' + _reviewRef).value = _reviewStars;
+            document.getElementById('review-comment-' + _reviewRef).value = comment;
+            form.submit();
+        }
+
+        /* ── ESC to close any modal ── */
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') closeDetails();
+            if (e.key !== 'Escape') return;
+            closeDetails(); closeCancelModal(); closeReceivedModal();
+            closeReturnRefundModal(); closeReviewModal();
         });
+
     </script>
 
-
-    <div id="order-detail-modal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(30,24,18,0.55);padding:1rem;" onclick="if(event.target===this)closeDetails()">
-        <div style="background:#fff;border-radius:14px;width:100%;max-width:520px;box-shadow:0 20px 60px rgba(0,0,0,0.2);overflow:hidden;animation:modalIn .2s ease;">
-            <div style="background:linear-gradient(135deg,#6b93b8,#4a7399);padding:1.2rem 1.5rem;display:flex;align-items:center;justify-content:space-between;">
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <i class="fa-solid fa-receipt" style="color:#fff;font-size:16px;"></i>
-                    <span style="color:#fff;font-weight:700;font-size:15px;">Order Details</span>
-                </div>
-                <button onclick="closeDetails()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <div style="padding:1.5rem;">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;padding-bottom:1.2rem;border-bottom:1px solid rgba(210,196,180,0.4);margin-bottom:1.2rem;">
-                    <div>
-                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:3px;">Reference Number</div>
-                        <div id="modal-ref" style="font-size:13px;font-weight:700;color:#3a3226;"></div>
-                    </div>
-                    <div>
-                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:3px;">Order Date</div>
-                        <div id="modal-date" style="font-size:13px;font-weight:700;color:#3a3226;"></div>
-                    </div>
-                    <div>
-                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:3px;">Customer</div>
-                        <div id="modal-customer" style="font-size:13px;font-weight:700;color:#3a3226;"></div>
-                    </div>
-                    <div>
-                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:3px;">Delivery Address</div>
-                        <div id="modal-address" style="font-size:13px;font-weight:700;color:#3a3226;"></div>
-                    </div>
-                </div>
-                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:.6rem;">Items Ordered</div>
-                <div id="modal-items" style="margin-bottom:1rem;"></div>
-                <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.75rem;border-top:2px solid rgba(210,196,180,0.5);">
-                    <span style="font-size:13px;font-weight:700;color:#3a3226;">Total Paid</span>
-                    <span id="modal-total" style="font-size:16px;font-weight:800;color:#4a7399;"></span>
-                </div>
-            </div>
-        </div>
-    </div>
     <style>
         @@keyframes modalIn {
             from {
@@ -248,6 +764,29 @@
                 opacity: 1;
                 transform: scale(1) translateY(0);
             }
+        }
+        /* force flex when inline style sets it */
+        #cancel-modal[style*="flex"],
+        #received-modal[style*="flex"],
+        #return-refund-modal[style*="flex"],
+        #review-modal[style*="flex"],
+        #order-detail-modal[style*="flex"] {
+            display: flex !important;
+        }
+
+        #review-modal-stars-ui i:hover {
+            transform: scale(1.2) translateY(-2px) !important;
+        }
+
+        #rr-img-box:hover, #review-img-box:hover {
+            border-color: var(--blue);
+        }
+
+        /* Cancelled pill — add to your order.css if not already there */
+        .sp-cancel {
+            background: rgba(100,100,100,0.1);
+            color: #555;
+            border: 1px solid rgba(100,100,100,0.2);
         }
     </style>
 }
