@@ -442,8 +442,10 @@
                     </div>
                 </div>
 
-                <input type="file" id="rr-img-input" accept="image/*" style="display:none;" onchange="previewRRImage(this)" />
-
+                <input type="file" id="rr-img-input" accept="image/*" required style="display:none;" onchange="previewRRImage(this)" />
+                <div id="rr-img-error" style="font-size:11px;color:#e05555;display:none;margin-top:4px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Evidence photo is required.
+                </div>
             </div>
             <!-- GCash Number -->
             <div class="form-group">
@@ -697,20 +699,50 @@
         function submitReturnRefund() {
             var reason = document.getElementById('rr-reason').value;
             var gcash = document.getElementById('rr-gcash').value.trim();
+            var imgInput = document.getElementById('rr-img-input');
+
             var valid = true;
-            if (!reason) { document.getElementById('rr-reason-error').style.display = 'block'; valid = false; }
-            if (gcash.length !== 11 || !/^\d{11}$/.test(gcash)) { document.getElementById('rr-gcash-error').style.display = 'block'; valid = false; }
+
+            // Reason validation
+            if (!reason) {
+                document.getElementById('rr-reason-error').style.display = 'block';
+                valid = false;
+            }
+
+            // GCash validation
+            if (gcash.length !== 11 || !/^\d{11}$/.test(gcash)) {
+                document.getElementById('rr-gcash-error').style.display = 'block';
+                valid = false;
+            }
+
+            // 🚨 IMAGE VALIDATION (THIS WAS MISSING)
+            var imgInput = document.getElementById('rr-img-input');
+            var imgError = document.getElementById('rr-img-error');
+
+            if (!imgInput.files || imgInput.files.length === 0) {
+                imgError.style.display = 'block';
+                valid = false;
+            } else {
+                imgError.style.display = 'none';
+            }
+
+            // STOP EVERYTHING if invalid
             if (!valid) return;
+
             var finalReason = reason === 'Other'
                 ? (document.getElementById('rr-other-text').value.trim() || 'Other')
                 : reason;
+
             var reasonInput = document.getElementById('refund-reason-val-' + _refundRef);
             var gcashInput = document.getElementById('refund-gcash-val-' + _refundRef);
             var form = document.getElementById('refund-form-' + _refundRef);
+
             if (!form) return;
+
             reasonInput.value = finalReason;
             gcashInput.value = gcash;
-            form.submit();
+
+            form.submit(); // ✅ only reaches here if EVERYTHING is valid
         }
 
         /* ─────────────────────────────────────────────
