@@ -137,13 +137,17 @@
                                 <i class="fa-solid fa-receipt"></i> See Details
                             </button>
 
-                            @* ── TO SHIP: Cancel button ── *@
+                            @* ── TO SHIP: Cancel button (15-min window) ── *@
                             @if (order.Status == "To Ship")
                             {
-                                <button class="btn-sm danger"
-                                        onclick="openCancelModal('@order.ReferenceNumber')">
-                                    <i class="fa-solid fa-ban"></i> Cancel Order
-                                </button>
+                                var minutesElapsed = (DateTime.Now - order.OrderDate).TotalMinutes;
+                                if (minutesElapsed < 15)
+                                {
+                                    <button class="btn-sm danger"
+                                            onclick="openCancelModal('@order.ReferenceNumber')">
+                                        <i class="fa-solid fa-ban"></i> Cancel Order
+                                    </button>
+                                }
                             }
 
                             @* ── OUT FOR DELIVERY: Received + Return/Refund ── *@
@@ -338,7 +342,7 @@
             </div>
             <div style="background:rgba(224,85,85,0.06);border:1px solid rgba(224,85,85,0.15);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--text-mid);line-height:1.65;">
                 <i class="fa-solid fa-circle-info" style="color:#e05555;margin-right:4px;"></i>
-                Orders can only be cancelled while in <strong>To Ship</strong> status. Once your order is in transit, cancellation is no longer possible.
+                Orders can only be cancelled within <strong>15 minutes</strong> of placing them and while in <strong>To Ship</strong> status. After the window closes, please use Return/Refund instead.
             </div>
         </div>
         <!-- Footer -->
@@ -621,9 +625,6 @@
     <script src="@Url.Content("~/Scripts/account.js")"></script>
     <script>
 
-        /* ─────────────────────────────────────────────
-           SEE DETAILS
-        ───────────────────────────────────────────── */
         function openDetails(ref) {
             var data = document.getElementById('details-' + ref);
             if (!data) return;

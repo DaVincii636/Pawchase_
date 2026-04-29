@@ -762,7 +762,7 @@ namespace Pawchase.Controllers
             }
         }
 
-        // ── Cancel order (only allowed on To Ship) ───────────────────
+        // ── Cancel order (only allowed within 15 min of placing, while To Ship) ───
         [HttpPost, ValidateAntiForgeryToken]
         public ActionResult CancelOrder(string referenceNumber, string cancelReason)
         {
@@ -778,6 +778,11 @@ namespace Pawchase.Controllers
                 {
                     TempData["Error"] = "Order can no longer be cancelled.";
                     return RedirectToAction("Track", "Order", new { tab = order.Status });
+                }
+                if ((DateTime.Now - order.OrderDate).TotalMinutes > 15)
+                {
+                    TempData["Error"] = "The 15-minute cancellation window has passed. Please use Return/Refund instead.";
+                    return RedirectToAction("Track", "Order", new { tab = "To Ship" });
                 }
 
                 order.Status = "Cancelled";

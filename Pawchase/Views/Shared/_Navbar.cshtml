@@ -15,7 +15,7 @@
 }
 
 <div class="announcement-bar">
-    <div class="announcement-track">
+    <div class="announcement-track" id="announcementTrack">
         <span><i class="fa-solid fa-truck"></i> FREE SHIPPING on orders over &#8369;500!</span>
         <span class="sep">|</span>
         <span>Use code <strong>PAWSOME</strong> for 10% off your first order!</span>
@@ -27,6 +27,15 @@
         <span>Use code <strong>PAWSOME</strong> for 10% off!</span>
     </div>
 </div>
+<script>
+    (function () {
+        var DURATION = 28000;
+        var elapsed = Date.now() % DURATION;
+        var delay = -elapsed / 1000;
+        var el = document.getElementById('announcementTrack');
+        if (el) el.style.animationDelay = delay + 's';
+    })();
+</script>
 
 <nav class="navbar">
     <div class="nav-logo">
