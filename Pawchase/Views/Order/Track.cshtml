@@ -19,6 +19,7 @@
 @section styles {
     <link href="@Url.Content("~/Content/css/account.css")" rel="stylesheet" />
     <link href="@Url.Content("~/Content/css/order.css")" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 }
 
 <div class="page-hero"><h1>My Orders</h1><p>Track and manage your orders</p></div>
@@ -232,12 +233,6 @@
                             <input type="hidden" name="gcashNumber" id="refund-gcash-val-@order.ReferenceNumber" />
                             <input type="hidden" name="refundEvidenceUrl" id="refund-evidence-val-@order.ReferenceNumber" />
                         }
-                        {
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="referenceNumber" value="@order.ReferenceNumber" />
-                            <input type="hidden" name="refundReason" id="refund-reason-val-@order.ReferenceNumber" />
-                            <input type="hidden" name="gcashNumber" id="refund-gcash-val-@order.ReferenceNumber" />
-                        }
                     }
 
                     @* ── REVIEW hidden POST form ── *@
@@ -330,7 +325,7 @@
                     Reason for Cancellation <span style="color:#e05555;">*</span>
                 </label>
                 <select id="cancel-reason-select" style="padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;color:var(--text);outline:none;width:100%;background:#fff;appearance:none;">
-                    <option value="">— Select a reason —</option>
+                    <option value="">&mdash; Select a reason &mdash;</option>
                     <option value="Changed my mind">Changed my mind</option>
                     <option value="Ordered by mistake">Ordered by mistake</option>
                     <option value="Found a better price">Found a better price</option>
@@ -407,7 +402,7 @@
                     Reason for Return / Refund <span style="color:#e05555;">*</span>
                 </label>
                 <select id="rr-reason" style="padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;color:var(--text);outline:none;width:100%;background:#fff;appearance:none;" onchange="handleReasonChange(this.value)">
-                    <option value="">— Select a reason —</option>
+                    <option value="">&mdash; Select a reason &mdash;</option>
                     <option value="Wrong item delivered">Wrong item delivered</option>
                     <option value="Item damaged or defective">Item damaged or defective</option>
                     <option value="Item not as described">Item not as described</option>
@@ -421,7 +416,7 @@
             <!-- Other reason -->
             <div id="rr-other-wrap" style="display:none;">
                 <label style="font-size:13px;font-weight:600;color:var(--text-mid);">Specify reason</label>
-                <textarea id="rr-other-text" rows="2" placeholder="Tell us more…" style="padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;resize:vertical;outline:none;width:100%;margin-top:5px;"></textarea>
+                <textarea id="rr-other-text" rows="2" placeholder="Tell us more&hellip;" style="padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;resize:vertical;outline:none;width:100%;margin-top:5px;"></textarea>
             </div>
 
             <!-- Evidence Photo -->
@@ -429,8 +424,7 @@
                 <label style="font-size:13px;font-weight:600;color:var(--text-mid);display:flex;align-items:center;justify-content:space-between;">
                     <span style="display:flex;align-items:center;gap:6px;">
                         <i class="fa-solid fa-camera" style="color:var(--blue);"></i>
-                        Evidence Photo
-                        <span style="font-size:11px;font-weight:400;color:var(--text-light);">(optional)</span>
+                        Evidence Photo <span style="color:#e05555;">*</span>
                     </span>
                     <button id="rr-remove-btn" onclick="removeRRImage()" type="button"
                             style="display:none;background:none;border:none;font-size:11px;font-weight:700;color:#e05555;cursor:pointer;font-family:'Poppins',sans-serif;padding:0;display:none;align-items:center;gap:4px;">
@@ -444,11 +438,14 @@
                          style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:10px;" />
 
                     <div id="rr-img-placeholder"
-                         style="display:flex;flex-direction:column;align-items:center;gap:6px;color:#777;pointer-events:none;">
-
-                        <i class="fa-solid fa-camera" style="font-size:22px;color:#aaa;"></i>
-                        <span style="font-size:13px;">Click to upload a photo of the product</span>
-
+                         style="display:flex;flex-direction:column;align-items:center;gap:8px;color:#999;pointer-events:none;">
+                        <div style="width:48px;height:48px;border-radius:12px;background:rgba(129,166,198,0.12);display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(129,166,198,0.25);">
+                            <i class="bi bi-image" style="font-size:22px;color:var(--blue);"></i>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:12px;font-weight:600;color:var(--text-mid);">Click to upload a photo</div>
+                            <div style="font-size:10px;color:var(--text-light);margin-top:2px;">JPG, PNG, GIF supported</div>
+                        </div>
                     </div>
                 </div>
 
@@ -472,7 +469,7 @@
             <!-- Refund amount -->
             <div style="background:linear-gradient(135deg,rgba(243,227,208,0.6),rgba(237,221,207,0.4));border:1px solid var(--taupe);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <i class="fa-solid fa-peso-sign" style="color:var(--blue-dark);font-size:14px;"></i>
+                    <span style="color:var(--blue-dark);font-size:15px;font-weight:800;">&#8369;</span>
                     <span style="font-size:12px;font-weight:600;color:var(--text-mid);">Estimated Refund Amount</span>
                 </div>
                 <span id="rr-amount-display" style="font-size:15px;font-weight:800;color:var(--blue-dark);"></span>
@@ -481,7 +478,7 @@
             <!-- Info note -->
             <div style="background:rgba(129,166,198,0.08);border:1px solid rgba(129,166,198,0.2);border-radius:var(--radius-sm);padding:10px 14px;font-size:11px;color:var(--text-light);line-height:1.65;">
                 <i class="fa-solid fa-circle-info" style="color:var(--blue);margin-right:4px;"></i>
-                Refund requests are reviewed within <strong>1–3 business days</strong>. Approved refunds will be sent to your GCash number.
+                Refund requests are reviewed within <strong>1&ndash;3 business days</strong>. Approved refunds will be sent to your GCash number.
             </div>
         </div>
         <!-- Footer -->
@@ -528,7 +525,7 @@
                            onmouseout="resetReviewStarHover()"></i>
                     }
                 </div>
-                <div id="review-modal-star-label" style="font-size:11px;color:var(--text-light);margin-top:4px;">5 stars — Excellent</div>
+                <div id="review-modal-star-label" style="font-size:11px;color:var(--text-light);margin-top:4px;">5 stars &mdash; Excellent</div>
                 <div id="review-stars-error" style="font-size:11px;color:#e05555;display:none;margin-top:3px;"><i class="fa-solid fa-triangle-exclamation"></i> Please select a rating.</div>
             </div>
 
@@ -538,7 +535,7 @@
                     <i class="fa-solid fa-comment" style="color:var(--blue);"></i>
                     Your Review <span style="color:#e05555;">*</span>
                 </label>
-                <textarea id="review-modal-comment" rows="4" placeholder="Share your experience with this product…"
+                <textarea id="review-modal-comment" rows="4" placeholder="Share your experience with this product&hellip;"
                           style="padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;resize:vertical;outline:none;width:100%;min-height:90px;margin-top:5px;"></textarea>
                 <div id="review-comment-error" style="font-size:11px;color:#e05555;display:none;margin-top:3px;"><i class="fa-solid fa-triangle-exclamation"></i> Please write your review.</div>
             </div>
@@ -565,6 +562,50 @@
             <button onclick="closeReviewModal()" style="padding:10px 22px;border-radius:50px;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);cursor:pointer;font-family:'Poppins',sans-serif;">Cancel</button>
             <button onclick="submitReviewModal()" style="padding:10px 22px;border-radius:50px;font-size:13px;font-weight:700;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;border:none;cursor:pointer;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;gap:7px;box-shadow:0 4px 14px rgba(129,166,198,0.4);">
                 <i class="fa-solid fa-paper-plane"></i> Submit Review
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- REVIEW SUBMITTED CONFIRMATION MODAL         -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="review-confirm-modal" onclick="if(event.target===this)closeReviewConfirmModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;align-items:center;justify-content:center;padding:1rem;">
+    <div style="background:#fff;border-radius:20px;padding:2rem;max-width:380px;width:90%;box-shadow:0 24px 70px rgba(0,0,0,0.2);text-align:center;animation:modalIn .2s ease;">
+        <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,rgba(230,165,32,0.15),rgba(230,165,32,0.05));display:flex;align-items:center;justify-content:center;margin:0 auto 1.1rem;border:2px solid rgba(230,165,32,0.25);">
+            <i class="bi bi-star-fill" style="font-size:1.6rem;color:#E6A520;"></i>
+        </div>
+        <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:.4rem;">Submit Your Review?</div>
+        <div style="font-size:13px;color:var(--text-mid);margin-bottom:1.5rem;line-height:1.65;">
+            Your review will be posted publicly on the product page. This cannot be undone.
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+            <button onclick="closeReviewConfirmModal()" style="padding:10px 24px;border-radius:50px;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);cursor:pointer;font-family:'Poppins',sans-serif;">Cancel</button>
+            <button onclick="doSubmitReview()" style="padding:10px 24px;border-radius:50px;font-size:13px;font-weight:700;background:linear-gradient(135deg,#E6A520,#c98a00);color:#fff;border:none;cursor:pointer;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;gap:7px;box-shadow:0 4px 14px rgba(230,165,32,0.35);">
+                <i class="bi bi-send-fill"></i> Yes, Submit!
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- REFUND REQUEST SUBMITTED CONFIRMATION MODAL -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="refund-confirm-modal" onclick="if(event.target===this)closeRefundConfirmModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;align-items:center;justify-content:center;padding:1rem;">
+    <div style="background:#fff;border-radius:20px;padding:2rem;max-width:380px;width:90%;box-shadow:0 24px 70px rgba(0,0,0,0.2);text-align:center;animation:modalIn .2s ease;">
+        <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,rgba(224,85,85,0.12),rgba(224,85,85,0.04));display:flex;align-items:center;justify-content:center;margin:0 auto 1.1rem;border:2px solid rgba(224,85,85,0.2);">
+            <i class="bi bi-arrow-counterclockwise" style="font-size:1.6rem;color:#e05555;"></i>
+        </div>
+        <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:.4rem;">Submit Return Request?</div>
+        <div style="font-size:13px;color:var(--text-mid);margin-bottom:1.5rem;line-height:1.65;">
+            Your refund request will be sent for review. Approved refunds are processed within <strong>1&ndash;3 business days</strong>.
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+            <button onclick="closeRefundConfirmModal()" style="padding:10px 24px;border-radius:50px;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);cursor:pointer;font-family:'Poppins',sans-serif;">Cancel</button>
+            <button onclick="doSubmitRefund()" style="padding:10px 24px;border-radius:50px;font-size:13px;font-weight:700;background:linear-gradient(135deg,#e05555,#c0392b);color:#fff;border:none;cursor:pointer;font-family:'Poppins',sans-serif;display:inline-flex;align-items:center;gap:7px;box-shadow:0 4px 14px rgba(224,85,85,0.3);">
+                <i class="bi bi-send-fill"></i> Yes, Submit!
             </button>
         </div>
     </div>
@@ -739,6 +780,16 @@
             // STOP EVERYTHING if invalid
             if (!valid) return;
 
+            // Show confirmation modal
+            document.getElementById('refund-confirm-modal').style.display = 'flex';
+        }
+        function closeRefundConfirmModal() {
+            document.getElementById('refund-confirm-modal').style.display = 'none';
+        }
+        function doSubmitRefund() {
+            var reason = document.getElementById('rr-reason').value;
+            var gcash = document.getElementById('rr-gcash').value.trim();
+
             var finalReason = reason === 'Other'
                 ? (document.getElementById('rr-other-text').value.trim() || 'Other')
                 : reason;
@@ -767,7 +818,7 @@
         ───────────────────────────────────────────── */
         var _reviewRef = null;
         var _reviewStars = 5;
-        var _starLabels = ['', '1 star — Poor', '2 stars — Fair', '3 stars — Good', '4 stars — Very Good', '5 stars — Excellent'];
+        var _starLabels = ['', '1 star &mdash; Poor', '2 stars &mdash; Fair', '3 stars &mdash; Good', '4 stars &mdash; Very Good', '5 stars &mdash; Excellent'];
 
         function openReviewModal(ref, productId, productName) {
             _reviewRef = ref;
@@ -816,6 +867,14 @@
             if (_reviewStars < 1) { document.getElementById('review-stars-error').style.display = 'block'; valid = false; }
             if (!comment) { document.getElementById('review-comment-error').style.display = 'block'; valid = false; }
             if (!valid) return;
+            // Show confirmation modal
+            document.getElementById('review-confirm-modal').style.display = 'flex';
+        }
+        function closeReviewConfirmModal() {
+            document.getElementById('review-confirm-modal').style.display = 'none';
+        }
+        function doSubmitReview() {
+            var comment = document.getElementById('review-modal-comment').value.trim();
             var form = document.getElementById('review-form-' + _reviewRef);
             if (!form) return;
             document.getElementById('review-stars-' + _reviewRef).value = _reviewStars;
@@ -828,6 +887,7 @@
             if (e.key !== 'Escape') return;
             closeDetails(); closeCancelModal(); closeReceivedModal();
             closeReturnRefundModal(); closeReviewModal();
+            closeReviewConfirmModal(); closeRefundConfirmModal();
         });
 
     </script>
@@ -849,7 +909,9 @@
         #received-modal[style*="flex"],
         #return-refund-modal[style*="flex"],
         #review-modal[style*="flex"],
-        #order-detail-modal[style*="flex"] {
+        #order-detail-modal[style*="flex"],
+        #review-confirm-modal[style*="flex"],
+        #refund-confirm-modal[style*="flex"] {
             display: flex !important;
         }
 
@@ -862,7 +924,7 @@
             background: #f5faff !important;
         }
 
-        /* Cancelled pill — add to your order.css if not already there */
+        /* Cancelled pill &mdash; add to your order.css if not already there */
         .sp-cancel {
             background: rgba(100,100,100,0.1);
             color: #555;
