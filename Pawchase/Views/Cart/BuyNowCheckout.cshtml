@@ -1,6 +1,6 @@
 @model List<Pawchase.Models.CartItem>
 @{
-    ViewBag.Title = "Buy Now – Checkout";
+    ViewBag.Title = "Buy Now \u2013 Checkout";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var subtotal = Model.Sum(c => c.Subtotal);
     var shipping = subtotal >= 500 ? 0 : 80;

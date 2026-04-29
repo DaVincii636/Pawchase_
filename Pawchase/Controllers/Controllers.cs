@@ -506,7 +506,20 @@ namespace Pawchase.Controllers
                 MockData.Orders.Add(order);
 
                 var p = MockData.Products.FirstOrDefault(x => x.Id == buyNowItem.Product.Id);
-                if (p != null) p.Stock = Math.Max(0, p.Stock - buyNowItem.Quantity);
+                if (p != null)
+                {
+                    if (buyNowItem.SelectedVariant != null && p.Variants != null)
+                    {
+                        var pv = p.Variants.FirstOrDefault(v => v.Label == buyNowItem.SelectedVariant.Label);
+                        if (pv != null) pv.Stock = Math.Max(0, pv.Stock - buyNowItem.Quantity);
+                        // Recalculate total product stock from variants
+                        p.Stock = p.Variants.Sum(v => v.Stock);
+                    }
+                    else
+                    {
+                        p.Stock = Math.Max(0, p.Stock - buyNowItem.Quantity);
+                    }
+                }
 
                 Session["BuyNowItem"] = null;
                 return RedirectToAction("Confirmation", "Order",
@@ -575,7 +588,20 @@ namespace Pawchase.Controllers
                 foreach (var item in cart)
                 {
                     var p = MockData.Products.FirstOrDefault(x => x.Id == item.Product.Id);
-                    if (p != null) p.Stock = Math.Max(0, p.Stock - item.Quantity);
+                    if (p != null)
+                    {
+                        if (item.SelectedVariant != null && p.Variants != null)
+                        {
+                            var pv = p.Variants.FirstOrDefault(v => v.Label == item.SelectedVariant.Label);
+                            if (pv != null) pv.Stock = Math.Max(0, pv.Stock - item.Quantity);
+                            // Recalculate total product stock from variants
+                            p.Stock = p.Variants.Sum(v => v.Stock);
+                        }
+                        else
+                        {
+                            p.Stock = Math.Max(0, p.Stock - item.Quantity);
+                        }
+                    }
                 }
 
                 Session["Cart"] = new List<CartItem>();
@@ -763,7 +789,19 @@ namespace Pawchase.Controllers
                     foreach (var snap in order.Snapshots)
                     {
                         var product = MockData.Products.FirstOrDefault(p => p.Id == snap.ProductId);
-                        if (product != null) product.Stock += snap.Quantity;
+                        if (product != null)
+                        {
+                            if (!string.IsNullOrEmpty(snap.VariantLabel) && product.Variants != null)
+                            {
+                                var pv = product.Variants.FirstOrDefault(v => v.Label == snap.VariantLabel);
+                                if (pv != null) pv.Stock += snap.Quantity;
+                                product.Stock = product.Variants.Sum(v => v.Stock);
+                            }
+                            else
+                            {
+                                product.Stock += snap.Quantity;
+                            }
+                        }
                     }
                 }
 
@@ -955,7 +993,7 @@ namespace Pawchase.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public ActionResult AddProduct(Product product, string[] VariantImagePaths, string[] VariantLabels)
+        public ActionResult AddProduct(Product product, string[] VariantImagePaths, string[] VariantLabels, int[] VariantStocks)
         {
             try
             {
@@ -979,19 +1017,33 @@ namespace Pawchase.Controllers
                 product.Variants = new List<ProductVariant>();
                 int maxV = Math.Max(
                     VariantImagePaths != null ? VariantImagePaths.Length : 0,
-                    VariantLabels != null ? VariantLabels.Length : 0);
+                    Math.Max(
+                        VariantLabels != null ? VariantLabels.Length : 0,
+                        VariantStocks != null ? VariantStocks.Length : 0));
 
+                bool hasVariantStock = false;
+                int totalVariantStock = 0;
                 for (int i = 0; i < maxV; i++)
                 {
                     var img = (VariantImagePaths != null && i < VariantImagePaths.Length) ? VariantImagePaths[i] : null;
                     var label = (VariantLabels != null && i < VariantLabels.Length) ? VariantLabels[i] : null;
+                    var stock = (VariantStocks != null && i < VariantStocks.Length) ? VariantStocks[i] : 0;
                     if (!string.IsNullOrWhiteSpace(img) || !string.IsNullOrWhiteSpace(label))
+                    {
                         product.Variants.Add(new ProductVariant
                         {
                             ImageUrl = string.IsNullOrWhiteSpace(img) ? null : img,
-                            Label = label
+                            Label = label,
+                            Stock = Math.Max(0, stock)
                         });
+                        hasVariantStock = true;
+                        totalVariantStock += Math.Max(0, stock);
+                    }
                 }
+
+                // If variants have stock set, use the sum; otherwise use the manually entered stock
+                if (hasVariantStock)
+                    product.Stock = totalVariantStock;
 
                 MockData.Products.Add(product);
                 TempData["Success"] = "Product \"" + product.Name + "\" added!";
@@ -1023,7 +1075,7 @@ namespace Pawchase.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public ActionResult EditProduct(Product updated, string[] VariantImagePaths, string[] VariantLabels)
+        public ActionResult EditProduct(Product updated, string[] VariantImagePaths, string[] VariantLabels, int[] VariantStocks)
         {
             try
             {
@@ -1046,26 +1098,38 @@ namespace Pawchase.Controllers
                 p.OriginalPrice = updated.OriginalPrice;
                 p.Category = updated.Category;
                 p.BreedSize = updated.BreedSize;
-                p.Stock = Math.Max(0, updated.Stock);
                 if (!string.IsNullOrWhiteSpace(updated.ImageUrl))
                     p.ImageUrl = updated.ImageUrl;
 
                 p.Variants = new List<ProductVariant>();
                 int maxV = Math.Max(
                     VariantImagePaths != null ? VariantImagePaths.Length : 0,
-                    VariantLabels != null ? VariantLabels.Length : 0);
+                    Math.Max(
+                        VariantLabels != null ? VariantLabels.Length : 0,
+                        VariantStocks != null ? VariantStocks.Length : 0));
 
+                bool hasVariantStock = false;
+                int totalVariantStock = 0;
                 for (int i = 0; i < maxV; i++)
                 {
                     var img = (VariantImagePaths != null && i < VariantImagePaths.Length) ? VariantImagePaths[i] : null;
                     var label = (VariantLabels != null && i < VariantLabels.Length) ? VariantLabels[i] : null;
+                    var stock = (VariantStocks != null && i < VariantStocks.Length) ? VariantStocks[i] : 0;
                     if (!string.IsNullOrWhiteSpace(img) || !string.IsNullOrWhiteSpace(label))
+                    {
                         p.Variants.Add(new ProductVariant
                         {
                             ImageUrl = string.IsNullOrWhiteSpace(img) ? null : img,
-                            Label = label
+                            Label = label,
+                            Stock = Math.Max(0, stock)
                         });
+                        hasVariantStock = true;
+                        totalVariantStock += Math.Max(0, stock);
+                    }
                 }
+
+                // If variants have stock set, use the sum; otherwise use the manually entered stock
+                p.Stock = hasVariantStock ? totalVariantStock : Math.Max(0, updated.Stock);
 
                 TempData["Success"] = "Product \"" + updated.Name + "\" updated!";
                 return RedirectToAction("Products");
