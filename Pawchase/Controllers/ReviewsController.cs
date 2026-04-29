@@ -264,14 +264,11 @@ namespace Pawchase.Controllers
         }
 
         private int GetCurrentUserId()
-        {
-            var userIdString = Session["UserId"] as string;
-            if (int.TryParse(userIdString, out int userId))
-            {
-                return userId;
-            }
-            return 1;
-        }
+{
+    var userId = 0;
+    int.TryParse(Session["UserId"]?.ToString(), out userId);
+    return userId;
+}
 
         private string GetCurrentUserName()
         {
