@@ -199,6 +199,7 @@
     <Content Include="Content\css\cart.css" />
     <Content Include="Content\css\home.css" />
     <Content Include="Content\css\mobile.css" />
+    <Content Include="Content\images\About_Paw.png" />
     <Content Include="Content\images\hero-dog.png" />
     <Content Include="Content\images\Pawchase.png" />
     <Content Include="Content\images\PawV1.png" />

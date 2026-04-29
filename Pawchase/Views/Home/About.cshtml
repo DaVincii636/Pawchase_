@@ -3,7 +3,132 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 @section styles {
-    <link href="@Url.Content("~/Content/css/home.css")" rel="stylesheet"/>
+    <link href="@Url.Content("~/Content/css/home.css")" rel="stylesheet" />
+    <style>
+        .page-hero {
+            background: linear-gradient(135deg, var(--blue-deeper), var(--blue-dark), var(--blue));
+            padding: 2.5rem 6%;
+            text-align: center;
+        }
+        .page-hero h1 { font-size: 1.8rem; font-weight: 800; color: #fff; margin-bottom: .3rem; }
+        .page-hero p  { font-size: 14px; color: rgba(255,255,255,0.75); }
+
+        /* ── ABOUT SECTION ── */
+        .about-section {
+            position: relative;
+            min-height: 580px;
+            display: grid;
+            grid-template-columns: 1fr 420px;
+            overflow: hidden;
+        }
+
+        .about-bg {
+            position: absolute;
+            inset: 0;
+            background: url('/Content/images/About_Paw.png') center top / cover no-repeat;
+            z-index: 0;
+        }
+        .about-bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                to right,
+                rgba(232,224,213,0.96) 0%,
+                rgba(232,224,213,0.88) 35%,
+                rgba(232,224,213,0.40) 58%,
+                transparent 100%
+            );
+        }
+
+        /* Left text */
+        .about-text-col {
+            position: relative;
+            z-index: 2;
+            padding: 3.5rem 2rem 3.5rem 6%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 1.8rem;
+        }
+        .about-text-col h2 {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--text);
+            letter-spacing: -1px;
+            margin-bottom: .4rem;
+        }
+        .about-divider {
+            width: 40px; height: 3px;
+            background: linear-gradient(90deg, var(--blue), var(--blue-dark));
+            border-radius: 2px;
+            margin-bottom: .7rem;
+        }
+        .about-text-col p {
+            font-size: 14px;
+            color: var(--text-mid);
+            line-height: 1.8;
+        }
+
+        /* Right cards column — with margin on both sides */
+        .about-cards-col {
+            position: relative;
+            z-index: 2;
+            padding: 3rem 0 3rem 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: .75rem;
+        }
+
+        /* Card: horizontal — icon LEFT, text RIGHT, flush to right edge */
+        .highlight-card {
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 12px 0 0 12px;
+            margin-right: -100px;
+            border: 1px solid rgba(255,255,255,0.95);
+            border-right: none;
+            padding: 1.2rem 1.6rem 1.2rem 1.4rem;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 1.2rem;
+            box-shadow: -4px 4px 20px rgba(0,0,0,0.07);
+        }
+
+        /* Large faded icon on the LEFT */
+        .highlight-card i {
+            font-size: 2.6rem;
+            color: rgba(110,140,165,0.30);
+            flex-shrink: 0;
+            width: 52px;
+            text-align: center;
+        }
+
+        .highlight-card-body h3 {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: .25rem;
+        }
+        .highlight-card-body p {
+            font-size: 12px;
+            color: var(--text-mid);
+            line-height: 1.6;
+        }
+
+        @@media (max-width: 860px) {
+            .about-section {
+                grid-template-columns: 1fr;
+                min-height: auto;
+            }
+            .about-bg::after { background: rgba(232,224,213,0.80); }
+            .about-text-col { padding: 3rem 6%; }
+            .about-cards-col { padding: 0 6% 3rem; }
+        }
+    </style>
 }
 
 <div class="page-hero">
@@ -12,27 +137,42 @@
 </div>
 
 <section class="about-section">
-    <div class="about-inner">
-        <div class="about-text">
+    <div class="about-bg"></div>
+
+    <!-- Left: Story + Mission -->
+    <div class="about-text-col">
+        <div>
             <h2>Our Story</h2>
+            <div class="about-divider"></div>
             <p>PawChase was built out of a simple love for dogs. We noticed how hard it was to find quality, trusted products for dogs in one place &mdash; so we built it ourselves.</p>
-            <p>We carry only products we'd use on our own dogs. Every item is carefully selected for quality, safety, and value &mdash; whether you have a tiny Chihuahua or a massive German Shepherd.</p>
-            <h2 style="margin-top:2rem;">Our Mission</h2>
+            <p style="margin-top:.6rem;">We carry only products we'd use on our own dogs. Every item is carefully selected for quality, safety, and value &mdash; whether you have a tiny Chihuahua or a massive German Shepherd.</p>
+        </div>
+        <div>
+            <h2>Our Mission</h2>
+            <div class="about-divider"></div>
             <p>To make dog care simpler, more affordable, and more enjoyable for every Filipino dog owner.</p>
         </div>
-        <div class="about-highlights">
-            <div class="highlight-card">
-                <i class="fa-solid fa-dog"></i>
+    </div>
+
+    <!-- Right: Individual cards, icon left + text right -->
+    <div class="about-cards-col">
+        <div class="highlight-card">
+            <i class="fa-solid fa-dog"></i>
+            <div class="highlight-card-body">
                 <h3>Dogs Only</h3>
                 <p>Specialized exclusively for man's best friend &mdash; every product is dog-specific.</p>
             </div>
-            <div class="highlight-card">
-                <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div class="highlight-card">
+            <i class="fa-solid fa-shield-halved"></i>
+            <div class="highlight-card-body">
                 <h3>Quality Assured</h3>
                 <p>Every product is vet-approved or trusted by breeders before we list it.</p>
             </div>
-            <div class="highlight-card">
-                <i class="fa-solid fa-truck-fast"></i>
+        </div>
+        <div class="highlight-card">
+            <i class="fa-solid fa-truck-fast"></i>
+            <div class="highlight-card-body">
                 <h3>Fast Delivery</h3>
                 <p>Get your orders delivered across the Philippines &mdash; fast and reliable.</p>
             </div>
