@@ -3,73 +3,135 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 @section styles {
-    <link href="@Url.Content("~/Content/css/home.css")" rel="stylesheet"/>
+    <link href="@Url.Content("~/Content/css/home.css")" rel="stylesheet" />
 }
 
-<div class="page-hero">
-    <h1>Contact Us</h1>
-    <p>We'd love to hear from you &mdash; reach out anytime!</p>
-</div>
-
-<section class="contact-section">
-    <div class="contact-inner">
-        <div class="contact-info-card">
-            <h2>Get in Touch</h2>
-            <div class="info-item">
-                <div class="ci-icon"><i class="fa-regular fa-envelope"></i></div>
-                <div><strong>Email</strong><p>support@pawchase.com</p></div>
-            </div>
-            <div class="info-item">
-                <div class="ci-icon"><i class="fa-solid fa-phone"></i></div>
-                <div><strong>Phone</strong><p>+63 912 345 6789</p></div>
-            </div>
-            <div class="info-item">
-                <div class="ci-icon"><i class="fa-solid fa-location-dot"></i></div>
-                <div><strong>Address</strong><p>Quezon City, Metro Manila, Philippines</p></div>
-            </div>
-            <div class="info-item">
-                <div class="ci-icon"><i class="fa-regular fa-clock"></i></div>
-                <div><strong>Support Hours</strong><p>Monday &ndash; Saturday, 8AM &ndash; 6PM</p></div>
-            </div>
-        </div>
-        <div class="contact-form-wrap">
-            <h2>Send a Message</h2>
-            <form class="contact-form" onsubmit="handleContact(event)">
-                <div class="form-group">
-                    <label><i class="fa-regular fa-user"></i> Your Name</label>
-                    <input type="text" placeholder="Juan dela Cruz" required />
-                </div>
-                <div class="form-group">
-                    <label><i class="fa-regular fa-envelope"></i> Email Address</label>
-                    <input type="email" placeholder="juan@email.com" required />
-                </div>
-                <div class="form-group">
-                    <label><i class="fa-solid fa-tag"></i> Subject</label>
-                    <input type="text" placeholder="Order inquiry, product question..." required />
-                </div>
-                <div class="form-group">
-                    <label><i class="fa-regular fa-message"></i> Message</label>
-                    <textarea rows="5" placeholder="Type your message here..." required></textarea>
-                </div>
-                <button type="submit" class="btn-primary" style="width:100%;justify-content:center;">
-                    <i class="fa-solid fa-paper-plane"></i> Send Message
-                </button>
-                <p id="contact-success" style="display:none;color:#1e8449;text-align:center;margin-top:.75rem;font-weight:600;">
-                    <i class="fa-solid fa-circle-check"></i> Message sent! We'll get back to you shortly.
-                </p>
-            </form>
+<div class="pc-hero">
+    <div class="pc-hero-bg" style="background-image: url('@Url.Content("~/Content/images/hero-dog.png")');"></div>
+    <div class="pc-hero-overlay"></div>
+    <div class="pc-hero-blob pc-hero-blob--1"></div>
+    <div class="pc-hero-blob pc-hero-blob--2"></div>
+    <div class="pc-hero-content">
+        <h1 class="pc-hero-title">Contact <span>Us</span></h1>
+        <p class="pc-hero-subtitle">We&rsquo;d love to hear from you &mdash; reach out and we&rsquo;ll get back to you shortly.</p>
+        <div class="pc-hero-divider">
+            <div class="pc-hero-divider-line"></div>
+            <i class="fa-solid fa-paw"></i>
+            <div class="pc-hero-divider-line"></div>
         </div>
     </div>
+</div>
 
+<section class="pc-contact-section">
+    <div class="pc-contact-inner">
 
+        <div class="pc-contact-info">
+            <h2 class="pc-contact-info-heading">Let&rsquo;s Talk</h2>
+            <p class="pc-contact-info-sub">Here&rsquo;s how to reach our friendly team.</p>
+
+            <div class="pc-info-item">
+                <div class="pc-info-icon">
+                    <i class="fa-regular fa-envelope"></i>
+                </div>
+                <div>
+                    <div class="pc-info-label">Email</div>
+                    <div class="pc-info-value">support@pawchase.com</div>
+                </div>
+            </div>
+
+            <div class="pc-info-item">
+                <div class="pc-info-icon">
+                    <i class="fa-solid fa-phone"></i>
+                </div>
+                <div>
+                    <div class="pc-info-label">Phone</div>
+                    <div class="pc-info-value">+63 912 345 6789</div>
+                </div>
+            </div>
+
+            <div class="pc-info-item">
+                <div class="pc-info-icon">
+                    <i class="fa-solid fa-location-dot"></i>
+                </div>
+                <div>
+                    <div class="pc-info-label">Address</div>
+                    <div class="pc-info-value">Quezon City, Metro Manila,<br>Philippines</div>
+                </div>
+            </div>
+
+            <div class="pc-info-item">
+                <div class="pc-info-icon">
+                    <i class="fa-regular fa-clock"></i>
+                </div>
+                <div>
+                    <div class="pc-info-label">Support Hours</div>
+                    <div class="pc-info-value">Mon &ndash; Sat &nbsp; 8AM &ndash; 6PM</div>
+                </div>
+            </div>
+
+            <div class="pc-contact-social">
+                <a href="#" class="pc-social-btn" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+                <a href="#" class="pc-social-btn" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                <a href="#" class="pc-social-btn" title="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+                <a href="#" class="pc-social-btn" title="Email"><i class="fa-regular fa-envelope"></i></a>
+            </div>
+        </div>
+
+        <div class="pc-contact-form-card">
+            <h2 class="pc-form-heading">Send a Message</h2>
+            <p class="pc-form-sub">Fill in the form and we&rsquo;ll reply as soon as possible.</p>
+
+            <form id="pcContactForm" onsubmit="pcHandleContact(event)">
+                <div class="pc-form-row">
+                    <div class="pc-form-group">
+                        <label class="pc-form-label"><i class="fa-regular fa-user"></i> Your Name</label>
+                        <input type="text" class="pc-form-input" placeholder="Juan dela Cruz" required />
+                    </div>
+                    <div class="pc-form-group">
+                        <label class="pc-form-label"><i class="fa-regular fa-envelope"></i> Email Address</label>
+                        <input type="email" class="pc-form-input" placeholder="juan@email.com" required />
+                    </div>
+                </div>
+
+                <div class="pc-form-group">
+                    <label class="pc-form-label"><i class="fa-solid fa-tag"></i> Subject</label>
+                    <input type="text" class="pc-form-input" placeholder="Order inquiry, product question..." required />
+                </div>
+
+                <div class="pc-form-group">
+                    <label class="pc-form-label"><i class="fa-regular fa-message"></i> Message</label>
+                    <textarea class="pc-form-textarea" rows="5" placeholder="Type your message here..." required></textarea>
+                </div>
+
+                <button type="submit" class="pc-form-btn">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    Send Message
+                </button>
+
+                <div class="pc-form-success" id="pcContactSuccess">
+                    <i class="fa-solid fa-circle-check"></i>
+                    Message sent! We&rsquo;ll get back to you shortly.
+                </div>
+            </form>
+        </div>
+
+    </div>
 </section>
 
 @section scripts {
-<script>
-function handleContact(e) {
-    e.preventDefault();
-    document.getElementById('contact-success').style.display = 'block';
-    e.target.reset();
-}
-</script>
+    <script>
+    function pcHandleContact(e) {
+        e.preventDefault();
+        var btn = e.target.querySelector('.pc-form-btn');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+        btn.disabled = true;
+        setTimeout(function () {
+            var success = document.getElementById('pcContactSuccess');
+            success.style.display = 'flex';
+            e.target.reset();
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send Message';
+            btn.disabled = false;
+        }, 1200);
+    }
+    </script>
 }

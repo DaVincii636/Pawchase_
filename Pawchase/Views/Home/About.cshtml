@@ -4,178 +4,105 @@
 }
 @section styles {
     <link href="@Url.Content("~/Content/css/home.css")" rel="stylesheet" />
-    <style>
-        .page-hero {
-            background: linear-gradient(135deg, var(--blue-deeper), var(--blue-dark), var(--blue));
-            padding: 2.5rem 6%;
-            text-align: center;
-        }
-        .page-hero h1 { font-size: 1.8rem; font-weight: 800; color: #fff; margin-bottom: .3rem; }
-        .page-hero p  { font-size: 14px; color: rgba(255,255,255,0.75); }
-
-        /* ── ABOUT SECTION ── */
-        .about-section {
-            position: relative;
-            min-height: 580px;
-            display: grid;
-            grid-template-columns: 1fr 420px;
-            overflow: hidden;
-        }
-
-        .about-bg {
-            position: absolute;
-            inset: 0;
-            background: url('/Content/images/About_Paw.png') center top / cover no-repeat;
-            z-index: 0;
-        }
-        .about-bg::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(
-                to right,
-                rgba(232,224,213,0.96) 0%,
-                rgba(232,224,213,0.88) 35%,
-                rgba(232,224,213,0.40) 58%,
-                transparent 100%
-            );
-        }
-
-        /* Left text */
-        .about-text-col {
-            position: relative;
-            z-index: 2;
-            padding: 3.5rem 2rem 3.5rem 6%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: 1.8rem;
-        }
-        .about-text-col h2 {
-            font-size: 2rem;
-            font-weight: 900;
-            color: var(--text);
-            letter-spacing: -1px;
-            margin-bottom: .4rem;
-        }
-        .about-divider {
-            width: 40px; height: 3px;
-            background: linear-gradient(90deg, var(--blue), var(--blue-dark));
-            border-radius: 2px;
-            margin-bottom: .7rem;
-        }
-        .about-text-col p {
-            font-size: 14px;
-            color: var(--text-mid);
-            line-height: 1.8;
-        }
-
-        /* Right cards column — with margin on both sides */
-        .about-cards-col {
-            position: relative;
-            z-index: 2;
-            padding: 3rem 0 3rem 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: .75rem;
-        }
-
-        /* Card: horizontal — icon LEFT, text RIGHT, flush to right edge */
-        .highlight-card {
-            background: rgba(255,255,255,0.92);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: 12px 0 0 12px;
-            margin-right: -100px;
-            border: 1px solid rgba(255,255,255,0.95);
-            border-right: none;
-            padding: 1.2rem 1.6rem 1.2rem 1.4rem;
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 1.2rem;
-            box-shadow: -4px 4px 20px rgba(0,0,0,0.07);
-        }
-
-        /* Large faded icon on the LEFT */
-        .highlight-card i {
-            font-size: 2.6rem;
-            color: rgba(110,140,165,0.30);
-            flex-shrink: 0;
-            width: 52px;
-            text-align: center;
-        }
-
-        .highlight-card-body h3 {
-            font-size: 14px;
-            font-weight: 800;
-            color: var(--text);
-            margin-bottom: .25rem;
-        }
-        .highlight-card-body p {
-            font-size: 12px;
-            color: var(--text-mid);
-            line-height: 1.6;
-        }
-
-        @@media (max-width: 860px) {
-            .about-section {
-                grid-template-columns: 1fr;
-                min-height: auto;
-            }
-            .about-bg::after { background: rgba(232,224,213,0.80); }
-            .about-text-col { padding: 3rem 6%; }
-            .about-cards-col { padding: 0 6% 3rem; }
-        }
-    </style>
 }
 
-<div class="page-hero">
-    <h1>About PawChase</h1>
-    <p>A store made by dog lovers, for dog lovers.</p>
-</div>
-
-<section class="about-section">
-    <div class="about-bg"></div>
-
-    <!-- Left: Story + Mission -->
-    <div class="about-text-col">
-        <div>
-            <h2>Our Story</h2>
-            <div class="about-divider"></div>
-            <p>PawChase was built out of a simple love for dogs. We noticed how hard it was to find quality, trusted products for dogs in one place &mdash; so we built it ourselves.</p>
-            <p style="margin-top:.6rem;">We carry only products we'd use on our own dogs. Every item is carefully selected for quality, safety, and value &mdash; whether you have a tiny Chihuahua or a massive German Shepherd.</p>
-        </div>
-        <div>
-            <h2>Our Mission</h2>
-            <div class="about-divider"></div>
-            <p>To make dog care simpler, more affordable, and more enjoyable for every Filipino dog owner.</p>
+<div class="pc-hero">
+    <div class="pc-hero-bg" style="background-image: url('@Url.Content("~/Content/images/hero-dog.png")');"></div>
+    <div class="pc-hero-overlay"></div>
+    <div class="pc-hero-blob pc-hero-blob--1"></div>
+    <div class="pc-hero-blob pc-hero-blob--2"></div>
+    <div class="pc-hero-content">
+        <h1 class="pc-hero-title">About <span>Pawchase</span></h1>
+        <p class="pc-hero-subtitle">A store built by dog lovers, for dog lovers &mdash; every product chosen with care.</p>
+        <div class="pc-hero-divider">
+            <div class="pc-hero-divider-line"></div>
+            <i class="fa-solid fa-bone"></i>
+            <div class="pc-hero-divider-line"></div>
         </div>
     </div>
+</div>
 
-    <!-- Right: Individual cards, icon left + text right -->
-    <div class="about-cards-col">
-        <div class="highlight-card">
-            <i class="fa-solid fa-dog"></i>
-            <div class="highlight-card-body">
-                <h3>Dogs Only</h3>
-                <p>Specialized exclusively for man's best friend &mdash; every product is dog-specific.</p>
+<section class="pc-about-section">
+    <div class="pc-about-inner">
+
+        <div class="pc-about-left">
+            <div class="pc-about-block">
+                <div class="pc-about-label">
+                    <i class="fa-solid fa-book-open"></i>
+                    Our Story
+                </div>
+                <h2 class="pc-about-h2">We Built What Dog<br>Owners Were Missing</h2>
+                <p class="pc-about-p">
+                    Pawchase was born out of a simple love for dogs. We noticed how hard it was to find quality, trusted
+                    products for dogs in one place &mdash; so we built it ourselves.
+                </p>
+                <p class="pc-about-p">
+                    We carry only products we&rsquo;d use on our own dogs. Every item is carefully selected for quality,
+                    safety, and value &mdash; whether you have a tiny Chihuahua or a massive German Shepherd.
+                </p>
+            </div>
+
+            <div class="pc-about-divider">
+                <div class="pc-about-divider-line"></div>
+                <i class="fa-solid fa-paw"></i>
+                <div class="pc-about-divider-line"></div>
+            </div>
+
+            <div class="pc-about-block">
+                <div class="pc-about-label">
+                    <i class="fa-solid fa-bullseye"></i>
+                    Our Mission
+                </div>
+                <h2 class="pc-about-h2">Caring for Every Dog,<br>Every Day</h2>
+                <div class="pc-mission-box">
+                    <p class="pc-mission-quote">
+                        &ldquo;To make dog care simpler, more affordable, and more enjoyable for every Filipino dog owner
+                        &mdash; one happy tail at a time.&rdquo;
+                    </p>
+                </div>
             </div>
         </div>
-        <div class="highlight-card">
-            <i class="fa-solid fa-shield-halved"></i>
-            <div class="highlight-card-body">
-                <h3>Quality Assured</h3>
-                <p>Every product is vet-approved or trusted by breeders before we list it.</p>
+
+        <div class="pc-about-right">
+            <div class="pc-feature-card">
+                <div class="pc-feature-icon-wrap pc-feature-icon-wrap--blue">
+                    <i class="fa-solid fa-dog"></i>
+                </div>
+                <div class="pc-feature-text">
+                    <div class="pc-feature-title">Dogs Only</div>
+                    <div class="pc-feature-desc">
+                        Specialized exclusively for man&rsquo;s best friend &mdash; every product
+                        on our store is dog-specific and carefully chosen.
+                    </div>
+                </div>
+            </div>
+
+            <div class="pc-feature-card">
+                <div class="pc-feature-icon-wrap pc-feature-icon-wrap--teal">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div class="pc-feature-text">
+                    <div class="pc-feature-title">Quality Assured</div>
+                    <div class="pc-feature-desc">
+                        Every product is vet-approved or trusted by breeders before we list it.
+                        No compromises on what goes into your dog&rsquo;s life.
+                    </div>
+                </div>
+            </div>
+
+            <div class="pc-feature-card">
+                <div class="pc-feature-icon-wrap pc-feature-icon-wrap--orange">
+                    <i class="fa-solid fa-truck-fast"></i>
+                </div>
+                <div class="pc-feature-text">
+                    <div class="pc-feature-title">Fast Delivery</div>
+                    <div class="pc-feature-desc">
+                        Get your orders delivered across the Philippines &mdash; fast, reliable,
+                        and right to your doorstep when your dog needs it most.
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="highlight-card">
-            <i class="fa-solid fa-truck-fast"></i>
-            <div class="highlight-card-body">
-                <h3>Fast Delivery</h3>
-                <p>Get your orders delivered across the Philippines &mdash; fast and reliable.</p>
-            </div>
-        </div>
+
     </div>
 </section>
