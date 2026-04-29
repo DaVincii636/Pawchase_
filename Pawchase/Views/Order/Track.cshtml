@@ -164,10 +164,13 @@
                             @* ── COMPLETED: Rate + Return/Refund ── *@
                             @if (order.Status == "Completed")
                             {
-                                <button class="btn-sm primary"
-                                        onclick="openReviewModal('@order.ReferenceNumber','@firstProductId','@Html.Raw(firstProductName.Replace("'","\\'"))')">
-                                    <i class="fa-regular fa-star"></i> Rate
-                                </button>
+                                if (!order.IsReviewed)
+                                {
+                                    <button class="btn-sm primary"
+                                            onclick="openReviewModal('@order.ReferenceNumber','@firstProductId','@Html.Raw(firstProductName.Replace("'","\\'"))')">
+                                        <i class="fa-regular fa-star"></i> Rate
+                                    </button>
+                                }
                                 if (!order.HasRefundRequest)
                                 {
                                     <button class="btn-sm danger"

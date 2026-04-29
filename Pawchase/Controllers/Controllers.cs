@@ -846,6 +846,10 @@ namespace Pawchase.Controllers
                 };
                 MockData.Reviews.Add(review);
 
+                // Mark the order as reviewed so the Rate button is hidden afterward
+                var reviewedOrder = MockData.Orders.FirstOrDefault(o => o.ReferenceNumber == referenceNumber);
+                if (reviewedOrder != null) reviewedOrder.IsReviewed = true;
+
                 // Order stays Completed after rating
                 TempData["Success"] = "Thank you for your review!";
                 return RedirectToAction("Track", "Order", new { tab = "Completed" });

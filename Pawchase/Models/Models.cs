@@ -80,6 +80,8 @@ namespace Pawchase.Models
         public bool HasRefundRequest { get; set; }
         // Set when customer clicks "Received" — locks admin from changing status
         public bool IsReceivedByCustomer { get; set; }
+        // Set when the customer submits a review — hides the Rate button afterward
+        public bool IsReviewed { get; set; }
         public string CancelReason { get; set; }
         public string RefundReason { get; set; }
         // GCash number the customer provided for their refund
