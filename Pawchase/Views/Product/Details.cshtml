@@ -83,17 +83,13 @@
                 <div class="variant-section">
                     <span class="variant-label-title">Color / Style</span>
                     <div class="variant-thumbs" id="variantThumbs">
-                        @{ int _pageThumbIdx = 0; }
                         @foreach (var v in Model.Variants)
                         {
                             <div class="variant-thumb"
                                  title="@v.Label"
                                  data-img="@v.ImageUrl"
                                  data-label="@v.Label"
-                                 data-stock="@v.Stock"
-                                 data-variant-index="@_pageThumbIdx"
-                                 onclick="selectVariant(this, '@v.ImageUrl', '@v.Label', @v.Stock)">
-                            @{ _pageThumbIdx++; }
+                                 onclick="selectVariant(this, '@v.ImageUrl', '@v.Label')">
                                 @if (!string.IsNullOrEmpty(v.ImageUrl))
                                 {
                                     <img src="@v.ImageUrl" alt="@(string.IsNullOrEmpty(v.Label) ? "Variant" : v.Label)"
@@ -113,23 +109,15 @@
                 </div>
             }
 
-            @{
-                // If the product has variants, total stock = sum of all variant stocks.
-                var effectiveStock = hasVariants
-                    ? Model.Variants.Sum(v => v.Stock)
-                    : Model.Stock;
-            }
             <div class="detail-meta">
                 <div class="meta-item">
                     <i class="fa-solid fa-boxes-stacked"></i>
-                    @if (hasVariants)
-                    {<span id="stockDisplaySpan"><strong style="color:var(--text-mid);">Select a variant</strong> to see stock</span>}
-                    else if (effectiveStock > 10)
-                    {<span id="stockDisplaySpan"><strong style="color:#1e8449;">In Stock</strong> (@effectiveStock available)</span>}
-                    else if (effectiveStock > 0)
-                    {<span id="stockDisplaySpan"><strong style="color:#d4a017;">Low Stock</strong> (Only @effectiveStock left!)</span>}
-                    else
-                    {<span id="stockDisplaySpan"><strong style="color:#e05555;">Out of Stock</strong></span>}
+                    @if (Model.Stock > 10)
+                    {<span><strong style="color:#1e8449;">In Stock</strong> (@Model.Stock available)</span>}
+                else if (Model.Stock > 0)
+                {<span><strong style="color:#d4a017;">Low Stock</strong> (Only @Model.Stock left!)</span>}
+            else
+            {<span><strong style="color:#e05555;">Out of Stock</strong></span>}
                 </div>
                 <div class="meta-item">
                     <i class="fa-solid fa-truck"></i>
@@ -137,7 +125,7 @@
                 </div>
             </div>
 
-            @if (effectiveStock > 0)
+            @if (Model.Stock > 0)
             {
                 <div class="detail-actions">
                     <button type="button" class="btn-primary btn-lg" onclick="openCartModal('addtocart')">
@@ -185,17 +173,13 @@
                         Color / Style &nbsp;<span id="modalVariantSelected" style="color:var(--blue-dark);font-weight:700;"></span>
                     </div>
                     <div class="variant-thumbs" id="modalVariantThumbs">
-                        @{ int _modalThumbIdx = 0; }
                         @foreach (var v in Model.Variants)
                         {
                             <div class="variant-thumb"
                                  title="@v.Label"
                                  data-img="@v.ImageUrl"
                                  data-label="@v.Label"
-                                 data-stock="@v.Stock"
-                                 data-variant-index="@_modalThumbIdx"
                                  onclick="selectModalVariant(this)">
-                            @{ _modalThumbIdx++; }
                                 @if (!string.IsNullOrEmpty(v.ImageUrl))
                                 {
                                     <img src="@v.ImageUrl" alt="@(string.IsNullOrEmpty(v.Label) ? "Variant" : v.Label)"
@@ -224,7 +208,7 @@
                     <button type="button" onclick="modalChangeQty(-1)">-</button>
                     <span id="modalQtyDisplay" style="min-width:32px;text-align:center;font-size:16px;font-weight:700;color:var(--text);">1</span>
                     <button type="button" onclick="modalChangeQty(1)">+</button>
-                    <span id="modalStockAvail" style="font-size:12px;color:var(--text-light);margin-left:4px;">@(hasVariants ? "Select a variant" : "/ " + (Model.Stock) + " available")</span>
+                    <span style="font-size:12px;color:var(--text-light);margin-left:4px;">/ @Model.Stock available</span>
                 </div>
             </div>
 
@@ -244,8 +228,7 @@
 
     <!-- REVIEWS -->
     <div class="related-section" style="border-top:1px solid var(--border);padding-top:2rem;">
-        <h2>
-            <i class="fa-regular fa-star" style="color:#E6A520;"></i> Customer Reviews
+        <h2><i class="fa-regular fa-star" style="color:#E6A520;"></i> Customer Reviews
             @if (reviewCount > 0)
             {<span style="font-size:14px;font-weight:400;color:var(--text-light);margin-left:8px;">(@reviewCount review@(reviewCount != 1 ? "s" : ""))</span>}
         </h2>
@@ -254,13 +237,13 @@
             <div class="products-grid" style="margin-top:1rem;">
                 @{
                     var revColors = new[] { "#ffe8d6", "#ddeaf3", "#f3e3d0", "#d4eadd", "#ecddd0", "#d4e4f0" };
-                    var revIcons = new[] { "fa-dog", "fa-paw", "fa-bone", "fa-dog", "fa-paw", "fa-bone" };
+                    var revIcons  = new[] { "fa-dog", "fa-paw", "fa-bone", "fa-dog", "fa-paw", "fa-bone" };
                 }
                 @for (int ri = 0; ri < reviews.Count; ri++)
                 {
                     var r = reviews[ri];
                     var rColor = revColors[ri % revColors.Length];
-                    var rIcon = revIcons[ri % revIcons.Length];
+                    var rIcon  = revIcons[ri % revIcons.Length];
                     <div class="review-card @(r.IsTextOnly ? "without-photo" : "with-photo")" id="review-@r.Id" onclick="openModal(@ri)" style="cursor:pointer;">
                         @if (!r.IsTextOnly)
                         {
@@ -499,137 +482,47 @@
     </script>
     <script src="@Url.Content("~/Scripts/reviews.js")"></script>
     <script>
-        // ── Variant stock map (NEW) ────────────────────────────────────────
-        var variantStocks = {
-            @if (hasVariants)
-            {
-                foreach (var v in Model.Variants)
-                {
-                    @:@Html.Raw("'" + v.Label?.Replace("'", "\\'") + "': " + v.Stock + ",")
-                }
-            }
-        };
-        var baseStock = @(hasVariants ? Model.Variants.Sum(v => v.Stock) : Model.Stock);
-
         // ── State ──────────────────────────────────────────────────────────
-        var selectedVariantLabel = null;
-        var selectedVariantIndex = null; // tracks which thumb by index (handles duplicate labels)
-        var modalVariantLabel    = null;
+        var selectedVariantLabel = null;   // variant highlighted on main page
+        var modalVariantLabel    = null;   // variant chosen inside the modal
         var modalQty             = 1;
-        var maxStock             = @(hasVariants ? Model.Variants.Sum(v => v.Stock) : Model.Stock);
-        var _cartModalMode       = 'addtocart';
+        var maxStock             = @Model.Stock;
+        var _cartModalMode       = 'addtocart'; // 'addtocart' | 'buynow'
 
+        // ── Variant selector (main page thumbs — preview only) ─────────────
         var _defaultImgUrl = '@Model.ImageUrl';
-        var availEl = document.getElementById('modalStockAvail');
-        if (availEl) availEl.textContent = _hasVariants ? 'Select a variant' : '/ ' + baseStock + ' available';
 
-        // ── Update stock display (NEW) ─────────────────────────────────────
-        var _hasVariants = @(hasVariants ? "true" : "false");
-
-        function updateStockDisplay(label, explicitStock) {
-            var stockEl = document.getElementById('stockDisplaySpan') || document.querySelector('.detail-meta .meta-item:first-child span');
-            var actionDiv = document.querySelector('.detail-actions');
-            var outOfStockBtn = document.querySelector('.btn-disabled');
-
-            // When variants exist and none is selected, always show the prompt.
-            if (_hasVariants && !label) {
-                if (stockEl) stockEl.innerHTML = '<strong style="color:var(--text-mid);">Select a variant</strong> to see stock';
-                maxStock = baseStock;
-                var availEl = document.getElementById('modalStockAvail');
-                if (availEl) availEl.textContent = 'Select a variant';
-                if (baseStock > 0) {
-                    if (outOfStockBtn) outOfStockBtn.style.display = 'none';
-                    if (actionDiv) actionDiv.style.display = '';
-                } else {
-                    if (actionDiv) actionDiv.style.display = 'none';
-                    if (outOfStockBtn) outOfStockBtn.style.display = '';
-                }
-                return;
-            }
-
-            // Use explicit stock if passed (avoids duplicate-label lookup bug),
-            // otherwise fall back to variantStocks map or baseStock.
-            var stock;
-            if (explicitStock !== undefined && explicitStock !== null && !isNaN(explicitStock)) {
-                stock = explicitStock;
-            } else {
-                var activeThumb = document.querySelector('#variantThumbs .variant-thumb.variant-active');
-                stock = (activeThumb && activeThumb.getAttribute('data-stock') !== null)
-                    ? parseInt(activeThumb.getAttribute('data-stock'), 10)
-                    : (variantStocks[label] !== undefined ? variantStocks[label] : baseStock);
-            }
-            if (isNaN(stock)) stock = baseStock;
-
-            maxStock = stock;
-            if (modalQty > maxStock) {
-                modalQty = Math.max(1, maxStock);
-                var disp = document.getElementById('modalQtyDisplay');
-                if (disp) disp.textContent = modalQty;
-            }
-
-            if (stockEl) {
-                if (stock > 10) {
-                    stockEl.innerHTML = '<strong style="color:#1e8449;">In Stock</strong> (' + stock + ' available)';
-                } else if (stock > 0) {
-                    stockEl.innerHTML = '<strong style="color:#d4a017;">Low Stock</strong> (Only ' + stock + ' left!)';
-                } else {
-                    stockEl.innerHTML = '<strong style="color:#e05555;">Out of Stock</strong>';
-                }
-            }
-
-            var availEl = document.getElementById('modalStockAvail');
-            if (availEl) availEl.textContent = '/ ' + stock + ' available';
-
-            if (stock > 0) {
-                if (outOfStockBtn) outOfStockBtn.style.display = 'none';
-                if (actionDiv) actionDiv.style.display = '';
-            } else {
-                if (actionDiv) actionDiv.style.display = 'none';
-                if (outOfStockBtn) outOfStockBtn.style.display = '';
-            }
-        }
-
-        // ── Variant selector (main page thumbs) ───────────────────────────
-        function selectVariant(el, imgUrl, label, stock) {
+        function selectVariant(el, imgUrl, label) {
             var mainImg = document.getElementById('mainProductImg');
             var alreadyActive = el.classList.contains('variant-active');
 
+            // Toggle: clicking an already-active variant deselects it
             document.querySelectorAll('#variantThumbs .variant-thumb').forEach(function (t) {
                 t.classList.remove('variant-active');
             });
 
             if (alreadyActive) {
+                // Deselect — revert to main product image
                 selectedVariantLabel = null;
-                selectedVariantIndex = null;
                 if (mainImg) {
                     mainImg.style.opacity = '0';
                     mainImg.style.transition = 'opacity .18s';
                     setTimeout(function () { mainImg.src = _defaultImgUrl; mainImg.style.opacity = '1'; }, 120);
                 }
-                updateStockDisplay(null);
             } else {
+                // Select this variant
                 el.classList.add('variant-active');
                 selectedVariantLabel = label || null;
-                selectedVariantIndex = el.getAttribute('data-variant-index');
                 if (mainImg && imgUrl) {
                     mainImg.style.opacity = '0';
                     mainImg.style.transition = 'opacity .18s';
                     setTimeout(function () { mainImg.src = imgUrl; mainImg.style.opacity = '1'; }, 120);
                 }
-                // Pass stock directly so duplicate labels never cause wrong lookup
-                updateStockDisplay(label, stock !== undefined ? stock : null);
             }
 
             var url = new URL(window.location.href);
-            if (selectedVariantLabel) {
-                url.searchParams.set('variant', selectedVariantLabel);
-                var elIdx = el.getAttribute('data-variant-index');
-                if (elIdx !== null) url.searchParams.set('variantIdx', elIdx);
-                else url.searchParams.delete('variantIdx');
-            } else {
-                url.searchParams.delete('variant');
-                url.searchParams.delete('variantIdx');
-            }
+            if (selectedVariantLabel) url.searchParams.set('variant', selectedVariantLabel);
+            else url.searchParams.delete('variant');
             history.replaceState(null, '', url.toString());
         }
 
@@ -646,6 +539,7 @@
             if (alert) alert.style.display = 'none';
 
             if (alreadyActive) {
+                // Deselect — revert main image to default
                 modalVariantLabel = null;
                 if (selEl) selEl.textContent = '';
                 var mainImg = document.getElementById('mainProductImg');
@@ -653,18 +547,8 @@
                     mainImg.style.opacity = '0';
                     setTimeout(function () { mainImg.src = _defaultImgUrl; mainImg.style.opacity = '1'; }, 120);
                 }
-                // Variant deselected — reset and show prompt
-                maxStock = baseStock;
-                modalQty = 1;
-                document.getElementById('modalQtyDisplay').textContent = modalQty;
-                var availEl = document.getElementById('modalStockAvail');
-                if (availEl) availEl.textContent = _hasVariants ? 'Select a variant' : '/ ' + baseStock + ' available';
-                // Sync page badge and page thumb highlights
-                selectedVariantLabel = null;
-                selectedVariantIndex = null;
-                document.querySelectorAll('#variantThumbs .variant-thumb').forEach(function(t) { t.classList.remove('variant-active'); });
-                updateStockDisplay(null);
             } else {
+                // Select this variant
                 el.classList.add('variant-active');
                 modalVariantLabel = el.getAttribute('data-label') || null;
                 if (selEl) selEl.textContent = modalVariantLabel ? modalVariantLabel : '';
@@ -674,26 +558,10 @@
                     mainImg.style.opacity = '0';
                     setTimeout(function () { mainImg.src = img; mainImg.style.opacity = '1'; }, 120);
                 }
-                // Read stock directly from the element's data-stock attribute
-                var vStock = parseInt(el.getAttribute('data-stock'), 10);
-                if (isNaN(vStock)) vStock = baseStock;
-                maxStock = vStock;
-                modalQty = Math.min(modalQty, Math.max(1, maxStock));
-                document.getElementById('modalQtyDisplay').textContent = modalQty;
-                var availEl = document.getElementById('modalStockAvail');
-                if (availEl) availEl.textContent = '/ ' + vStock + ' available';
-                // Sync page badge and page thumb highlight — use index so duplicate labels never mismatch
-                selectedVariantLabel = modalVariantLabel;
-                var variantIdx = el.getAttribute('data-variant-index');
-                selectedVariantIndex = variantIdx;
-                document.querySelectorAll('#variantThumbs .variant-thumb').forEach(function(t) {
-                    t.classList.toggle('variant-active', t.getAttribute('data-variant-index') === variantIdx);
-                });
-                updateStockDisplay(modalVariantLabel, vStock);
             }
         }
 
-        // eunice modified: login check
+        // eunice modified: login check — redirects to Login page with returnUrl
         var _isLoggedIn = @(Session["UserId"] != null ? "true" : "false");
         var _loginUrl = '@Url.Action("Login","Account")';
         function showLoginPopup() {
@@ -702,9 +570,11 @@
 
         // ── Open unified modal ─────────────────────────────────────────────
         function openCartModal(mode) {
+            // eunice modified: require login before Add to Cart or Buy Now
             if (!_isLoggedIn) { showLoginPopup(); return; }
             _cartModalMode = mode;
 
+            // Set title and confirm button label
             var title   = document.getElementById('cartModalTitle');
             var confirm = document.getElementById('cartModalConfirmBtn');
             if (mode === 'buynow') {
@@ -715,17 +585,18 @@
                 confirm.textContent = 'Add to Cart';
             }
 
+            // Pre-select variant in modal to match current page selection
             var thumbs = document.querySelectorAll('#modalVariantThumbs .variant-thumb');
             if (thumbs.length > 0) {
                 var matched = false;
                 thumbs.forEach(function (t) {
                     t.classList.remove('variant-active');
-                    // Use index-based match so duplicate labels don't select wrong thumb
-                    if (selectedVariantIndex !== null && t.getAttribute('data-variant-index') === selectedVariantIndex) {
+                    if (selectedVariantLabel && t.getAttribute('data-label') === selectedVariantLabel) {
                         t.classList.add('variant-active');
                         matched = true;
                     }
                 });
+                // Do NOT force-select the first thumb if nothing is selected on the main page
                 var active = matched ? document.querySelector('#modalVariantThumbs .variant-thumb.variant-active') : null;
                 modalVariantLabel = active ? active.getAttribute('data-label') : null;
                 var selEl = document.getElementById('modalVariantSelected');
@@ -734,28 +605,11 @@
                 modalVariantLabel = null;
             }
 
+            // Reset qty
             modalQty = 1;
             document.getElementById('modalQtyDisplay').textContent = modalQty;
 
-            // Set maxStock and avail label based on selected variant (or prompt if none)
-            var activeVariantLabel = modalVariantLabel;
-            var preActiveThumb = modalVariantLabel
-                ? document.querySelector('#modalVariantThumbs .variant-thumb.variant-active')
-                : null;
-            if (preActiveThumb && preActiveThumb.getAttribute('data-stock') !== null) {
-                maxStock = parseInt(preActiveThumb.getAttribute('data-stock'), 10);
-                if (isNaN(maxStock)) maxStock = baseStock;
-                var availEl = document.getElementById('modalStockAvail');
-                if (availEl) availEl.textContent = '/ ' + maxStock + ' available';
-            } else if (_hasVariants) {
-                maxStock = baseStock;
-                var availEl = document.getElementById('modalStockAvail');
-                if (availEl) availEl.textContent = 'Select a variant';
-            } else {
-                maxStock = baseStock;
-                var availEl = document.getElementById('modalStockAvail');
-                if (availEl) availEl.textContent = '/ ' + maxStock + ' available';
-            }
+            // Hide alerts
             var va = document.getElementById('modalVariantAlert');
             if (va) va.style.display = 'none';
 
@@ -787,6 +641,7 @@
             var productId = @Model.Id;
 
             if (_cartModalMode === 'buynow') {
+                // Buy Now: go directly to isolated single-item checkout (never touches cart)
                 var url = buyNowUrl + '?id=' + productId
                     + '&qty=' + modalQty
                     + (modalVariantLabel ? '&variantLabel=' + encodeURIComponent(modalVariantLabel) : '');
@@ -800,9 +655,11 @@
                 + (modalVariantLabel ? '&variantLabel=' + encodeURIComponent(modalVariantLabel) : '')
                 + '&returnUrl=' + encodeURIComponent(returnUrl);
 
+            // ── AJAX add to cart (stay on page, update badge) ──────────────
             closeCartModal();
             fetch(url, { method: 'GET', redirect: 'follow' })
                 .then(function (resp) {
+                    // Update cart badge by re-fetching its count from the page
                     return fetch(window.location.href);
                 })
                 .then(function (resp) { return resp.text(); })
@@ -859,34 +716,22 @@
             });
             updateNavBtns();
 
-            var urlParams      = new URLSearchParams(window.location.search);
-            var variantFromUrl = urlParams.get('variant');
-            var variantIdxFromUrl = urlParams.get('variantIdx');
-            var thumbs         = document.querySelectorAll('#variantThumbs .variant-thumb');
-            if (thumbs.length > 0) {
-                var matchedThumb = null;
-                if (variantIdxFromUrl !== null) {
-                    // Prefer exact index match (set when navigating away from this page)
-                    thumbs.forEach(function (t) {
-                        if (t.getAttribute('data-variant-index') === variantIdxFromUrl) matchedThumb = t;
-                    });
-                }
-                if (!matchedThumb && variantFromUrl) {
-                    // Fall back to first label match
-                    thumbs.forEach(function (t) {
-                        if (!matchedThumb && t.getAttribute('data-label') === variantFromUrl) matchedThumb = t;
-                    });
-                }
-                if (matchedThumb) {
-                    var urlStock = parseInt(matchedThumb.getAttribute('data-stock'), 10);
-                    selectVariant(matchedThumb, matchedThumb.getAttribute('data-img'), matchedThumb.getAttribute('data-label'), isNaN(urlStock) ? null : urlStock);
-                } else {
-                    selectedVariantLabel = null;
-                }
+            // Restore variant from URL (if any); otherwise no variant is selected by default
+            var urlParams        = new URLSearchParams(window.location.search);
+            var variantFromUrl   = urlParams.get('variant');
+            var thumbs           = document.querySelectorAll('#variantThumbs .variant-thumb');
+            if (variantFromUrl && thumbs.length > 0) {
+                thumbs.forEach(function (t) {
+                    if (t.getAttribute('data-label') === variantFromUrl) {
+                        selectVariant(t, t.getAttribute('data-img'), variantFromUrl);
+                    }
+                });
             } else {
+                // No variant pre-selected — show main image, no thumb highlighted
                 selectedVariantLabel = null;
             }
 
+            // Close modal on backdrop click
             document.getElementById('cartModal').addEventListener('click', function (e) {
                 if (e.target === this) closeCartModal();
             });
@@ -903,16 +748,10 @@
             var thumbs = document.querySelectorAll('#variantThumbs .variant-thumb');
             thumbs.forEach(function (t) { t.classList.remove('variant-active'); });
             if (_currentImgIdx > 0 && thumbs[_currentImgIdx - 1]) {
-                var activeThumb = thumbs[_currentImgIdx - 1];
-                activeThumb.classList.add('variant-active');
-                selectedVariantLabel = activeThumb.getAttribute('data-label') || null;
-                selectedVariantIndex = activeThumb.getAttribute('data-variant-index');
-                var thumbStock = parseInt(activeThumb.getAttribute('data-stock'), 10);
-                updateStockDisplay(selectedVariantLabel, isNaN(thumbStock) ? null : thumbStock);
+                thumbs[_currentImgIdx - 1].classList.add('variant-active');
+                selectedVariantLabel = thumbs[_currentImgIdx - 1].getAttribute('data-label') || null;
             } else {
                 selectedVariantLabel = null;
-                selectedVariantIndex = null;
-                updateStockDisplay(null);
             }
             updateNavBtns();
         }
@@ -926,8 +765,8 @@
 
         // Sync arrow navigation with variant thumb clicks
         var _origSelectVariant = window.selectVariant;
-        window.selectVariant = function (el, imgUrl, label, stock) {
-            _origSelectVariant(el, imgUrl, label, stock);
+        window.selectVariant = function (el, imgUrl, label) {
+            _origSelectVariant(el, imgUrl, label);
             var thumbs = Array.from(document.querySelectorAll('#variantThumbs .variant-thumb'));
             var idx = thumbs.indexOf(el);
             _currentImgIdx = idx >= 0 ? idx + 1 : 0;

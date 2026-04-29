@@ -78,11 +78,15 @@ namespace Pawchase.Models
         public DateTime OrderDate { get; set; }
         public string Status { get; set; }
         public bool HasRefundRequest { get; set; }
+        // Set when customer clicks "Received" — locks admin from changing status
+        public bool IsReceivedByCustomer { get; set; }
         public string CancelReason { get; set; }
         public string RefundReason { get; set; }
+        // GCash number the customer provided for their refund
         public string GCashNumber { get; set; }
+        // Base64 or URL of the evidence photo uploaded with refund request
+        public string RefundEvidenceUrl { get; set; }
     }
-
     public class Review
     {
         public int Id { get; set; }

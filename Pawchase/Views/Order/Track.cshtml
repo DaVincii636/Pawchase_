@@ -1,4 +1,4 @@
-﻿@using Pawchase.Models
+@using Pawchase.Models
 @model List<Pawchase.Models.Order>
 @{
     ViewBag.Title = "My Orders";
@@ -222,6 +222,13 @@
                     @if (order.Status == "Out for Delivery" || order.Status == "Completed")
                     {
                         using (Html.BeginForm("RequestRefund", "Order", FormMethod.Post, new { id = "refund-form-" + order.ReferenceNumber, style = "display:none" }))
+                        {
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="referenceNumber" value="@order.ReferenceNumber" />
+                            <input type="hidden" name="refundReason" id="refund-reason-val-@order.ReferenceNumber" />
+                            <input type="hidden" name="gcashNumber" id="refund-gcash-val-@order.ReferenceNumber" />
+                            <input type="hidden" name="refundEvidenceUrl" id="refund-evidence-val-@order.ReferenceNumber" />
+                        }
                         {
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="referenceNumber" value="@order.ReferenceNumber" />
@@ -741,6 +748,13 @@
 
             reasonInput.value = finalReason;
             gcashInput.value = gcash;
+
+            // Pass evidence image (base64) into the hidden form field
+            var evidenceInput = document.getElementById('refund-evidence-val-' + _refundRef);
+            if (evidenceInput) {
+                var preview = document.getElementById('rr-img-preview');
+                evidenceInput.value = (preview && preview.src && preview.style.display !== 'none') ? preview.src : '';
+            }
 
             form.submit(); // ✅ only reaches here if EVERYTHING is valid
         }

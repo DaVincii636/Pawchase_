@@ -2,11 +2,17 @@
 @{
     ViewBag.Title = "Manage Orders";
     Layout = "~/Views/Admin/_AdminLayout.cshtml";
-    var statuses = new[] { "To Ship", "In Transit", "Out for Delivery", "Delivered" };
+    var statuses = new[] { "To Ship", "In Transit", "Out for Delivery" };
+    // Forward-only progression map: each status only shows the NEXT valid status
+    var nextStatus = new System.Collections.Generic.Dictionary<string, string> {
+        { "To Ship",          "In Transit"       },
+        { "In Transit",       "Out for Delivery" },
+    };
     var refundOrders = Model.Where(o => o.HasRefundRequest).ToList();
 }
 
 <style>
+    /* ── TABS ── */
     .orders-tabs {
         display: flex; gap: .5rem;
         margin-bottom: 1.4rem;
@@ -25,7 +31,7 @@
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
-    /* Refund cards */
+    /* ── REFUND CARDS ── */
     .refund-card {
         background: var(--white); border-radius: var(--radius-lg);
         border: 1.5px solid rgba(224,85,85,.25); margin-bottom: 1rem;
@@ -37,9 +43,67 @@
         border-bottom: 1px solid rgba(224,85,85,.15); flex-wrap: wrap; gap: .5rem;
     }
     .refund-card-body { padding: 1.2rem 1.3rem; display: flex; flex-direction: column; gap: 1rem; }
-    .refund-info-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    .refund-info-row {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 8.5rem;
+        align-items: flex-start;
+        overflow-x: auto;
+    }
     .refund-info-item label { font-size: 10px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: .4px; display: block; margin-bottom: 3px; }
-    .refund-info-item span  { font-size: 13px; color: var(--text); font-weight: 500; }
+    .refund-info-item span {
+        font-size: 13px;
+        color: var(--text);
+        font-weight: 500;
+        white-space: nowrap;
+    }
+    .refund-info-item {
+        min-width: max-content;
+        display: flex;
+        flex-direction: column;
+    }
+    /* ── REFUND REASON ── */
+    .refund-reason-box {
+        display: flex; align-items: flex-start; gap: 10px;
+        background: rgba(224,85,85,0.06); border: 1px solid rgba(224,85,85,0.18);
+        border-radius: var(--radius-sm); padding: 11px 14px;
+    }
+    .refund-reason-label { font-size: 10px; font-weight: 700; color: rgba(224,85,85,.7); text-transform: uppercase; letter-spacing: .4px; display: block; margin-bottom: 3px; }
+    .refund-reason-text  { font-size: 13px; color: var(--text); font-weight: 500; line-height: 1.55; }
+
+    /* ── CARD TWO-COLUMN LAYOUT ── */
+    .refund-card-layout {
+        display: grid;
+        grid-template-columns: 160px 1fr;
+        gap: 1.2rem;
+        align-items: start;
+    }
+    .refund-img-col {
+        position: sticky; top: 0;
+    }
+    .refund-content-col {
+        display: flex; flex-direction: column; gap: .85rem;
+    }
+
+    /* ── EVIDENCE PHOTO ── */
+    .refund-evidence-thumb {
+        width: 160px; height: 160px; object-fit: cover;
+        border-radius: 12px; border: 2px solid var(--border);
+        cursor: zoom-in; transition: opacity .2s, transform .2s;
+        display: block;
+    }
+    .refund-evidence-thumb:hover { opacity: .88; transform: scale(1.02); }
+    .refund-no-img {
+        width: 160px; height: 160px;
+        border-radius: 12px; border: 2px dashed var(--border);
+        background: var(--peach, #f8ede3);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 8px; color: var(--text-light);
+    }
+    .refund-no-img i    { font-size: 2rem; opacity: .4; }
+    .refund-no-img span { font-size: 11px; font-weight: 600; }
+
+    /* ── GCASH BOX ── */
     .gcash-box {
         background: linear-gradient(135deg, rgba(0,119,255,.06), rgba(0,119,255,.03));
         border: 1.5px solid rgba(0,119,255,.2); border-radius: var(--radius-sm);
@@ -53,6 +117,8 @@
     .gcash-amount { margin-left:auto; text-align:right; }
     .gcash-amount label { font-size:10px; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:.4px; display:block; margin-bottom:2px; }
     .gcash-amount strong { font-size:16px; font-weight:800; color:var(--text); }
+
+    /* ── REFUND BUTTONS ── */
     .refund-actions { display: flex; gap: .6rem; }
     .btn-approve {
         display:inline-flex; align-items:center; gap:6px; padding:8px 18px; border-radius:50px;
@@ -66,6 +132,29 @@
         font-size:12px; font-weight:700; cursor:pointer; font-family:'Poppins',sans-serif; transition:all .2s;
     }
     .btn-decline:hover { background:#e05555; color:#fff; border-color:#e05555; }
+
+    /* ── LOCKED BADGE ── */
+    .locked-badge {
+        font-size:12px; color:#1e8449; font-weight:600;
+        display:inline-flex; align-items:center; gap:5px;
+    }
+
+    /* ── IMAGE ZOOM LIGHTBOX ── */
+    #imgZoomOverlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.88); z-index: 9999;
+        align-items: center; justify-content: center; cursor: zoom-out;
+    }
+    #imgZoomOverlay.open { display: flex; }
+    #imgZoomImg { max-width: 92vw; max-height: 88vh; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); cursor: default; }
+    #imgZoomClose {
+        position: absolute; top: 18px; right: 22px;
+        background: rgba(255,255,255,0.15); border: none; color: #fff;
+        font-size: 20px; width: 40px; height: 40px; border-radius: 50%;
+        cursor: pointer; display: flex; align-items: center; justify-content: center;
+        transition: background .2s;
+    }
+    #imgZoomClose:hover { background: rgba(255,255,255,0.3); }
 
     /* ── SHARED MODAL BASE ── */
     .pc-modal-overlay {
@@ -120,7 +209,7 @@
     <span class="order-count">@Model.Count total orders</span>
 </div>
 
-<!-- Tabs -->
+<!-- ── TABS ── -->
 <div class="orders-tabs">
     <button class="orders-tab-btn active" onclick="switchTab('all', this)">
         <i class="fa-solid fa-receipt"></i> All Orders
@@ -133,11 +222,13 @@
     </button>
 </div>
 
-<!-- ALL ORDERS TAB -->
+<!-- ── ALL ORDERS TAB ── -->
 <div id="tab-all" class="tab-panel active">
     @if (!Model.Any())
     {
-        <div class="admin-table-card"><div class="no-data-msg"><i class="fa-solid fa-receipt"></i><p>No orders yet.</p></div></div>
+        <div class="admin-table-card">
+            <div class="no-data-msg"><i class="fa-solid fa-receipt"></i><p>No orders yet.</p></div>
+        </div>
     }
     else
     {
@@ -162,7 +253,15 @@
                                 <strong>@o.ReferenceNumber</strong>
                                 @if (o.HasRefundRequest)
                                 {
-                                    <span class="flag-badge" style="margin-left:4px;"><i class="fa-solid fa-circle-exclamation"></i> REFUND</span>
+                                    <span class="flag-badge" style="margin-left:4px;">
+                                        <i class="fa-solid fa-circle-exclamation"></i> REFUND
+                                    </span>
+                                }
+                                @if (o.IsReceivedByCustomer)
+                                {
+                                    <span class="flag-badge" style="margin-left:4px;background:rgba(46,204,113,.15);color:#1e8449;border:1px solid rgba(46,204,113,.3);">
+                                        <i class="fa-solid fa-lock"></i> LOCKED
+                                    </span>
                                 }
                             </td>
                             <td>@o.CustomerName<small>@o.Email</small></td>
@@ -171,7 +270,13 @@
                             <td>&#8369;@o.Total.ToString("N2")</td>
                             <td><span class="status-pill status-@o.Status.ToLower().Replace(" ","-")">@o.Status</span></td>
                             <td>
-                                @if (o.HasRefundRequest)
+                                @if (o.IsReceivedByCustomer)
+                                {
+                                    <span class="locked-badge">
+                                        <i class="fa-solid fa-lock"></i> Customer Confirmed
+                                    </span>
+                                }
+                                else if (o.HasRefundRequest)
                                 {
                                     <div class="status-btns">
                                         <button type="button" class="approve-btn"
@@ -187,12 +292,12 @@
                                 else
                                 {
                                     <div class="status-btns">
-                                        @foreach (var s in statuses)
-                                        {
-                                            if (s != o.Status)
+                                        @{
+                                            string next;
+                                            if (nextStatus.TryGetValue(o.Status, out next))
                                             {
                                                 <button type="button" class="status-update-btn"
-                                                        onclick="openStatusModal(@o.Id, '@o.ReferenceNumber', '@s')">@s</button>
+                                                        onclick="openStatusModal(@o.Id, '@o.ReferenceNumber', '@next')">@next</button>
                                             }
                                         }
                                     </div>
@@ -206,7 +311,7 @@
     }
 </div>
 
-<!-- REFUND / RETURN REQUESTS TAB -->
+<!-- ── REFUND / RETURN REQUESTS TAB ── -->
 <div id="tab-refunds" class="tab-panel">
     @if (!refundOrders.Any())
     {
@@ -222,52 +327,101 @@
         foreach (var o in refundOrders)
         {
             <div class="refund-card">
+
                 <div class="refund-card-head">
                     <div>
-                        <strong>@o.ReferenceNumber <span class="flag-badge" style="margin-left:4px;"><i class="fa-solid fa-rotate-left"></i> REFUND REQUEST</span></strong>
-                        <small style="display:block;font-size:11px;color:var(--text-light);margin-top:2px;">Ordered @o.OrderDate.ToString("MMM dd, yyyy") &bull; @o.CustomerName</small>
+                        <strong>
+                            @o.ReferenceNumber
+                            <span class="flag-badge" style="margin-left:4px;">
+                                <i class="fa-solid fa-rotate-left"></i> REFUND REQUEST
+                            </span>
+                        </strong>
+                        <small style="display:block;font-size:11px;color:var(--text-light);margin-top:2px;">
+                            Ordered @o.OrderDate.ToString("MMM dd, yyyy") &bull; @o.CustomerName
+                        </small>
                     </div>
                     <span class="status-pill status-@o.Status.ToLower().Replace(" ","-")">@o.Status</span>
                 </div>
+
                 <div class="refund-card-body">
-                    <div class="refund-info-row">
-                        <div class="refund-info-item"><label>Customer</label><span>@o.CustomerName</span></div>
-                        <div class="refund-info-item"><label>Email</label><span>@o.Email</span></div>
-                        <div class="refund-info-item"><label>Phone</label><span>@o.Phone</span></div>
-                    </div>
-                    @if (!string.IsNullOrWhiteSpace(o.RefundReason))
-                    {
-                        <div style="background:rgba(224,85,85,0.06);border:1px solid rgba(224,85,85,0.18);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text-mid);line-height:1.6;margin-bottom:.5rem;">
-                            <i class="fa-solid fa-circle-question" style="color:#e05555;margin-right:5px;"></i>
-                            <strong>Reason:</strong> @o.RefundReason
+
+                    <!-- LEFT: evidence photo | RIGHT: all content -->
+                    <div class="refund-card-layout">
+
+                        <!-- Evidence image column -->
+                        <div class="refund-img-col">
+                            @if (!string.IsNullOrWhiteSpace(o.RefundEvidenceUrl))
+                            {
+                                <img src="@o.RefundEvidenceUrl"
+                                     alt="Refund evidence"
+                                     class="refund-evidence-thumb"
+                                     onclick="openImageZoom(this.src)"
+                                     title="Click to zoom" />
+                            }
+                            else
+                            {
+                                <div class="refund-no-img">
+                                    <i class="fa-regular fa-image"></i>
+                                    <span>No photo</span>
+                                </div>
+                            }
                         </div>
-                    }
-                    <div class="gcash-box">
-                        <div class="gcash-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
-                        <div class="gcash-info">
-                            <label>GCash Refund To</label>
-                            <div class="gcash-number">@(string.IsNullOrWhiteSpace(o.GCashNumber) ? o.Phone : o.GCashNumber)</div>
-                            <div class="gcash-name">@o.CustomerName</div>
-                        </div>
-                        <div class="gcash-amount">
-                            <label>Refund Amount</label>
-                            <strong>&#8369;@o.Total.ToString("N2")</strong>
+
+                        <!-- Content column -->
+                        <div class="refund-content-col">
+
+                            <!-- Customer info -->
+                            <div class="refund-info-row">
+                                <div class="refund-info-item"><label>Customer</label><span>@o.CustomerName</span></div>
+                                <div class="refund-info-item"><label>Email</label><span>@o.Email</span></div>
+                                <div class="refund-info-item"><label>Phone Number</label><span>@o.Phone</span></div>
+                                @if (!string.IsNullOrWhiteSpace(o.RefundReason))
+                                {
+                                    <div class="refund-info-item"><label>Reason for Return</label><span>@o.RefundReason</span></div>
+                                }
+                            </div>
+
+                            <!-- GCash -->
+                            <div class="gcash-box">
+                                <div class="gcash-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+                                <div class="gcash-info">
+                                    <label>GCash Refund To</label>
+                                    <div class="gcash-number">@(string.IsNullOrWhiteSpace(o.GCashNumber) ? o.Phone : o.GCashNumber)</div>
+                                    <div class="gcash-name">@o.CustomerName</div>
+                                </div>
+                                <div class="gcash-amount">
+                                    <label>Refund Amount</label>
+                                    <strong>&#8369;@o.Total.ToString("N2")</strong>
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="refund-actions">
+                                <button type="button" class="btn-approve"
+                                        onclick="openApproveModal(@o.Id, '@o.ReferenceNumber', '@o.CustomerName', '@o.Total.ToString("N2")', '@(string.IsNullOrWhiteSpace(o.GCashNumber) ? o.Phone : o.GCashNumber)')">
+                                    <i class="fa-solid fa-check"></i> Approve Refund
+                                </button>
+                                <button type="button" class="btn-decline"
+                                        onclick="openDeclineModal(@o.Id, '@o.ReferenceNumber', '@o.CustomerName')">
+                                    <i class="fa-solid fa-times"></i> Decline Request
+                                </button>
+                            </div>
+
                         </div>
                     </div>
-                    <div class="refund-actions">
-                        <button type="button" class="btn-approve"
-                                onclick="openApproveModal(@o.Id, '@o.ReferenceNumber', '@o.CustomerName', '@o.Total.ToString("N2")', '@(string.IsNullOrWhiteSpace(o.GCashNumber) ? o.Phone : o.GCashNumber)')">
-                            <i class="fa-solid fa-check"></i> Approve Refund
-                        </button>
-                        <button type="button" class="btn-decline"
-                                onclick="openDeclineModal(@o.Id, '@o.ReferenceNumber', '@o.CustomerName')">
-                            <i class="fa-solid fa-times"></i> Decline Request
-                        </button>
-                    </div>
+
                 </div>
             </div>
         }
     }
+</div>
+
+<!-- ── IMAGE ZOOM LIGHTBOX ── -->
+<div id="imgZoomOverlay" onclick="closeImageZoom()">
+    <button id="imgZoomClose" onclick="closeImageZoom()" title="Close">
+        <i class="fa-solid fa-times"></i>
+    </button>
+    <img id="imgZoomImg" src="" alt="Evidence" onclick="event.stopPropagation()" />
 </div>
 
 <!-- ── STATUS UPDATE MODAL ── -->
@@ -322,52 +476,67 @@
 </div>
 
 @section scripts {
-    <script>
-        // ── Tab switching ──
-        function switchTab(name, btn) {
-            document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
-            document.querySelectorAll('.orders-tab-btn').forEach(function(b) { b.classList.remove('active'); });
-            document.getElementById('tab-' + name).classList.add('active');
-            btn.classList.add('active');
-        }
+<script>
+    // ── Tab switching ──────────────────────────────────────────────
+    function switchTab(name, btn) {
+        document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+        document.querySelectorAll('.orders-tab-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.getElementById('tab-' + name).classList.add('active');
+        btn.classList.add('active');
+    }
 
-        // ── Status modal ──
-        function openStatusModal(id, ref, status) {
-            document.getElementById('statusModalText').textContent =
-                'Set order ' + ref + ' status to "' + status + '"?';
-            document.getElementById('statusConfirmLink').href =
-                '@Url.Action("UpdateOrderStatus","Admin")?id=' + id + '&status=' + encodeURIComponent(status);
-            document.getElementById('statusModal').style.display = 'flex';
-        }
-        function closeStatusModal() { document.getElementById('statusModal').style.display = 'none'; }
-        document.getElementById('statusModal').addEventListener('click', function(e) {
-            if (e.target === this) closeStatusModal();
-        });
+    // ── Image zoom lightbox ────────────────────────────────────────
+    function openImageZoom(src) {
+        document.getElementById('imgZoomImg').src = src;
+        document.getElementById('imgZoomOverlay').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeImageZoom() {
+        document.getElementById('imgZoomOverlay').classList.remove('open');
+        document.getElementById('imgZoomImg').src = '';
+        document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') { closeImageZoom(); closeStatusModal(); closeApproveModal(); closeDeclineModal(); }
+    });
 
-        // ── Approve refund modal ──
-        function openApproveModal(id, ref, name, amount, phone) {
-            document.getElementById('approveModalText').textContent =
-                'Send ₱' + amount + ' refund to ' + name + ' via GCash (' + phone + ') for order ' + ref + '?';
-            document.getElementById('approveConfirmLink').href =
-                '@Url.Action("UpdateOrderStatus","Admin")?id=' + id + '&status=Refund%20Approved';
-            document.getElementById('approveModal').style.display = 'flex';
-        }
-        function closeApproveModal() { document.getElementById('approveModal').style.display = 'none'; }
-        document.getElementById('approveModal').addEventListener('click', function(e) {
-            if (e.target === this) closeApproveModal();
-        });
+    // ── Status update modal ────────────────────────────────────────
+    function openStatusModal(id, ref, status) {
+        document.getElementById('statusModalText').textContent =
+            'Set order ' + ref + ' status to "' + status + '"?';
+        document.getElementById('statusConfirmLink').href =
+            '@Url.Action("UpdateOrderStatus","Admin")?id=' + id + '&status=' + encodeURIComponent(status);
+        document.getElementById('statusModal').style.display = 'flex';
+    }
+    function closeStatusModal() { document.getElementById('statusModal').style.display = 'none'; }
+    document.getElementById('statusModal').addEventListener('click', function(e) {
+        if (e.target === this) closeStatusModal();
+    });
 
-        // ── Decline refund modal ──
-        function openDeclineModal(id, ref, name) {
-            document.getElementById('declineModalText').textContent =
-                'Decline ' + name + '\'s refund request for order ' + ref + '? The order will be returned to Completed.';
-            document.getElementById('declineConfirmLink').href =
-                '@Url.Action("UpdateOrderStatus","Admin")?id=' + id + '&status=Completed';
-            document.getElementById('declineModal').style.display = 'flex';
-        }
-        function closeDeclineModal() { document.getElementById('declineModal').style.display = 'none'; }
-        document.getElementById('declineModal').addEventListener('click', function(e) {
-            if (e.target === this) closeDeclineModal();
-        });
-    </script>
+    // ── Approve refund modal ───────────────────────────────────────
+    function openApproveModal(id, ref, name, amount, gcash) {
+        document.getElementById('approveModalText').textContent =
+            'Send \u20B1' + amount + ' refund to ' + name + ' via GCash (' + gcash + ') for order ' + ref + '?';
+        document.getElementById('approveConfirmLink').href =
+            '@Url.Action("UpdateOrderStatus","Admin")?id=' + id + '&status=Refund%20Approved';
+        document.getElementById('approveModal').style.display = 'flex';
+    }
+    function closeApproveModal() { document.getElementById('approveModal').style.display = 'none'; }
+    document.getElementById('approveModal').addEventListener('click', function(e) {
+        if (e.target === this) closeApproveModal();
+    });
+
+    // ── Decline refund modal ───────────────────────────────────────
+    function openDeclineModal(id, ref, name) {
+        document.getElementById('declineModalText').textContent =
+            'Decline ' + name + '\'s refund request for order ' + ref + '? The order will be returned to Completed.';
+        document.getElementById('declineConfirmLink').href =
+            '@Url.Action("UpdateOrderStatus","Admin")?id=' + id + '&status=Completed';
+        document.getElementById('declineModal').style.display = 'flex';
+    }
+    function closeDeclineModal() { document.getElementById('declineModal').style.display = 'none'; }
+    document.getElementById('declineModal').addEventListener('click', function(e) {
+        if (e.target === this) closeDeclineModal();
+    });
+</script>
 }
