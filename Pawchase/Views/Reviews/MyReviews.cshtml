@@ -65,6 +65,10 @@
     }
 </div>
 
+@if (TempData["ReviewPosted"] != null)
+{
+    <div class="toast-small" id="posted-toast"><i class="fa-solid fa-circle-check"></i> Review posted successfully</div>
+}
 @if (TempData["ReviewUpdated"] != null)
 {
     <div class="toast-small" id="updated-toast"><i class="fa-solid fa-circle-check"></i> Review updated successfully</div>

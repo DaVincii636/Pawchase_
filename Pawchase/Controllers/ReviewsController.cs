@@ -91,7 +91,7 @@ namespace Pawchase.Controllers
 
             var review = new Review
             {
-                Id = MockData.Reviews.Count + 1,
+                Id = MockData.Reviews.Count > 0 ? MockData.Reviews.Max(r => r.Id) + 1 : 1,
                 ProductId = productId,
                 UserId = userId,
                 CustomerName = resolvedName,
@@ -106,6 +106,13 @@ namespace Pawchase.Controllers
             };
             MockData.Reviews.Add(review);
             TempData["ReviewPosted"] = true;
+
+            if (!string.IsNullOrEmpty(Request.Form["returnTo"]) &&
+                Request.Form["returnTo"] == "myreviews")
+            {
+                return RedirectToAction("MyReviews");
+            }
+
             return RedirectToAction("Index", new { sortBy = "recent", category = "All", photoFilter = "all" });
         }
 

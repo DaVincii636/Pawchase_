@@ -306,8 +306,10 @@ function setEditStar(val) {
 
     const updated = document.getElementById('updated-toast');
     const deleted = document.getElementById('deleted-toast');
+    const posted = document.getElementById('posted-toast');
     if (updated) setTimeout(function () { updated.style.display = 'none'; }, 5000);
     if (deleted) setTimeout(function () { deleted.style.display = 'none'; }, 5000);
+    if (posted) setTimeout(function () { posted.style.display = 'none'; }, 5000);
 })();
 
 // ── DELETE MODAL ──────────────────────────────────────────────────────────
