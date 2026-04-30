@@ -858,7 +858,7 @@ namespace Pawchase.Controllers
 
         // ── Submit Review from Completed tab ─────────────────────────
         [HttpPost, ValidateAntiForgeryToken]
-        public ActionResult SubmitReview(int productId, string referenceNumber, int stars, string comment)
+        public ActionResult SubmitReview(int productId, string referenceNumber, int stars, string comment, string photoUrl)
         {
             try
             {
@@ -884,6 +884,7 @@ namespace Pawchase.Controllers
                     CustomerName = Session["UserName"]?.ToString() ?? "Customer",
                     Stars = stars,
                     Comment = comment,
+                    PhotoUrl = string.IsNullOrWhiteSpace(photoUrl) ? null : photoUrl,
                     DatePosted = DateTime.Now,
                     Category = MockData.Products.FirstOrDefault(p => p.Id == productId)?.Category ?? "Others"
                 };

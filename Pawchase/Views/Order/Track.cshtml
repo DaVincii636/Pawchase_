@@ -249,6 +249,7 @@
                             <input type="hidden" name="referenceNumber" value="@order.ReferenceNumber" />
                             <input type="hidden" name="stars" id="review-stars-@order.ReferenceNumber" value="5" />
                             <input type="hidden" name="comment" id="review-comment-@order.ReferenceNumber" />
+                            <input type="hidden" name="photoUrl" id="review-photo-@order.ReferenceNumber" />
                         }
                     }
 
@@ -885,6 +886,11 @@
             if (!form) return;
             document.getElementById('review-stars-' + _reviewRef).value = _reviewStars;
             document.getElementById('review-comment-' + _reviewRef).value = comment;
+            var photoInput = document.getElementById('review-photo-' + _reviewRef);
+            if (photoInput) {
+                var preview = document.getElementById('review-img-preview');
+                photoInput.value = (preview && preview.src && preview.style.display !== 'none') ? preview.src : '';
+            }
             form.submit();
         }
 
