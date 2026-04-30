@@ -1,4 +1,124 @@
-﻿.my-reviews-header { background:linear-gradient(135deg,var(--blue-deeper),var(--blue)); color:#fff; text-align:center; padding:3rem 2rem; margin-bottom:2rem; }
+﻿/* ===== SHARED HERO ===== */
+.pc-hero {
+    position: relative;
+    width: 100%;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: linear-gradient(135deg, #1e3a52 0%, #2c5478 50%, #3d6b8c 100%);
+}
+
+.pc-hero-blob {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.pc-hero-blob--1 {
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle,rgba(170,205,220,.18) 0%,transparent 70%);
+    top: -80px;
+    right: 10%;
+}
+
+.pc-hero-blob--2 {
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle,rgba(243,227,208,.12) 0%,transparent 70%);
+    bottom: -40px;
+    left: 8%;
+}
+
+.pc-hero-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 1rem 2rem;
+    animation: pcHeroFadeIn .75s ease both;
+}
+
+@keyframes pcHeroFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(22px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.pc-hero-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 .5rem;
+}
+
+    .pc-hero-title span {
+        color: #a8cce0;
+    }
+
+.pc-hero-subtitle {
+    color: rgba(255,255,255,.82);
+    font-size: 14px;
+    margin: 0;
+}
+
+.pc-hero-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 1rem;
+    color: rgba(255,255,255,.35);
+    font-size: .75rem;
+}
+
+.pc-hero-divider-line {
+    width: 48px;
+    height: 1px;
+    background: rgba(255,255,255,.25);
+}
+
+.pc-hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2.5rem;
+    margin-top: 1.2rem;
+}
+
+.pc-hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2.5rem;
+    margin-top: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.pc-hero-stat strong {
+    display: block;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+.pc-hero-stat span {
+    font-size: 11px;
+    color: rgba(255,255,255,.7);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.pc-hero-stat.clickable {
+    cursor: pointer;
+}
+
+.my-reviews-header { background:linear-gradient(135deg,var(--blue-deeper),var(--blue)); color:#fff; text-align:center; padding:3rem 2rem; margin-bottom:2rem; }
 .my-reviews-header h1 { margin:0; font-size:2rem; font-weight:800; }
 .my-reviews-header p { margin:.5rem 0 0; opacity:.85; }
 .my-reviews-stats { display:flex; justify-content:center; gap:2rem; margin-top:1.2rem; }
@@ -7,7 +127,7 @@
 .stat-item strong { display:block; font-size:1.45rem; font-weight:800; }
 .stat-item span { font-size:11px; opacity:.75; }
 
-.my-reviews-container { padding:0 5% 3rem; }
+.my-reviews-container { padding:0 5% 3rem; margin-top: 2rem;}
 .reviews-divider { height:1px; background:rgba(129,166,198,.25); margin:1.2rem 0 1.4rem; }
 .my-reviews-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:16px; }
 .my-review-card { background:#fff; border:1px solid rgba(129,166,198,.15); border-radius:16px; overflow:hidden; box-shadow:var(--shadow-card); cursor:pointer; transition:transform .25s, box-shadow .25s; display:flex; flex-direction:column; }
