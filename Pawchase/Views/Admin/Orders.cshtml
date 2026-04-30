@@ -293,67 +293,22 @@
         font-size: 11px; font-weight: 700; text-transform: uppercase;
         letter-spacing: .4px; color: var(--text-light); margin-bottom: .6rem;
     }
-    /* ── ORDER NOTE MODAL ── */
-    .note-modal-box {
-        background: var(--white); border-radius: var(--radius-lg);
-        max-width: 440px; width: 92%;
-        box-shadow: 0 24px 70px rgba(0,0,0,0.22);
-        overflow: hidden;
-    }
-    .note-modal-header {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 1.1rem 1.4rem;
-        background: linear-gradient(135deg, rgba(129,166,198,.15), rgba(129,166,198,.05));
-        border-bottom: 1.5px solid rgba(129,166,198,.2);
-    }
-    .note-modal-header-left { display: flex; align-items: center; gap: .75rem; }
-    .note-modal-icon {
-        width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
-        background: linear-gradient(135deg, var(--blue), var(--blue-dark));
-        display: flex; align-items: center; justify-content: center;
-        font-size: 1.1rem; color: #fff;
-        box-shadow: 0 4px 12px rgba(129,166,198,.45);
-    }
-    .note-modal-title { font-size: 14px; font-weight: 800; color: var(--text); line-height: 1.2; }
-    .note-modal-subtitle { font-size: 10.5px; color: var(--text-light); margin-top: 1px; font-weight: 500; }
-    .note-modal-close {
-        background: rgba(129,166,198,.12); border: 1.5px solid rgba(129,166,198,.2);
-        color: var(--text-light); width: 32px; height: 32px; border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        cursor: pointer; font-size: 13px; transition: all .2s; flex-shrink: 0;
-    }
-    .note-modal-close:hover { background: rgba(224,85,85,.1); border-color: rgba(224,85,85,.3); color: #c0392b; }
-    .note-modal-body { padding: 1.4rem 1.4rem 1rem; }
-    .note-modal-text-wrap {
-        position: relative;
-        background: linear-gradient(135deg, rgba(129,166,198,.07), rgba(129,166,198,.03));
-        border: 1.5px solid rgba(129,166,198,.2);
+    .summary-note-section {
+        margin: 0 1.5rem 1rem;
+        background: linear-gradient(135deg, rgba(129,166,198,.08), rgba(129,166,198,.03));
+        border: 1.5px solid rgba(129,166,198,.25);
         border-left: 4px solid var(--blue);
         border-radius: 10px;
-        padding: 1rem 1rem 1rem 1.2rem;
-        min-height: 60px;
+        padding: .75rem 1rem;
     }
-    .note-quote-icon {
-        position: absolute; top: 8px; right: 10px;
-        font-size: 1.4rem; color: rgba(129,166,198,.25);
-        pointer-events: none;
+    .summary-note-label {
+        font-size: 11px; font-weight: 700; color: var(--blue);
+        text-transform: uppercase; letter-spacing: .5px;
+        margin-bottom: .4rem; display: flex; align-items: center; gap: 5px;
     }
-    .note-modal-text-wrap p {
-        margin: 0; font-size: 13.5px; color: var(--text);
-        line-height: 1.7; white-space: pre-wrap; font-weight: 500;
-    }
-    .note-modal-footer {
-        padding: .9rem 1.4rem 1.2rem;
-        display: flex; justify-content: flex-end;
-        border-top: 1px solid rgba(210,196,180,.35);
-    }
-    .note-modal-close-btn {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 8px 22px; border-radius: 50px;
-        background: linear-gradient(135deg, var(--blue), var(--blue-dark));
-        color: #fff; border: none; font-size: 13px; font-weight: 700;
-        cursor: pointer; font-family: 'Poppins', sans-serif;
-        transition: all .2s; box-shadow: 0 4px 12px rgba(129,166,198,.35);
+    .summary-note-text {
+        font-size: 13px; color: var(--text); line-height: 1.6;
+        white-space: pre-wrap; font-weight: 500;
     }
     .note-modal-close-btn:hover { opacity: .9; transform: translateY(-1px); }
 </style>
@@ -499,12 +454,6 @@
                                         <i class="fa-solid fa-lock"></i> LOCKED
                                     </span>
                                 }
-                                @if (!string.IsNullOrWhiteSpace(o.OrderNotes))
-                                {
-                                    <span onclick="openNoteModal('@o.OrderNotes.Replace("'", "&#39;").Replace("\n", "&#10;")')" style="margin-left:4px;cursor:pointer;color:var(--blue);font-size:11px;" title="View note">
-                                        <i class="fa-regular fa-note-sticky"></i>
-                                    </span>
-                                }
                                 @{
                                 }
                                 <button type="button" class="btn-summary"
@@ -516,6 +465,7 @@
                                         data-total="@o.Total.ToString("N2")"
                                         data-status="@o.Status"
                                         data-items="@Html.Raw(System.Web.HttpUtility.HtmlEncode(itemsJson))"
+                                        data-note="@(o.OrderNotes ?? "")"
                                         onclick="openOrderSummaryFromBtn(this)">
                                     <i class="fa-solid fa-list-ul"></i> View Summary
                                 </button>
@@ -715,40 +665,15 @@
             </div>
             <div id="summaryItems"></div>
         </div>
+        <div id="summaryNoteSection" class="summary-note-section" style="display:none;">
+            <div class="summary-note-label">
+                <i class="fa-regular fa-note-sticky"></i> Customer Note
+            </div>
+            <div class="summary-note-text" id="summaryNoteText"></div>
+        </div>
         <div class="order-summary-footer">
             <span class="order-summary-footer-label">Order Total</span>
             <span class="order-summary-footer-total" id="summaryTotal"></span>
-        </div>
-    </div>
-</div>
-
-<!-- ── ORDER NOTE MODAL ── -->
-<div id="noteModal" class="pc-modal-overlay" onclick="if(event.target===this)closeNoteModal()">
-    <div class="note-modal-box">
-        <div class="note-modal-header">
-            <div class="note-modal-header-left">
-                <div class="note-modal-icon">
-                    <i class="fa-regular fa-note-sticky"></i>
-                </div>
-                <div>
-                    <div class="note-modal-title">Order Note</div>
-                    <div class="note-modal-subtitle">Added by customer at checkout</div>
-                </div>
-            </div>
-            <button class="note-modal-close" onclick="closeNoteModal()" title="Close">
-                <i class="fa-solid fa-times"></i>
-            </button>
-        </div>
-        <div class="note-modal-body">
-            <div class="note-modal-text-wrap">
-                <i class="fa-solid fa-quote-left note-quote-icon"></i>
-                <p id="noteModalText"></p>
-            </div>
-        </div>
-        <div class="note-modal-footer">
-            <button class="note-modal-close-btn" onclick="closeNoteModal()">
-                <i class="fa-solid fa-check"></i> Got it
-            </button>
         </div>
     </div>
 </div>
@@ -905,7 +830,7 @@
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeImageZoom(); closeStatusModal();
-            closeApproveModal(); closeDeclineModal(); closeOrderSummary(); closeBulkConfirmModal(); closeNoteModal();
+            closeApproveModal(); closeDeclineModal(); closeOrderSummary(); closeBulkConfirmModal();
         }
     });
 
@@ -948,13 +873,6 @@
         if (e.target === this) closeDeclineModal();
     });
 
-    // ── Order Note Modal ───────────────────────────────────────────
-    function openNoteModal(note) {
-        document.getElementById('noteModalText').textContent = note;
-        document.getElementById('noteModal').style.display = 'flex';
-    }
-    function closeNoteModal() { document.getElementById('noteModal').style.display = 'none'; }
-
     // ── Order Summary Modal ────────────────────────────────────────
     function openOrderSummaryFromBtn(btn) {
         var items = [];
@@ -967,10 +885,11 @@
             btn.getAttribute('data-address'),
             btn.getAttribute('data-total'),
             btn.getAttribute('data-status'),
-            items
+            items,
+            btn.getAttribute('data-note') || ''
         );
     }
-    function openOrderSummary(ref, customer, email, date, address, total, status, items) {
+    function openOrderSummary(ref, customer, email, date, address, total, status, items, note) {
         document.getElementById('summaryRef').textContent = ref;
         document.getElementById('summaryDate').textContent = date;
         document.getElementById('summaryCustomer').textContent = customer;
@@ -1011,6 +930,15 @@
             html = '<p style="font-size:13px;color:var(--text-light);text-align:center;padding:1.5rem 0;">No item details available.</p>';
         }
         document.getElementById('summaryItems').innerHTML = html;
+
+        var noteSection = document.getElementById('summaryNoteSection');
+        var noteText = document.getElementById('summaryNoteText');
+        if (note && note.trim()) {
+            noteText.textContent = note.trim();
+            noteSection.style.display = 'block';
+        } else {
+            noteSection.style.display = 'none';
+        }
 
         document.getElementById('orderSummaryOverlay').classList.add('open');
         document.body.style.overflow = 'hidden';
