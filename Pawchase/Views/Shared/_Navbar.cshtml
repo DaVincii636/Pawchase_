@@ -87,7 +87,8 @@
                 <div class="account-dropdown">
                     <a href="@Url.Action("Orders","Account")"><i class="fa-solid fa-user-pen"></i> Profile</a>
                     <a href="@Url.Action("MyReviews","Reviews")"><i class="fa-solid fa-paw"></i> My Reviews</a>
-                    <a href="@Url.Action("Logout","Account")" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+                    <a href="javascript:void(0);" onclick="openLogoutModal()"><i class="fa-solid fa-right-from-bracket"></i> Logout
+                    </a>
                 </div>
             </div>
         }

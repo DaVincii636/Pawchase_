@@ -106,3 +106,12 @@ function showToast(msg, type) {
     setTimeout(function() { t.classList.add('show'); }, 10);
     setTimeout(function() { t.classList.remove('show'); setTimeout(function() { t.remove(); }, 300); }, 3000);
 }
+
+
+function openLogoutModal() {
+    document.getElementById("logoutModal").style.display = "flex";
+}
+
+function closeLogoutModal() {
+    document.getElementById("logoutModal").style.display = "none";
+}
