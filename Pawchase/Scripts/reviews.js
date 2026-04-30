@@ -205,6 +205,24 @@ function openModal(index) {
 
     renderComments(r.comments);
 
+    // ── Verified Purchase badge ──────────────────────────────────────
+    var verifiedEl = byId('modal-verified-badge');
+    if (verifiedEl) {
+        verifiedEl.style.display = r.isVerifiedPurchase ? 'inline-flex' : 'none';
+    }
+
+    // ── Seller Reply ─────────────────────────────────────────────────
+    var replyWrap = byId('modal-seller-reply');
+    if (replyWrap) {
+        if (r.sellerReply) {
+            byId('modal-seller-reply-text').textContent = r.sellerReply;
+            byId('modal-seller-reply-date').textContent = r.sellerReplyDate ? 'Seller · ' + r.sellerReplyDate : 'Seller';
+            replyWrap.style.display = 'block';
+        } else {
+            replyWrap.style.display = 'none';
+        }
+    }
+
     byId('review-modal-overlay').classList.add('open');
     setBodyLock(true);
 }

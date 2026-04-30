@@ -42,6 +42,9 @@ namespace Pawchase.Models
             new User { Id=2, FullName="Maria Santos",   Email="maria@email.com", Password="user123", IsAdmin=false },
         };
 
+        // Saved addresses keyed by UserId — persists for the lifetime of the app session
+        public static Dictionary<int, List<SavedAddress>> UserAddresses = new Dictionary<int, List<SavedAddress>>();
+
         public static List<Order> Orders = new List<Order>
         {
             new Order {

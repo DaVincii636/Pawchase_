@@ -183,6 +183,19 @@
                                         <i class="fa-solid fa-rotate-left"></i> Return/Refund
                                     </button>
                                 }
+                                <button type="button" class="btn-sm outline"
+                                        onclick="openReorderModal('@order.ReferenceNumber')">
+                                    <i class="fa-solid fa-rotate-right"></i> Re-order
+                                </button>
+                            }
+
+                            @* ── CANCELLED: Re-order ── *@
+                            @if (order.Status == "Cancelled")
+                            {
+                                <button type="button" class="btn-sm outline"
+                                        onclick="openReorderModal('@order.ReferenceNumber')">
+                                    <i class="fa-solid fa-rotate-right"></i> Re-order
+                                </button>
                             }
 
                         </div>
@@ -194,6 +207,7 @@
                          data-date="@order.OrderDate.ToString("MMMM dd, yyyy")"
                          data-customer="@order.CustomerName"
                          data-address="@order.Address"
+                         data-notes="@order.OrderNotes"
                          data-total="&#8369;@order.Total.ToString("N2")">
                         <div class="detail-items">
                             @foreach (var snap in snapList)
@@ -294,6 +308,10 @@
             </div>
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:.6rem;">Items Ordered</div>
             <div id="modal-items" style="margin-bottom:1rem;"></div>
+            <div id="modal-notes-wrap" style="display:none;background:rgba(129,166,198,.08);border-radius:6px;padding:9px 12px;margin-bottom:1rem;">
+                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#a89880;margin-bottom:3px;"><i class="fa-regular fa-note-sticky"></i> Order Notes</div>
+                <div id="modal-notes" style="font-size:13px;color:#3a3226;line-height:1.5;"></div>
+            </div>
             <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.75rem;border-top:2px solid rgba(210,196,180,0.5);">
                 <span style="font-size:13px;font-weight:700;color:#3a3226;">Total Paid</span>
                 <span id="modal-total" style="font-size:16px;font-weight:800;color:#4a7399;"></span>
@@ -620,6 +638,42 @@
     </div>
 </div>
 
+<!-- ── RE-ORDER CONFIRMATION MODAL ── -->
+<div id="reorder-modal" onclick="if(event.target===this)closeReorderModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+    <div style="background:#fff;border-radius:20px;width:90%;max-width:460px;box-shadow:0 24px 70px rgba(0,0,0,0.2);overflow:hidden;animation:modalIn .2s ease;">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:1px solid rgba(210,196,180,0.4);">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:36px;height:36px;border-radius:50%;background:rgba(129,166,198,.15);display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-rotate-right" style="color:var(--blue);font-size:15px;"></i>
+                </div>
+                <div>
+                    <div style="font-size:14px;font-weight:800;color:var(--text);">Re-order Items</div>
+                    <div id="reorder-modal-ref" style="font-size:11px;color:var(--text-light);margin-top:1px;"></div>
+                </div>
+            </div>
+            <button onclick="closeReorderModal()" style="background:none;border:none;color:var(--text-light);font-size:18px;cursor:pointer;padding:4px;"><i class="fa-solid fa-times"></i></button>
+        </div>
+        <!-- Items list -->
+        <div style="padding:1.25rem 1.5rem;max-height:240px;overflow-y:auto;">
+            <p style="font-size:12px;color:var(--text-light);margin:0 0 .75rem;">The following items will be added to your cart and you'll be taken straight to checkout:</p>
+            <div id="reorder-modal-items" style="display:flex;flex-direction:column;gap:.5rem;"></div>
+        </div>
+        <!-- Footer note -->
+        <div style="padding:.75rem 1.5rem;background:rgba(129,166,198,.06);border-top:1px solid rgba(210,196,180,0.3);">
+            <p style="font-size:11px;color:var(--text-light);margin:0;"><i class="fa-solid fa-circle-info" style="color:var(--blue);margin-right:4px;"></i>Out-of-stock or removed items will be skipped automatically.</p>
+        </div>
+        <!-- Buttons -->
+        <div style="display:flex;gap:.75rem;justify-content:flex-end;padding:1.25rem 1.5rem;border-top:1px solid rgba(210,196,180,0.3);">
+            <button onclick="closeReorderModal()" style="padding:10px 22px;border-radius:50px;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);cursor:pointer;font-family:'Poppins',sans-serif;">Cancel</button>
+            <a id="reorder-modal-confirm-btn" href="#"
+               style="padding:10px 24px;border-radius:50px;font-size:13px;font-weight:700;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;border:none;cursor:pointer;font-family:'Poppins',sans-serif;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+                <i class="fa-solid fa-rotate-right"></i> Yes, Re-order
+            </a>
+        </div>
+    </div>
+</div>
+
 
 @section scripts {
     <script src="@Url.Content("~/Scripts/account.js")"></script>
@@ -640,6 +694,14 @@
             document.getElementById('modal-address').textContent = data.dataset.address;
             document.getElementById('modal-items').innerHTML = itemsHtml;
             document.getElementById('modal-total').textContent = data.dataset.total;
+            var notes = data.dataset.notes;
+            var notesWrap = document.getElementById('modal-notes-wrap');
+            if (notes && notes.trim()) {
+                document.getElementById('modal-notes').textContent = notes;
+                notesWrap.style.display = 'block';
+            } else {
+                notesWrap.style.display = 'none';
+            }
             document.getElementById('order-detail-modal').style.display = 'flex';
             document.body.style.overflow = 'hidden';
         }
@@ -894,6 +956,52 @@
             closeDetails(); closeCancelModal(); closeReceivedModal();
             closeReturnRefundModal(); closeReviewModal();
             closeReviewConfirmModal(); closeRefundConfirmModal();
+        });
+
+
+        // ── Re-order Confirmation Modal ──────────────────────────────
+        function openReorderModal(refNum) {
+            // Gather items from the hidden detail-data block
+            var dataBlock = document.getElementById('details-' + refNum);
+            var items = dataBlock ? dataBlock.querySelectorAll('.detail-item') : [];
+
+            var itemsHtml = '';
+            items.forEach(function(el) {
+                var name = el.getAttribute('data-name') || '';
+                var qty  = el.getAttribute('data-qty') || '1';
+                var sub  = el.getAttribute('data-subtotal') || '';
+                itemsHtml += '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:rgba(129,166,198,.06);border-radius:8px;">'
+                           + '<div style="display:flex;align-items:center;gap:8px;">'
+                           + '<div style="width:26px;height:26px;border-radius:6px;background:rgba(129,166,198,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-bone" style="font-size:11px;color:var(--blue);"></i></div>'
+                           + '<span style="font-size:13px;font-weight:600;color:var(--text);">' + name + '</span>'
+                           + '</div>'
+                           + '<div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">'
+                           + '<span style="font-size:11px;color:var(--text-light);">x' + qty + '</span>'
+                           + '<span style="font-size:12px;font-weight:700;color:var(--blue-dark);">' + sub + '</span>'
+                           + '</div>'
+                           + '</div>';
+            });
+
+            if (!itemsHtml) {
+                itemsHtml = '<p style="font-size:12px;color:var(--text-light);text-align:center;">No item details available.</p>';
+            }
+
+            document.getElementById('reorder-modal-ref').textContent = refNum;
+            document.getElementById('reorder-modal-items').innerHTML = itemsHtml;
+            document.getElementById('reorder-modal-confirm-btn').href = '/Cart/Reorder?referenceNumber=' + refNum;
+
+            var modal = document.getElementById('reorder-modal');
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeReorderModal() {
+            document.getElementById('reorder-modal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeReorderModal();
         });
 
     </script>

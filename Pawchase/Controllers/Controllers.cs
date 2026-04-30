@@ -166,6 +166,9 @@ namespace Pawchase.Controllers
                 ViewBag.Tab = tab;
                 ViewBag.ProfileUser = user;
                 ViewBag.CurrentUserId = userId;
+                ViewBag.SavedAddresses = MockData.UserAddresses.ContainsKey(userId)
+                    ? MockData.UserAddresses[userId]
+                    : new List<SavedAddress>();
                 return View(orders);
             }
             catch (Exception ex)
@@ -244,6 +247,103 @@ namespace Pawchase.Controllers
         {
             Session.Clear();
             return RedirectToAction("Index", "Home");
+        }
+
+        // ── Saved Delivery Addresses ──────────────────────────────────
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult SaveAddress(int? addressId, string label, string address, string phone, bool isDefault = false)
+        {
+            try
+            {
+                if (!IsLoggedIn) return RedirectToAction("Login");
+                var userId = 0;
+                int.TryParse(Session["UserId"]?.ToString(), out userId);
+                var user = MockData.Users.FirstOrDefault(u => u.Id == userId);
+                if (user == null) return RedirectToAction("Login");
+
+                if (string.IsNullOrWhiteSpace(address))
+                {
+                    TempData["ProfileError"] = "Address cannot be empty.";
+                    return RedirectToAction("Orders", new { tab = "Addresses" });
+                }
+
+                if (!MockData.UserAddresses.ContainsKey(userId))
+                    MockData.UserAddresses[userId] = new List<SavedAddress>();
+                var addresses = MockData.UserAddresses[userId];
+
+                if (isDefault)
+                    foreach (var a in addresses) a.IsDefault = false;
+
+                if (addressId == null || addressId == 0)
+                {
+                    // New address
+                    var newId = addresses.Any() ? addresses.Max(a => a.Id) + 1 : 1;
+                    addresses.Add(new SavedAddress
+                    {
+                        Id = newId,
+                        UserId = userId,
+                        Label = label?.Trim() ?? "Home",
+                        Address = address.Trim(),
+                        Phone = phone?.Trim(),
+                        IsDefault = isDefault || !addresses.Any()
+                    });
+                    TempData["ProfileSuccess"] = "Address saved.";
+                }
+                else
+                {
+                    // Edit existing
+                    var existing = addresses.FirstOrDefault(a => a.Id == addressId);
+                    if (existing != null)
+                    {
+                        existing.Label = label?.Trim() ?? "Home";
+                        existing.Address = address.Trim();
+                        existing.Phone = phone?.Trim();
+                        existing.IsDefault = isDefault;
+                        TempData["ProfileSuccess"] = "Address updated.";
+                    }
+                }
+
+                return RedirectToAction("Orders", new { tab = "Addresses" });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("SaveAddress Error: " + ex.Message);
+                TempData["ProfileError"] = "Could not save address.";
+                return RedirectToAction("Orders", new { tab = "Addresses" });
+            }
+        }
+
+        public ActionResult DeleteAddress(int id)
+        {
+            try
+            {
+                if (!IsLoggedIn) return RedirectToAction("Login");
+                var userId = 0;
+                int.TryParse(Session["UserId"]?.ToString(), out userId);
+                var user = MockData.Users.FirstOrDefault(u => u.Id == userId);
+                if (user == null) return RedirectToAction("Login");
+
+                if (!MockData.UserAddresses.ContainsKey(userId))
+                    MockData.UserAddresses[userId] = new List<SavedAddress>();
+                var addresses = MockData.UserAddresses[userId];
+
+                var addr = addresses.FirstOrDefault(a => a.Id == id);
+                if (addr != null)
+                {
+                    addresses.Remove(addr);
+                    // Promote first remaining to default if we deleted the default
+                    if (addr.IsDefault && addresses.Any())
+                        addresses.First().IsDefault = true;
+                    TempData["ProfileSuccess"] = "Address deleted.";
+                }
+                return RedirectToAction("Orders", new { tab = "Addresses" });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("DeleteAddress Error: " + ex.Message);
+                TempData["ProfileError"] = "Could not delete address.";
+                return RedirectToAction("Orders", new { tab = "Addresses" });
+            }
         }
     }
 
@@ -453,7 +553,7 @@ namespace Pawchase.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public ActionResult PlaceBuyNowOrder(string address, string phone)
+        public ActionResult PlaceBuyNowOrder(string address, string phone, string orderNotes)
         {
             try
             {
@@ -500,7 +600,8 @@ namespace Pawchase.Controllers
                     Snapshots = snapshots,
                     Total = items.Sum(c => c.Subtotal) + shipping,
                     OrderDate = DateTime.Now,
-                    Status = "To Ship"
+                    Status = "To Ship",
+                    OrderNotes = orderNotes?.Trim()
                 };
 
                 MockData.Orders.Add(order);
@@ -534,7 +635,7 @@ namespace Pawchase.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public ActionResult PlaceOrder(string address, string phone)
+        public ActionResult PlaceOrder(string address, string phone, string orderNotes)
         {
             try
             {
@@ -580,7 +681,8 @@ namespace Pawchase.Controllers
                     Snapshots = snapshots,
                     Total = cart.Sum(c => c.Subtotal) + shipping,
                     OrderDate = DateTime.Now,
-                    Status = "To Ship"
+                    Status = "To Ship",
+                    OrderNotes = orderNotes?.Trim()
                 };
 
                 MockData.Orders.Add(order);
@@ -645,6 +747,80 @@ namespace Pawchase.Controllers
                 System.Diagnostics.Debug.WriteLine("ChangeVariant Error: " + ex.Message);
                 TempData["Error"] = "Could not update variant. Please try again.";
                 return RedirectToAction("Index");
+            }
+        }
+
+        // ── One-tap Re-order: re-adds all items from a past order to cart ──
+        public ActionResult Reorder(string referenceNumber)
+        {
+            try
+            {
+                if (!IsLoggedIn)
+                    return RedirectToAction("Login", "Account",
+                        new { returnUrl = Url.Action("Track", "Order") });
+
+                var order = MockData.Orders.FirstOrDefault(o => o.ReferenceNumber == referenceNumber);
+                if (order == null)
+                {
+                    TempData["Error"] = "Order not found.";
+                    return RedirectToAction("Track", "Order");
+                }
+
+                var snapshots = order.Snapshots != null && order.Snapshots.Any()
+                    ? order.Snapshots
+                    : order.Items?.Select(i => new OrderItemSnapshot
+                    {
+                        ProductId = i.Product.Id,
+                        ProductName = i.Product.Name,
+                        Quantity = i.Quantity,
+                        VariantLabel = i.SelectedVariant?.Label
+                    }).ToList() ?? new List<OrderItemSnapshot>();
+
+                // Build a fresh item list from the original order snapshots
+                var reorderItems = new List<CartItem>();
+                var skipped = new List<string>();
+
+                foreach (var snap in snapshots)
+                {
+                    var product = MockData.Products.FirstOrDefault(p => p.Id == snap.ProductId && !p.IsDeleted);
+                    if (product == null || product.Stock <= 0)
+                    {
+                        skipped.Add(snap.ProductName);
+                        continue;
+                    }
+
+                    ProductVariant variant = null;
+                    if (!string.IsNullOrEmpty(snap.VariantLabel) && product.Variants != null)
+                        variant = product.Variants.FirstOrDefault(v => v.Label == snap.VariantLabel);
+
+                    reorderItems.Add(new CartItem
+                    {
+                        Product = product,
+                        Quantity = Math.Min(snap.Quantity, product.Stock),
+                        SelectedVariant = variant
+                    });
+                }
+
+                if (!reorderItems.Any())
+                {
+                    TempData["Error"] = "None of the items from this order are available. " +
+                        (skipped.Any() ? "Skipped: " + string.Join(", ", skipped) + "." : "");
+                    return RedirectToAction("Track", "Order");
+                }
+
+                if (skipped.Any())
+                    TempData["Error"] = skipped.Count + " item(s) skipped (out of stock or removed): "
+                        + string.Join(", ", skipped) + ".";
+
+                // Replace cart with only the reorder items, then serve checkout directly
+                Session["Cart"] = reorderItems;
+                return View("Checkout", reorderItems);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Reorder Error: " + ex.Message);
+                TempData["Error"] = "Could not re-order. Please try again.";
+                return RedirectToAction("Track", "Order");
             }
         }
 
@@ -885,7 +1061,13 @@ namespace Pawchase.Controllers
                     Stars = stars,
                     Comment = comment,
                     DatePosted = DateTime.Now,
-                    Category = MockData.Products.FirstOrDefault(p => p.Id == productId)?.Category ?? "Others"
+                    Category = MockData.Products.FirstOrDefault(p => p.Id == productId)?.Category ?? "Others",
+                    // Verified purchase: check the reviewer has a completed+received order containing this product
+                    IsVerifiedPurchase = MockData.Orders.Any(o =>
+                        o.Email == (Session["UserEmail"]?.ToString() ?? "") &&
+                        o.IsReceivedByCustomer &&
+                        o.Snapshots != null &&
+                        o.Snapshots.Any(s => s.ProductId == productId))
                 };
                 MockData.Reviews.Add(review);
 
@@ -1302,6 +1484,82 @@ namespace Pawchase.Controllers
             }
         }
         // ── Paste this action inside AdminController, after SalesReport() ──
+
+        // ── Seller Reply to a Review ──────────────────────────────────
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult ReplyToReview(int reviewId, string replyText)
+        {
+            try
+            {
+                if (!IsAdmin) return RedirectToAction("Login");
+                var review = MockData.Reviews.FirstOrDefault(r => r.Id == reviewId);
+                if (review == null)
+                {
+                    TempData["Error"] = "Review not found.";
+                    return RedirectToAction("FlaggedReviews");
+                }
+
+                review.SellerReply = replyText?.Trim();
+                review.SellerReplyDate = string.IsNullOrWhiteSpace(replyText) ? (DateTime?)null : DateTime.Now;
+                TempData["Success"] = string.IsNullOrWhiteSpace(replyText)
+                    ? "Seller reply removed."
+                    : "Reply posted for review #" + reviewId + ".";
+                return RedirectToAction("FlaggedReviews");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("ReplyToReview Error: " + ex.Message);
+                TempData["Error"] = "Could not save reply. Please try again.";
+                return RedirectToAction("FlaggedReviews");
+            }
+        }
+
+        // ── Bulk Order Status Update ──────────────────────────────────
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult BulkUpdateOrderStatus(int[] orderIds, string status)
+        {
+            try
+            {
+                if (!IsAdmin) return RedirectToAction("Login");
+
+                var validStatuses = new[] { "To Ship", "In Transit", "Out for Delivery",
+                                            "Cancelled", "Return/Refund",
+                                            "Refund Requested", "Refund Approved", "Completed" };
+                if (!validStatuses.Contains(status))
+                {
+                    TempData["Error"] = "Invalid status.";
+                    return RedirectToAction("Orders");
+                }
+
+                if (orderIds == null || orderIds.Length == 0)
+                {
+                    TempData["Error"] = "No orders selected.";
+                    return RedirectToAction("Orders");
+                }
+
+                var updated = 0;
+                var skipped = 0;
+                foreach (var id in orderIds)
+                {
+                    var o = MockData.Orders.FirstOrDefault(x => x.Id == id);
+                    if (o == null || o.IsReceivedByCustomer) { skipped++; continue; }
+                    o.Status = status;
+                    if (status == "Refund Approved" || status == "Completed")
+                        o.HasRefundRequest = false;
+                    updated++;
+                }
+
+                TempData["Success"] = updated + " order(s) updated to \"" + status + "\"."
+                    + (skipped > 0 ? " " + skipped + " skipped (customer-confirmed)." : "");
+                return RedirectToAction("Orders");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("BulkUpdateOrderStatus Error: " + ex.Message);
+                TempData["Error"] = "Bulk update failed. Please try again.";
+                return RedirectToAction("Orders");
+            }
+        }
 
         public ActionResult SalesReport()
         {
