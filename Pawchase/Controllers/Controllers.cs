@@ -1128,8 +1128,8 @@ namespace Pawchase.Controllers
 
         public ActionResult Logout()
         {
-            Session["IsAdmin"] = null;
-            Session["AdminName"] = null;
+            Session.Clear();
+            Session.Abandon();
             return RedirectToAction("Index", "Home");
         }
 
@@ -1398,11 +1398,17 @@ namespace Pawchase.Controllers
                 var o = MockData.Orders.FirstOrDefault(x => x.Id == id);
                 if (o != null)
                 {
-                    if (o.IsReceivedByCustomer)
+                    // If the customer confirmed receipt, only allow refund-related status changes.
+                    // Shipping-stage changes (e.g. back to "In Transit") are blocked.
+                    if (o.IsReceivedByCustomer &&
+                        status != "Refund Approved" &&
+                        status != "Return/Refund" &&
+                        status != "Completed")
                     {
-                        TempData["Error"] = "This order was confirmed received by the customer and cannot be changed.";
+                        TempData["Error"] = "This order was confirmed received by the customer. Only refund actions are allowed.";
                         return RedirectToAction("Orders");
                     }
+
                     o.Status = status;
                     if (status == "Refund Approved" || status == "Completed")
                         o.HasRefundRequest = false;
@@ -1522,7 +1528,8 @@ namespace Pawchase.Controllers
             {
                 if (!IsAdmin) return RedirectToAction("Login");
 
-                var validStatuses = new[] { "To Ship", "In Transit", "Out for Delivery",
+                // "To Ship" is excluded: orders start automatically in that state when placed.
+                var validStatuses = new[] { "In Transit", "Out for Delivery",
                                             "Cancelled", "Return/Refund",
                                             "Refund Requested", "Refund Approved", "Completed" };
                 if (!validStatuses.Contains(status))
@@ -1542,7 +1549,13 @@ namespace Pawchase.Controllers
                 foreach (var id in orderIds)
                 {
                     var o = MockData.Orders.FirstOrDefault(x => x.Id == id);
-                    if (o == null || o.IsReceivedByCustomer) { skipped++; continue; }
+                    // Skip locked orders for non-refund status changes.
+                    // Received orders can still have refunds approved/declined.
+                    if (o == null) { skipped++; continue; }
+                    if (o.IsReceivedByCustomer &&
+                        status != "Refund Approved" &&
+                        status != "Return/Refund" &&
+                        status != "Completed") { skipped++; continue; }
                     o.Status = status;
                     if (status == "Refund Approved" || status == "Completed")
                         o.HasRefundRequest = false;
@@ -1550,7 +1563,7 @@ namespace Pawchase.Controllers
                 }
 
                 TempData["Success"] = updated + " order(s) updated to \"" + status + "\"."
-                    + (skipped > 0 ? " " + skipped + " skipped (customer-confirmed)." : "");
+                    + (skipped > 0 ? " " + skipped + " skipped (customer-confirmed or ineligible)." : "");
                 return RedirectToAction("Orders");
             }
             catch (Exception ex)
