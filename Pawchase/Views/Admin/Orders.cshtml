@@ -2,13 +2,16 @@
 @{
     ViewBag.Title = "Manage Orders";
     Layout = "~/Views/Admin/_AdminLayout.cshtml";
-    var statuses = new[] { "To Ship", "In Transit", "Out for Delivery" };
+
     // Forward-only progression map: each status only shows the NEXT valid status
     var nextStatus = new System.Collections.Generic.Dictionary<string, string> {
         { "To Ship",          "In Transit"       },
         { "In Transit",       "Out for Delivery" },
     };
     var refundOrders = Model.Where(o => o.HasRefundRequest).ToList();
+
+    // All distinct statuses (for the filter dropdown)
+    var allStatuses = new[] { "To Ship", "In Transit", "Out for Delivery", "Completed", "Cancelled", "Return/Refund", "Refund Approved" };
 }
 
 <style>
@@ -31,6 +34,45 @@
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
+    /* ── ORDERS TOOLBAR (bulk + filter in one row) ── */
+    .orders-toolbar {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 12px; flex-wrap: wrap;
+        background: rgba(129,166,198,.1); border: 1.5px solid rgba(129,166,198,.3);
+        border-radius: var(--radius-sm); padding: 10px 16px; margin-bottom: 1rem;
+    }
+    .toolbar-left {
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        opacity: 0.45; transition: opacity .2s;
+    }
+    .toolbar-right {
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-left: auto;
+    }
+    .bulk-count-label { font-size: 13px; font-weight: 700; color: var(--text-mid); white-space: nowrap; }
+    .bulk-status-select {
+        padding: 7px 12px; border-radius: 50px; font-size: 12px; font-weight: 600;
+        border: 1.5px solid var(--border); background: #fff;
+        font-family: 'Poppins', sans-serif; cursor: pointer;
+    }
+    .btn-toolbar-clear {
+        padding: 7px 16px; font-size: 12px; border: 1.5px solid var(--border);
+        border-radius: 50px; background: #fff; color: var(--text-mid);
+        cursor: pointer; font-family: 'Poppins', sans-serif;
+    }
+    .filter-label { font-size: 12px; font-weight: 700; color: var(--text-light); white-space: nowrap; }
+    .status-filter-select {
+        padding: 7px 32px 7px 14px; border-radius: 50px; font-size: 12px; font-weight: 600;
+        border: 1.5px solid var(--border); background: #fff;
+        font-family: 'Poppins', sans-serif; cursor: pointer; color: var(--text);
+        min-width: 160px; appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23888' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat; background-position: right 10px center;
+        transition: border-color .2s;
+    }
+    .status-filter-select:focus { border-color: var(--blue); outline: none; }
+    .filter-count-badge { font-size: 11px; color: var(--text-light); white-space: nowrap; }
+    .filter-count-badge strong { color: var(--text); }
+
     /* ── REFUND CARDS ── */
     .refund-card {
         background: var(--white); border-radius: var(--radius-lg);
@@ -44,58 +86,26 @@
     }
     .refund-card-body { padding: 1.2rem 1.3rem; display: flex; flex-direction: column; gap: 1rem; }
     .refund-info-row {
-        display: flex;
-        flex-wrap: nowrap;
-        gap: 8.5rem;
-        align-items: flex-start;
-        overflow-x: auto;
+        display: flex; flex-wrap: nowrap; gap: 8.5rem;
+        align-items: flex-start; overflow-x: auto;
     }
     .refund-info-item label { font-size: 10px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: .4px; display: block; margin-bottom: 3px; }
-    .refund-info-item span {
-        font-size: 13px;
-        color: var(--text);
-        font-weight: 500;
-        white-space: nowrap;
-    }
-    .refund-info-item {
-        min-width: max-content;
-        display: flex;
-        flex-direction: column;
-    }
-    /* ── REFUND REASON ── */
-    .refund-reason-box {
-        display: flex; align-items: flex-start; gap: 10px;
-        background: rgba(224,85,85,0.06); border: 1px solid rgba(224,85,85,0.18);
-        border-radius: var(--radius-sm); padding: 11px 14px;
-    }
-    .refund-reason-label { font-size: 10px; font-weight: 700; color: rgba(224,85,85,.7); text-transform: uppercase; letter-spacing: .4px; display: block; margin-bottom: 3px; }
-    .refund-reason-text  { font-size: 13px; color: var(--text); font-weight: 500; line-height: 1.55; }
+    .refund-info-item span { font-size: 13px; color: var(--text); font-weight: 500; white-space: nowrap; }
+    .refund-info-item { min-width: max-content; display: flex; flex-direction: column; }
 
     /* ── CARD TWO-COLUMN LAYOUT ── */
-    .refund-card-layout {
-        display: grid;
-        grid-template-columns: 160px 1fr;
-        gap: 1.2rem;
-        align-items: start;
-    }
-    .refund-img-col {
-        position: sticky; top: 0;
-    }
-    .refund-content-col {
-        display: flex; flex-direction: column; gap: .85rem;
-    }
+    .refund-card-layout { display: grid; grid-template-columns: 160px 1fr; gap: 1.2rem; align-items: start; }
+    .refund-content-col { display: flex; flex-direction: column; gap: .85rem; }
 
     /* ── EVIDENCE PHOTO ── */
     .refund-evidence-thumb {
         width: 160px; height: 160px; object-fit: cover;
         border-radius: 12px; border: 2px solid var(--border);
-        cursor: zoom-in; transition: opacity .2s, transform .2s;
-        display: block;
+        cursor: zoom-in; transition: opacity .2s, transform .2s; display: block;
     }
     .refund-evidence-thumb:hover { opacity: .88; transform: scale(1.02); }
     .refund-no-img {
-        width: 160px; height: 160px;
-        border-radius: 12px; border: 2px dashed var(--border);
+        width: 160px; height: 160px; border-radius: 12px; border: 2px dashed var(--border);
         background: var(--peach, #f8ede3);
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         gap: 8px; color: var(--text-light);
@@ -134,10 +144,7 @@
     .btn-decline:hover { background:#e05555; color:#fff; border-color:#e05555; }
 
     /* ── LOCKED BADGE ── */
-    .locked-badge {
-        font-size:12px; color:#1e8449; font-weight:600;
-        display:inline-flex; align-items:center; gap:5px;
-    }
+    .locked-badge { font-size:12px; color:#1e8449; font-weight:600; display:inline-flex; align-items:center; gap:5px; }
 
     /* ── IMAGE ZOOM LIGHTBOX ── */
     #imgZoomOverlay {
@@ -151,8 +158,7 @@
         position: absolute; top: 18px; right: 22px;
         background: rgba(255,255,255,0.15); border: none; color: #fff;
         font-size: 20px; width: 40px; height: 40px; border-radius: 50%;
-        cursor: pointer; display: flex; align-items: center; justify-content: center;
-        transition: background .2s;
+        cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .2s;
     }
     #imgZoomClose:hover { background: rgba(255,255,255,0.3); }
 
@@ -167,11 +173,7 @@
         padding: 2rem; max-width: 420px; width: 90%;
         box-shadow: 0 20px 60px rgba(0,0,0,0.2); text-align: center;
     }
-    .pc-modal-icon {
-        width: 58px; height: 58px; border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        margin: 0 auto 1rem; font-size: 1.5rem;
-    }
+    .pc-modal-icon { width: 58px; height: 58px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 1.5rem; }
     .pc-modal-title { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: .5rem; }
     .pc-modal-body  { font-size: 13px; color: var(--text-mid); margin-bottom: 1.5rem; line-height: 1.6; }
     .pc-modal-btns  { display: flex; gap: 10px; justify-content: center; }
@@ -202,6 +204,158 @@
         display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
     }
     .pc-modal-confirm-danger:hover { opacity: .9; transform: translateY(-1px); }
+
+    /* ── ORDER SUMMARY MODAL ── */
+    .order-summary-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.5); z-index: 1100;
+        align-items: center; justify-content: center;
+    }
+    .order-summary-overlay.open { display: flex; }
+    .order-summary-box {
+        background: var(--white); border-radius: var(--radius-lg);
+        max-width: 580px; width: 95%; max-height: 90vh;
+        overflow-y: auto; box-shadow: 0 24px 80px rgba(0,0,0,0.25);
+        display: flex; flex-direction: column;
+    }
+    .order-summary-head {
+        padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border);
+        display: flex; align-items: flex-start; justify-content: space-between;
+        position: sticky; top: 0; background: var(--white); z-index: 2;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+    .order-summary-head h3 { font-size: 15px; font-weight: 800; color: var(--text); margin: 0; }
+    .order-summary-head small { font-size: 11px; color: var(--text-light); display: block; margin-top: 2px; }
+    .order-summary-close {
+        background: none; border: none; font-size: 18px; cursor: pointer;
+        color: var(--text-light); padding: 4px; line-height: 1; transition: color .2s; flex-shrink: 0;
+    }
+    .order-summary-close:hover { color: var(--text); }
+    .order-summary-body { padding: 1.2rem 1.5rem; flex: 1; }
+    .order-summary-item {
+        display: flex; align-items: center; gap: 12px;
+        padding: 10px 0; border-bottom: 1px dashed rgba(210,196,180,0.4);
+    }
+    .order-summary-item:last-child { border-bottom: none; }
+    .order-summary-thumb {
+        width: 54px; height: 54px; border-radius: 10px;
+        object-fit: cover; border: 1.5px solid var(--border); flex-shrink: 0;
+    }
+    .order-summary-thumb-ph {
+        width: 54px; height: 54px; border-radius: 10px;
+        border: 1.5px solid var(--border); flex-shrink: 0;
+        background: var(--bg-light, #f7f5f2);
+        display: flex; align-items: center; justify-content: center;
+        color: var(--text-light);
+    }
+    .order-summary-item-info { flex: 1; min-width: 0; }
+    .order-summary-item-name { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.3; }
+    .order-summary-item-meta { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+    .order-summary-item-price { font-size: 13px; font-weight: 800; color: var(--blue-dark); white-space: nowrap; }
+    .order-summary-footer {
+        padding: 1rem 1.5rem; border-top: 2px solid var(--border);
+        background: rgba(129,166,198,.05);
+        display: flex; justify-content: space-between; align-items: center;
+        border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+        position: sticky; bottom: 0;
+    }
+    .order-summary-footer-label { font-size: 12px; color: var(--text-light); font-weight: 600; }
+    .order-summary-footer-total { font-size: 18px; font-weight: 900; color: var(--text); }
+    .summary-info-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+        margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);
+    }
+    .summary-info-item label {
+        font-size: 10px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .4px; color: var(--text-light); display: block; margin-bottom: 2px;
+    }
+    .summary-info-item span { font-size: 13px; color: var(--text); font-weight: 500; word-break: break-word; }
+    .btn-summary {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 9px;
+        border-radius: 50px;
+        font-size: 10px;
+        font-weight: 700;
+        border: 1.5px solid rgba(129,166,198,.35);
+        background: rgba(129,166,198,.08);
+        color: var(--blue-dark);
+        cursor: pointer;
+        font-family: 'Poppins', sans-serif;
+        transition: all .2s;
+        white-space: nowrap;
+        margin-top: 5px;
+        margin-left: 6px;
+    }
+    .btn-summary:hover { background: rgba(129,166,198,.22); border-color: var(--blue); }
+    .items-section-label {
+        font-size: 11px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .4px; color: var(--text-light); margin-bottom: .6rem;
+    }
+    /* ── ORDER NOTE MODAL ── */
+    .note-modal-box {
+        background: var(--white); border-radius: var(--radius-lg);
+        max-width: 440px; width: 92%;
+        box-shadow: 0 24px 70px rgba(0,0,0,0.22);
+        overflow: hidden;
+    }
+    .note-modal-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 1.1rem 1.4rem;
+        background: linear-gradient(135deg, rgba(129,166,198,.15), rgba(129,166,198,.05));
+        border-bottom: 1.5px solid rgba(129,166,198,.2);
+    }
+    .note-modal-header-left { display: flex; align-items: center; gap: .75rem; }
+    .note-modal-icon {
+        width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+        background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.1rem; color: #fff;
+        box-shadow: 0 4px 12px rgba(129,166,198,.45);
+    }
+    .note-modal-title { font-size: 14px; font-weight: 800; color: var(--text); line-height: 1.2; }
+    .note-modal-subtitle { font-size: 10.5px; color: var(--text-light); margin-top: 1px; font-weight: 500; }
+    .note-modal-close {
+        background: rgba(129,166,198,.12); border: 1.5px solid rgba(129,166,198,.2);
+        color: var(--text-light); width: 32px; height: 32px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; font-size: 13px; transition: all .2s; flex-shrink: 0;
+    }
+    .note-modal-close:hover { background: rgba(224,85,85,.1); border-color: rgba(224,85,85,.3); color: #c0392b; }
+    .note-modal-body { padding: 1.4rem 1.4rem 1rem; }
+    .note-modal-text-wrap {
+        position: relative;
+        background: linear-gradient(135deg, rgba(129,166,198,.07), rgba(129,166,198,.03));
+        border: 1.5px solid rgba(129,166,198,.2);
+        border-left: 4px solid var(--blue);
+        border-radius: 10px;
+        padding: 1rem 1rem 1rem 1.2rem;
+        min-height: 60px;
+    }
+    .note-quote-icon {
+        position: absolute; top: 8px; right: 10px;
+        font-size: 1.4rem; color: rgba(129,166,198,.25);
+        pointer-events: none;
+    }
+    .note-modal-text-wrap p {
+        margin: 0; font-size: 13.5px; color: var(--text);
+        line-height: 1.7; white-space: pre-wrap; font-weight: 500;
+    }
+    .note-modal-footer {
+        padding: .9rem 1.4rem 1.2rem;
+        display: flex; justify-content: flex-end;
+        border-top: 1px solid rgba(210,196,180,.35);
+    }
+    .note-modal-close-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 8px 22px; border-radius: 50px;
+        background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+        color: #fff; border: none; font-size: 13px; font-weight: 700;
+        cursor: pointer; font-family: 'Poppins', sans-serif;
+        transition: all .2s; box-shadow: 0 4px 12px rgba(129,166,198,.35);
+    }
+    .note-modal-close-btn:hover { opacity: .9; transform: translateY(-1px); }
 </style>
 
 <div class="admin-page-header">
@@ -232,10 +386,55 @@
     }
     else
     {
+        <!-- ── Combined Toolbar: Bulk Actions (left) + Filter (right) ── -->
+        using (Html.BeginForm("BulkUpdateOrderStatus", "Admin", FormMethod.Post, new { id = "bulk-form" }))
+        {
+            @Html.AntiForgeryToken()
+            <div id="bulk-bar" class="orders-toolbar">
+                <!-- Left: bulk actions -->
+                <div class="toolbar-left">
+                    <span id="bulk-count" class="bulk-count-label">0 order(s) selected</span>
+                    <select name="status" id="bulk-status-select" class="bulk-status-select">
+                        <option value="">— Set status to —</option>
+                        @* NOTE: "To Ship" is intentionally excluded.
+                           Orders are automatically set to "To Ship" when placed by a customer. *@
+                        <option value="In Transit">In Transit</option>
+                        <option value="Out for Delivery">Out for Delivery</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                    <button type="button" onclick="submitBulk()" class="btn-primary" style="padding:7px 20px;font-size:12px;">
+                        <i class="fa-solid fa-arrows-rotate"></i> Apply
+                    </button>
+                    <button type="button" onclick="clearSelection()" class="btn-toolbar-clear">
+                        Clear
+                    </button>
+                </div>
+                <!-- Right: filter + count -->
+                <div class="toolbar-right">
+                    <label class="filter-label"><i class="fa-solid fa-filter"></i>&nbsp; Filter by status:</label>
+                    <select class="status-filter-select" id="statusFilterSelect" onchange="applyStatusFilter()">
+                        <option value="">All Statuses</option>
+                        @foreach (var s in allStatuses)
+                        {
+                            var cnt = Model.Count(o => o.Status == s);
+                            if (cnt > 0)
+                            {
+                                <option value="@s">@s (@cnt)</option>
+                            }
+                        }
+                    </select>
+                    <span class="filter-count-badge">
+                        Showing <strong id="filteredCount">@Model.Count</strong> of @Model.Count orders
+                    </span>
+                </div>
+            </div>
+
         <div class="admin-table-card">
             <table class="admin-table">
                 <thead>
                     <tr>
+                        <th style="width:36px;"><input type="checkbox" id="chk-all" title="Select all" onchange="toggleAllCheckboxes(this)" /></th>
                         <th>Reference</th>
                         <th>Customer</th>
                         <th>Date</th>
@@ -245,10 +444,47 @@
                         <th>Update Status</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="ordersTableBody">
                     @foreach (var o in Model)
                     {
-                        <tr @(o.HasRefundRequest ? "style='background:rgba(224,85,85,.03);'" : "")>
+                        var itemCount = (o.Snapshots != null && o.Snapshots.Any()
+                            ? o.Snapshots.Sum(s => s.Quantity)
+                            : o.Items != null ? o.Items.Sum(i => i.Quantity) : 0);
+
+                        var snapshots = o.Snapshots != null && o.Snapshots.Any()
+                            ? o.Snapshots
+                            : (o.Items != null
+                                ? o.Items.Select(i => new Pawchase.Models.OrderItemSnapshot {
+                                    ProductId    = i.Product.Id,
+                                    ProductName  = i.Product.Name,
+                                    ProductImageUrl = i.Product.ImageUrl,
+                                    VariantImageUrl = i.SelectedVariant?.ImageUrl,
+                                    VariantLabel    = i.SelectedVariant?.Label,
+                                    Quantity   = i.Quantity,
+                                    UnitPrice  = i.Product.Price
+                                }).ToList()
+                                : new List<Pawchase.Models.OrderItemSnapshot>());
+
+                        // Build safe JSON for JS
+                        var itemsJson = Newtonsoft.Json.JsonConvert.SerializeObject(
+                            snapshots.Select(s => new {
+                                name    = s.ProductName,
+                                img     = !string.IsNullOrEmpty(s.VariantImageUrl) ? s.VariantImageUrl : s.ProductImageUrl,
+                                variant = s.VariantLabel,
+                                qty     = s.Quantity,
+                                price   = s.UnitPrice
+                            })
+                        );
+                        var safeName = o.CustomerName.Replace("\"", "&quot;").Replace("'", "&#39;");
+                        var safeAddress = (o.Address ?? "").Replace("\"", "&quot;").Replace("'", "&#39;").Replace("\n", " ");
+
+                        <tr class="order-row" data-status="@o.Status" @(o.HasRefundRequest ? Html.Raw("style='background:rgba(224,85,85,.03);'") : Html.Raw(""))>
+                            <td>
+                                @if (!o.IsReceivedByCustomer)
+                                {
+                                    <input type="checkbox" name="orderIds" value="@o.Id" class="order-chk" onchange="updateBulkBar()" />
+                                }
+                            </td>
                             <td>
                                 <strong>@o.ReferenceNumber</strong>
                                 @if (o.HasRefundRequest)
@@ -263,14 +499,34 @@
                                         <i class="fa-solid fa-lock"></i> LOCKED
                                     </span>
                                 }
+                                @if (!string.IsNullOrWhiteSpace(o.OrderNotes))
+                                {
+                                    <span onclick="openNoteModal('@o.OrderNotes.Replace("'", "&#39;").Replace("\n", "&#10;")')" style="margin-left:4px;cursor:pointer;color:var(--blue);font-size:11px;" title="View note">
+                                        <i class="fa-regular fa-note-sticky"></i>
+                                    </span>
+                                }
+                                @{
+                                }
+                                <button type="button" class="btn-summary"
+                                        data-ref="@o.ReferenceNumber"
+                                        data-customer="@safeName"
+                                        data-email="@o.Email"
+                                        data-date="@o.OrderDate.ToString("MMM dd, yyyy")"
+                                        data-address="@safeAddress"
+                                        data-total="@o.Total.ToString("N2")"
+                                        data-status="@o.Status"
+                                        data-items="@Html.Raw(System.Web.HttpUtility.HtmlEncode(itemsJson))"
+                                        onclick="openOrderSummaryFromBtn(this)">
+                                    <i class="fa-solid fa-list-ul"></i> View Summary
+                                </button>
                             </td>
                             <td>@o.CustomerName<small>@o.Email</small></td>
                             <td>@o.OrderDate.ToString("MMM dd, yyyy")</td>
-                            <td>@((o.Snapshots != null && o.Snapshots.Any() ? o.Snapshots.Sum(s => s.Quantity) : o.Items != null ? o.Items.Sum(i => i.Quantity) : 0)) item(s)</td>
+                            <td>@itemCount item(s)</td>
                             <td>&#8369;@o.Total.ToString("N2")</td>
                             <td><span class="status-pill status-@o.Status.ToLower().Replace(" ","-")">@o.Status</span></td>
                             <td>
-                                @if (o.IsReceivedByCustomer)
+                                @if (o.IsReceivedByCustomer && !o.HasRefundRequest)
                                 {
                                     <span class="locked-badge">
                                         <i class="fa-solid fa-lock"></i> Customer Confirmed
@@ -308,6 +564,7 @@
                 </tbody>
             </table>
         </div>
+        } @* end bulk form *@
     }
 </div>
 
@@ -327,7 +584,6 @@
         foreach (var o in refundOrders)
         {
             <div class="refund-card">
-
                 <div class="refund-card-head">
                     <div>
                         <strong>
@@ -335,28 +591,33 @@
                             <span class="flag-badge" style="margin-left:4px;">
                                 <i class="fa-solid fa-rotate-left"></i> REFUND REQUEST
                             </span>
+                            @if (o.IsReceivedByCustomer)
+                            {
+                                <span class="flag-badge" style="margin-left:4px;background:rgba(46,204,113,.15);color:#1e8449;border:1px solid rgba(46,204,113,.3);">
+                                    <i class="fa-solid fa-user-check"></i> CUSTOMER RECEIVED
+                                </span>
+                            }
                         </strong>
                         <small style="display:block;font-size:11px;color:var(--text-light);margin-top:2px;">
                             Ordered @o.OrderDate.ToString("MMM dd, yyyy") &bull; @o.CustomerName
+                            @if (o.IsReceivedByCustomer)
+                            {
+                                <span style="color:#1e8449;font-weight:600;"> — Customer confirmed receipt, then requested refund</span>
+                            }
                         </small>
                     </div>
                     <span class="status-pill status-@o.Status.ToLower().Replace(" ","-")">@o.Status</span>
                 </div>
 
                 <div class="refund-card-body">
-
-                    <!-- LEFT: evidence photo | RIGHT: all content -->
                     <div class="refund-card-layout">
-
-                        <!-- Evidence image column -->
-                        <div class="refund-img-col">
+                        <!-- Evidence image -->
+                        <div>
                             @if (!string.IsNullOrWhiteSpace(o.RefundEvidenceUrl))
                             {
-                                <img src="@o.RefundEvidenceUrl"
-                                     alt="Refund evidence"
+                                <img src="@o.RefundEvidenceUrl" alt="Refund evidence"
                                      class="refund-evidence-thumb"
-                                     onclick="openImageZoom(this.src)"
-                                     title="Click to zoom" />
+                                     onclick="openImageZoom(this.src)" title="Click to zoom" />
                             }
                             else
                             {
@@ -367,21 +628,18 @@
                             }
                         </div>
 
-                        <!-- Content column -->
+                        <!-- Content -->
                         <div class="refund-content-col">
-
-                            <!-- Customer info -->
                             <div class="refund-info-row">
                                 <div class="refund-info-item"><label>Customer</label><span>@o.CustomerName</span></div>
                                 <div class="refund-info-item"><label>Email</label><span>@o.Email</span></div>
                                 <div class="refund-info-item"><label>Phone Number</label><span>@o.Phone</span></div>
                                 @if (!string.IsNullOrWhiteSpace(o.RefundReason))
                                 {
-                                    <div class="refund-info-item"><label>Reason for Return</label><span>@o.RefundReason</span></div>
+                                    <div class="refund-info-item"><label>Reason</label><span>@o.RefundReason</span></div>
                                 }
                             </div>
 
-                            <!-- GCash -->
                             <div class="gcash-box">
                                 <div class="gcash-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
                                 <div class="gcash-info">
@@ -395,7 +653,6 @@
                                 </div>
                             </div>
 
-                            <!-- Actions -->
                             <div class="refund-actions">
                                 <button type="button" class="btn-approve"
                                         onclick="openApproveModal(@o.Id, '@o.ReferenceNumber', '@o.CustomerName', '@o.Total.ToString("N2")', '@(string.IsNullOrWhiteSpace(o.GCashNumber) ? o.Phone : o.GCashNumber)')">
@@ -406,10 +663,8 @@
                                     <i class="fa-solid fa-times"></i> Decline Request
                                 </button>
                             </div>
-
                         </div>
                     </div>
-
                 </div>
             </div>
         }
@@ -422,6 +677,97 @@
         <i class="fa-solid fa-times"></i>
     </button>
     <img id="imgZoomImg" src="" alt="Evidence" onclick="event.stopPropagation()" />
+</div>
+
+<!-- ── ORDER SUMMARY MODAL ── -->
+<div id="orderSummaryOverlay" class="order-summary-overlay" onclick="if(event.target===this)closeOrderSummary()">
+    <div class="order-summary-box">
+        <div class="order-summary-head">
+            <div>
+                <h3 id="summaryRef">Order Summary</h3>
+                <small id="summaryDate"></small>
+            </div>
+            <button class="order-summary-close" onclick="closeOrderSummary()" title="Close">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+        <div class="order-summary-body">
+            <div class="summary-info-grid">
+                <div class="summary-info-item">
+                    <label>Customer</label>
+                    <span id="summaryCustomer"></span>
+                </div>
+                <div class="summary-info-item">
+                    <label>Email</label>
+                    <span id="summaryEmail"></span>
+                </div>
+                <div class="summary-info-item" style="grid-column:1/-1;">
+                    <label>Delivery Address</label>
+                    <span id="summaryAddress"></span>
+                </div>
+                <div class="summary-info-item">
+                    <label>Order Status</label>
+                    <span id="summaryStatus"></span>
+                </div>
+            </div>
+            <div class="items-section-label">
+                <i class="fa-solid fa-box-open" style="margin-right:5px;color:var(--blue);"></i>Products Ordered
+            </div>
+            <div id="summaryItems"></div>
+        </div>
+        <div class="order-summary-footer">
+            <span class="order-summary-footer-label">Order Total</span>
+            <span class="order-summary-footer-total" id="summaryTotal"></span>
+        </div>
+    </div>
+</div>
+
+<!-- ── ORDER NOTE MODAL ── -->
+<div id="noteModal" class="pc-modal-overlay" onclick="if(event.target===this)closeNoteModal()">
+    <div class="note-modal-box">
+        <div class="note-modal-header">
+            <div class="note-modal-header-left">
+                <div class="note-modal-icon">
+                    <i class="fa-regular fa-note-sticky"></i>
+                </div>
+                <div>
+                    <div class="note-modal-title">Order Note</div>
+                    <div class="note-modal-subtitle">Added by customer at checkout</div>
+                </div>
+            </div>
+            <button class="note-modal-close" onclick="closeNoteModal()" title="Close">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+        <div class="note-modal-body">
+            <div class="note-modal-text-wrap">
+                <i class="fa-solid fa-quote-left note-quote-icon"></i>
+                <p id="noteModalText"></p>
+            </div>
+        </div>
+        <div class="note-modal-footer">
+            <button class="note-modal-close-btn" onclick="closeNoteModal()">
+                <i class="fa-solid fa-check"></i> Got it
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── BULK UPDATE CONFIRM MODAL ── -->
+<div id="bulkConfirmModal" class="pc-modal-overlay">
+    <div class="pc-modal-box">
+        <div class="pc-modal-icon" style="background:rgba(129,166,198,.12);">
+            <i class="fa-solid fa-arrows-rotate" style="color:var(--blue);"></i>
+        </div>
+        <div class="pc-modal-title">Bulk Status Update</div>
+        <div class="pc-modal-body" id="bulkConfirmText"></div>
+        <div class="pc-modal-btns">
+            <button class="pc-modal-cancel" onclick="closeBulkConfirmModal()">Cancel</button>
+            <button class="pc-modal-confirm-blue" onclick="confirmBulkSubmit()">
+                <i class="fa-solid fa-check"></i> Apply
+            </button>
+        </div>
+    </div>
 </div>
 
 <!-- ── STATUS UPDATE MODAL ── -->
@@ -485,6 +831,65 @@
         btn.classList.add('active');
     }
 
+    // ── Status filter ──────────────────────────────────────────────
+    function applyStatusFilter() {
+        var selected = document.getElementById('statusFilterSelect').value;
+        var rows = document.querySelectorAll('.order-row');
+        var count = 0;
+        rows.forEach(function(row) {
+            var show = !selected || row.getAttribute('data-status') === selected;
+            row.style.display = show ? '' : 'none';
+            if (show) count++;
+        });
+        document.getElementById('filteredCount').textContent = count;
+        // Reset checkboxes when filter changes
+        clearSelection();
+    }
+
+    // ── Bulk selection helpers ─────────────────────────────────────
+    function toggleAllCheckboxes(master) {
+        document.querySelectorAll('.order-chk').forEach(function(c) {
+            var row = c.closest('tr');
+            if (row && row.style.display !== 'none') c.checked = master.checked;
+        });
+        updateBulkBar();
+    }
+    function updateBulkBar() {
+        var checked = document.querySelectorAll('.order-chk:checked');
+        var count = checked.length;
+        document.getElementById('bulk-count').textContent = count + ' order(s) selected';
+        // Dim the bulk controls when nothing is selected
+        var left = document.querySelector('.toolbar-left');
+        if (left) left.style.opacity = count > 0 ? '1' : '0.45';
+    }
+    function clearSelection() {
+        document.querySelectorAll('.order-chk').forEach(function(c) { c.checked = false; });
+        var master = document.getElementById('chk-all');
+        if (master) master.checked = false;
+        updateBulkBar();
+    }
+    function submitBulk() {
+        var status = document.getElementById('bulk-status-select').value;
+        if (!status) { alert('Please choose a status to apply.'); return; }
+        var count = document.querySelectorAll('.order-chk:checked').length;
+        if (!count) { alert('No orders selected.'); return; }
+        document.getElementById('bulkConfirmText').textContent =
+            'Update ' + count + ' order(s) to "' + status + '"?';
+        document.getElementById('bulkConfirmModal').style.display = 'flex';
+    }
+    function closeBulkConfirmModal() {
+        document.getElementById('bulkConfirmModal').style.display = 'none';
+    }
+    function confirmBulkSubmit() {
+        closeBulkConfirmModal();
+        document.getElementById('bulk-form').submit();
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('bulkConfirmModal').addEventListener('click', function(e) {
+            if (e.target === this) closeBulkConfirmModal();
+        });
+    });
+
     // ── Image zoom lightbox ────────────────────────────────────────
     function openImageZoom(src) {
         document.getElementById('imgZoomImg').src = src;
@@ -496,8 +901,12 @@
         document.getElementById('imgZoomImg').src = '';
         document.body.style.overflow = '';
     }
+
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') { closeImageZoom(); closeStatusModal(); closeApproveModal(); closeDeclineModal(); }
+        if (e.key === 'Escape') {
+            closeImageZoom(); closeStatusModal();
+            closeApproveModal(); closeDeclineModal(); closeOrderSummary(); closeBulkConfirmModal(); closeNoteModal();
+        }
     });
 
     // ── Status update modal ────────────────────────────────────────
@@ -538,5 +947,77 @@
     document.getElementById('declineModal').addEventListener('click', function(e) {
         if (e.target === this) closeDeclineModal();
     });
+
+    // ── Order Note Modal ───────────────────────────────────────────
+    function openNoteModal(note) {
+        document.getElementById('noteModalText').textContent = note;
+        document.getElementById('noteModal').style.display = 'flex';
+    }
+    function closeNoteModal() { document.getElementById('noteModal').style.display = 'none'; }
+
+    // ── Order Summary Modal ────────────────────────────────────────
+    function openOrderSummaryFromBtn(btn) {
+        var items = [];
+        try { items = JSON.parse(btn.getAttribute('data-items') || '[]'); } catch(e) {}
+        openOrderSummary(
+            btn.getAttribute('data-ref'),
+            btn.getAttribute('data-customer'),
+            btn.getAttribute('data-email'),
+            btn.getAttribute('data-date'),
+            btn.getAttribute('data-address'),
+            btn.getAttribute('data-total'),
+            btn.getAttribute('data-status'),
+            items
+        );
+    }
+    function openOrderSummary(ref, customer, email, date, address, total, status, items) {
+        document.getElementById('summaryRef').textContent = ref;
+        document.getElementById('summaryDate').textContent = date;
+        document.getElementById('summaryCustomer').textContent = customer;
+        document.getElementById('summaryEmail').textContent = email;
+        document.getElementById('summaryAddress').textContent = address || '—';
+        document.getElementById('summaryTotal').textContent = '\u20B1' + total;
+
+        var statusEl = document.getElementById('summaryStatus');
+        statusEl.textContent = status;
+        statusEl.className = 'status-pill status-' + status.toLowerCase().replace(/ /g, '-');
+
+        var html = '';
+        if (items && items.length > 0) {
+            items.forEach(function(item) {
+                var imgHtml;
+                if (item.img) {
+                    imgHtml = '<img src="' + item.img + '" alt="" class="order-summary-thumb"' +
+                        ' onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';" />' +
+                        '<div class="order-summary-thumb-ph" style="display:none;"><i class="fa-solid fa-bone" style="font-size:1.1rem;"></i></div>';
+                } else {
+                    imgHtml = '<div class="order-summary-thumb-ph"><i class="fa-solid fa-bone" style="font-size:1.1rem;"></i></div>';
+                }
+
+                var subtotal = (item.price * item.qty).toFixed(2);
+                var meta = 'Qty: ' + item.qty + ' &nbsp;&bull;&nbsp; &#8369;' + Number(item.price).toFixed(2) + ' each';
+                if (item.variant) meta = 'Variant: <strong>' + item.variant + '</strong> &nbsp;&bull;&nbsp; ' + meta;
+
+                html += '<div class="order-summary-item">' +
+                    imgHtml +
+                    '<div class="order-summary-item-info">' +
+                        '<div class="order-summary-item-name">' + item.name + '</div>' +
+                        '<div class="order-summary-item-meta">' + meta + '</div>' +
+                    '</div>' +
+                    '<div class="order-summary-item-price">&#8369;' + subtotal + '</div>' +
+                '</div>';
+            });
+        } else {
+            html = '<p style="font-size:13px;color:var(--text-light);text-align:center;padding:1.5rem 0;">No item details available.</p>';
+        }
+        document.getElementById('summaryItems').innerHTML = html;
+
+        document.getElementById('orderSummaryOverlay').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeOrderSummary() {
+        document.getElementById('orderSummaryOverlay').classList.remove('open');
+        document.body.style.overflow = '';
+    }
 </script>
 }

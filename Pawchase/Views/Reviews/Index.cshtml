@@ -99,7 +99,7 @@
                             <div>
                                 <div class="review-name">@r.CustomerName</div>
                                 <div class="review-meta">
-                                    @r.DatePosted.ToString("MMM dd, yyyy") · Verified Buyer
+                                    @r.DatePosted.ToString("MMM dd, yyyy")
                                     @if (r.IsEdited)
                                     {
                                         <span class="review-edited" data-edited-at="@r.LastEditedAt.Value.ToString("o")">Edited</span>
@@ -114,6 +114,13 @@
                             }
                         </div>
                         <p class="review-caption">"@r.Comment"</p>
+                        @if (!string.IsNullOrWhiteSpace(r.SellerReply))
+                        {
+                            <div style="margin:8px 0 4px;background:rgba(129,166,198,.08);border-left:3px solid rgba(129,166,198,.5);border-radius:0 6px 6px 0;padding:8px 12px;">
+                                <div style="font-size:9px;font-weight:700;color:var(--blue-dark);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;"><i class="fa-solid fa-store"></i> Seller Reply</div>
+                                <div style="font-size:12px;color:var(--text);line-height:1.5;">@r.SellerReply</div>
+                            </div>
+                        }
                         @if (prod != null)
                         {
                             <span class="review-product"><i class="fa-solid fa-bone"></i> @prod.Name</span>
@@ -157,8 +164,14 @@
             </div>
             <div class="modal-body">
                 <div class="modal-stars" id="modal-stars"></div>
+                <div style="margin-bottom:.4rem;">
+                </div>
                 <p class="modal-caption" id="modal-caption"></p>
                 <div class="modal-product" id="modal-product"></div>
+                <div id="modal-seller-reply" style="display:none;background:rgba(129,166,198,.08);border-left:3px solid rgba(129,166,198,.5);border-radius:0 6px 6px 0;padding:9px 13px;margin-top:.75rem;">
+                    <div id="modal-seller-reply-date" style="font-size:11px;font-weight:700;color:var(--blue-dark);margin-bottom:4px;"></div>
+                    <div id="modal-seller-reply-text" style="font-size:13px;color:var(--text);line-height:1.5;"></div>
+                </div>
             </div>
             <div class="modal-actions">
                 <button class="review-action" id="modal-like-btn" data-review-id="0" onclick="toggleLike(activeReview.id,this)">
@@ -307,6 +320,9 @@ window.reviewsData = {
             resolvedPhotoUrl = string.IsNullOrWhiteSpace(r.PhotoUrl) ? "" : Url.Content(r.PhotoUrl),
             color = colors[i % colors.Length],
             icon = icons[i % icons.Length],
+            isVerifiedPurchase = r.IsVerifiedPurchase,
+            sellerReply = r.SellerReply ?? "",
+            sellerReplyDate = r.SellerReplyDate.HasValue ? r.SellerReplyDate.Value.ToString("MMM dd, yyyy") : "",
             comments = (r.Comments ?? new List<Pawchase.Models.ReviewComment>()).Select(c => new {
                 userName = c.UserName,
                 text = c.Text,

@@ -3,6 +3,18 @@ using System.Collections.Generic;
 
 namespace Pawchase.Models
 {
+    // ── Saved delivery address (linked to a User) ─────────────────────
+    public class SavedAddress
+    {
+        public int Id { get; set; }
+        public int UserId { get; set; }
+        public string Label { get; set; }       // e.g. "Home", "Office"
+        public string Address { get; set; }
+        public string Phone { get; set; }
+        public bool IsDefault { get; set; }
+    }
+
+
     public class ProductVariant
     {
         public string ImageUrl { get; set; }
@@ -36,6 +48,7 @@ namespace Pawchase.Models
         public string Phone { get; set; }
         public string GCashNumber { get; set; }
         public bool IsAdmin { get; set; }
+        public List<SavedAddress> SavedAddresses { get; set; } = new List<SavedAddress>();
     }
 
     public class CartItem
@@ -88,6 +101,8 @@ namespace Pawchase.Models
         public string GCashNumber { get; set; }
         // Base64 or URL of the evidence photo uploaded with refund request
         public string RefundEvidenceUrl { get; set; }
+        // Optional special instructions from customer at checkout
+        public string OrderNotes { get; set; }
     }
     public class Review
     {
@@ -106,6 +121,11 @@ namespace Pawchase.Models
         public bool IsTextOnly => string.IsNullOrEmpty(PhotoUrl);
         public bool IsEdited => LastEditedAt.HasValue && LastEditedAt.Value > DatePosted;
         public List<ReviewComment> Comments { get; set; } = new List<ReviewComment>();
+        // Seller reply (set by admin from FlaggedReviews panel or dedicated seller reply action)
+        public string SellerReply { get; set; }
+        public DateTime? SellerReplyDate { get; set; }
+        // True when the reviewer has a completed+received order containing this product
+        public bool IsVerifiedPurchase { get; set; }
     }
 
     public class ReviewComment

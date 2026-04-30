@@ -4,10 +4,57 @@
     ViewBag.Title = "My Profile";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var tab = ViewBag.Tab as string ?? "Profile";
+    if (tab != "Profile" && tab != "Addresses") { tab = "Profile"; }
     var profileUser = ViewBag.ProfileUser as User;
+    var savedAddresses = ViewBag.SavedAddresses as List<SavedAddress> ?? new List<SavedAddress>();
 }
 @section styles {
     <link href="@Url.Content("~/Content/css/account.css")" rel="stylesheet" />
+    <style>
+        keyframes acctToastIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+        .acct-tabs { display:flex; gap:.5rem; margin-bottom:1.5rem; border-bottom:2px solid rgba(210,196,180,0.4); }
+        .acct-tab-btn {
+            padding:9px 20px; font-size:13px; font-weight:600;
+            color:var(--text-light); background:none; border:none;
+            border-bottom:3px solid transparent; margin-bottom:-2px;
+            cursor:pointer; font-family:'Poppins',sans-serif; transition:all .18s;
+            display:flex; align-items:center; gap:7px;
+        }
+        .acct-tab-btn.active { color:var(--blue-dark); border-bottom-color:var(--blue); }
+        .acct-tab-btn:hover  { color:var(--text); }
+        .acct-tab-panel { display:none; }
+        .acct-tab-panel.active { display:block; }
+        .addr-card {
+            border:1.5px solid var(--border); border-radius:var(--radius-sm);
+            padding:14px 16px; margin-bottom:.75rem;
+            display:flex; align-items:flex-start; justify-content:space-between; gap:1rem;
+        }
+        .addr-card.is-default { border-color:rgba(129,166,198,.5); background:rgba(129,166,198,.04); }
+        .addr-label { font-size:12px; font-weight:700; color:var(--text); margin-bottom:3px; }
+        .addr-text  { font-size:12px; color:var(--text-mid); line-height:1.5; }
+        .addr-phone { font-size:11px; color:var(--text-light); margin-top:2px; }
+        .addr-actions { display:flex; gap:.4rem; flex-shrink:0; }
+        .addr-btn {
+            padding:5px 13px; font-size:11px; font-weight:600; border-radius:50px;
+            cursor:pointer; font-family:'Poppins',sans-serif; transition:all .2s;
+            border:1.5px solid var(--border); background:#fff; color:var(--text-mid);
+        }
+        .addr-btn:hover { background:var(--border); }
+        .addr-btn.danger { border-color:rgba(224,85,85,.3); color:#c0392b; background:rgba(224,85,85,.05); }
+        .addr-btn.danger:hover { background:#e05555; color:#fff; border-color:#e05555; }
+        /* address modal */
+        #addrModal {
+            display:none; position:fixed; inset:0;
+            background:rgba(0,0,0,.45); z-index:1000;
+            align-items:center; justify-content:center;
+        }
+        #addrModal.open { display:flex; }
+        #addrModalBox {
+            background:#fff; border-radius:var(--radius-lg);
+            padding:2rem; max-width:460px; width:90%;
+            box-shadow:0 20px 60px rgba(0,0,0,.2);
+        }
+    </style>
 }
 
 <div class="page-hero"><h1>My Account</h1><p>View and manage your profile</p></div>
@@ -17,130 +64,266 @@
 
         @if (TempData["ProfileSuccess"] != null)
         {
-            <div style="background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);color:#1e8449;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;margin-bottom:1.2rem;display:flex;align-items:center;gap:8px;">
+            <div id="acct-toast-success" style="position: fixed; top: 90px; right: 20px; z-index: 9999; background: #4caf50; border: none; border-radius: 10px; padding: 13px 18px; font-size: 13px; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 10px; box-shadow: 0 6px 24px rgba(0,0,0,0.12); max-width: 320px; animation: acctToastIn .3s ease;">
                 <i class="fa-solid fa-circle-check"></i> @TempData["ProfileSuccess"]
             </div>
         }
         @if (TempData["ProfileError"] != null)
         {
-            <div style="background:rgba(224,85,85,0.08);border:1px solid rgba(224,85,85,0.25);color:#c0392b;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;margin-bottom:1.2rem;display:flex;align-items:center;gap:8px;">
+            <div id="acct-toast-error" style="position:fixed;top:90px;right:20px;z-index:9999;background:#fff;border:1.5px solid rgba(224,85,85,0.3);border-left:4px solid #e05555;border-radius:10px;padding:13px 18px;font-size:13px;font-weight:600;color:#c0392b;display:flex;align-items:center;gap:10px;box-shadow:0 6px 24px rgba(0,0,0,0.12);max-width:320px;animation:acctToastIn .3s ease;">
                 <i class="fa-solid fa-triangle-exclamation"></i> @TempData["ProfileError"]
             </div>
         }
 
-        <div class="order-card" style="padding:2rem;">
-            <!-- Profile Header -->
-            <div style="display:flex;align-items:center;gap:1rem;padding-bottom:1.2rem;margin-bottom:1.5rem;border-bottom:1px solid rgba(210,196,180,0.4);">
-                <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(145deg,var(--blue),var(--blue-dark));display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 14px rgba(129,166,198,0.35);">
-                    <i class="fa-solid fa-user" style="font-size:22px;color:#fff;"></i>
+        <!-- Tab buttons -->
+        <div class="acct-tabs">
+            <button class="acct-tab-btn @(tab == "Profile" ? "active" : "")" onclick="switchAcctTab('profile', this)">
+                <i class="fa-solid fa-user"></i> Profile
+            </button>
+            <button class="acct-tab-btn @(tab == "Addresses" ? "active" : "")" onclick="switchAcctTab('addresses', this)">
+                <i class="fa-solid fa-location-dot"></i> Saved Addresses
+                @if (savedAddresses.Count > 0)
+                {
+                    <span style="background:var(--border);color:var(--text-mid);font-size:9px;font-weight:700;padding:2px 6px;border-radius:50px;">@savedAddresses.Count</span>
+                }
+            </button>
+        </div>
+
+        <!-- ── PROFILE TAB ── -->
+        <div id="acct-tab-profile" class="acct-tab-panel @(tab == "Profile" ? "active" : "")">
+            <div class="order-card" style="padding:2rem;">
+                <!-- Profile Header -->
+                <div style="display:flex;align-items:center;gap:1rem;padding-bottom:1.2rem;margin-bottom:1.5rem;border-bottom:1px solid rgba(210,196,180,0.4);">
+                    <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(145deg,var(--blue),var(--blue-dark));display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 14px rgba(129,166,198,0.35);">
+                        <i class="fa-solid fa-user" style="font-size:22px;color:#fff;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:16px;font-weight:800;color:var(--text);">@(profileUser?.FullName ?? Session["UserName"])</div>
+                        <div style="font-size:12px;color:var(--text-light);margin-top:2px;">@(profileUser?.Email ?? Session["UserEmail"])</div>
+                    </div>
                 </div>
-                <div>
-                    <div style="font-size:16px;font-weight:800;color:var(--text);">@(profileUser?.FullName ?? Session["UserName"])</div>
-                    <div style="font-size:12px;color:var(--text-light);margin-top:2px;">@(profileUser?.Email ?? Session["UserEmail"])</div>
-                </div>
+
+                @using (Html.BeginForm("SaveProfile", "Account", FormMethod.Post))
+                {
+                    @Html.AntiForgeryToken()
+
+                    <!-- Account Information -->
+                    <div style="margin-bottom:1.5rem;">
+                        <h3 style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:1rem;display:flex;align-items:center;gap:6px;">
+                            <i class="fa-solid fa-circle-info" style="color:var(--blue);font-size:12px;"></i> Account Information
+                        </h3>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+                            <div>
+                                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Full Name</label>
+                                <input type="text" name="fullName" value="@(profileUser?.FullName ?? "")"
+                                       required maxlength="100"
+                                       style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;"
+                                       onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'" />
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Email Address</label>
+                                <input type="email" name="email" value="@(profileUser?.Email ?? "")"
+                                       required maxlength="200"
+                                       style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;"
+                                       onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'" />
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                            <div>
+                                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Phone Number</label>
+                                <input type="tel" name="phone" value="@(profileUser?.Phone ?? "")"
+                                       maxlength="11" placeholder="e.g. 09171234567"
+                                       inputmode="numeric" pattern="[0-9]{1,11}"
+                                       onkeypress="return /[0-9]/.test(String.fromCharCode(event.which))"
+                                       title="Phone number must contain only numbers (max 11 digits)"
+                                       style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;"
+                                       onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'" />
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">
+                                    GCash Number
+                                    <span style="background:rgba(0,119,255,.1);color:#0055bb;font-size:9px;font-weight:700;padding:2px 7px;border-radius:50px;margin-left:4px;vertical-align:middle;">for refunds</span>
+                                </label>
+                                <input type="tel" name="gcashNumber" value="@(profileUser?.GCashNumber ?? "")"
+                                       maxlength="20" placeholder="GCash number"
+                                       style="width:100%;padding:10px 14px;border:1.5px solid rgba(0,119,255,.25);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;background:rgba(0,119,255,.02);"
+                                       onfocus="this.style.borderColor='#0077FF'" onblur="this.style.borderColor='rgba(0,119,255,.25)'" />
+                                <small style="font-size:10px;color:var(--text-light);margin-top:4px;display:block;"><i class="fa-solid fa-circle-info"></i> Used to process approved refunds via GCash.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Change Password -->
+                    <div style="margin-bottom:1.5rem;">
+                        <h3 style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.4rem;display:flex;align-items:center;gap:6px;">
+                            <i class="fa-solid fa-lock" style="color:var(--blue);font-size:12px;"></i> Change Password
+                        </h3>
+                        <p style="font-size:11px;color:var(--text-light);margin-bottom:1rem;">Leave blank to keep your current password.</p>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+                            <div>
+                                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Current Password</label>
+                                <div class="password-wrap">
+                                    <input type="password" name="currentPassword" id="cur-pw" placeholder="Current password"
+                                           style="width:100%;padding:10px 40px 10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;"
+                                           onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'" />
+                                    <button type="button" class="toggle-pw" onclick="togglePw('cur-pw','cur-pw-ic')"><i id="cur-pw-ic" class="fa-regular fa-eye"></i></button>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">New Password</label>
+                                <div class="password-wrap">
+                                    <input type="password" name="newPassword" id="new-pw" placeholder="New password"
+                                           style="width:100%;padding:10px 40px 10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;"
+                                           onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'" />
+                                    <button type="button" class="toggle-pw" onclick="togglePw('new-pw','new-pw-ic')"><i id="new-pw-ic" class="fa-regular fa-eye"></i></button>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Confirm New Password</label>
+                                <div class="password-wrap">
+                                    <input type="password" name="confirmPassword" id="conf-pw" placeholder="Confirm new password"
+                                           style="width:100%;padding:10px 40px 10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;"
+                                           onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'" />
+                                    <button type="button" class="toggle-pw" onclick="togglePw('conf-pw','conf-pw-ic')"><i id="conf-pw-ic" class="fa-regular fa-eye"></i></button>
+                                </div>
+                                <span id="pw-match-profile" style="display:none;font-size:11px;color:#e05555;margin-top:4px;">Passwords do not match.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;justify-content:flex-end;padding-top:1rem;border-top:1px solid rgba(210,196,180,0.4);">
+                        <button type="submit" class="btn-primary" id="save-profile-btn" style="padding:10px 28px;font-size:13px;">
+                            <i class="fa-solid fa-floppy-disk"></i> Save Changes
+                        </button>
+                    </div>
+                }
             </div>
+        </div>
 
-            @using (Html.BeginForm("SaveProfile", "Account", FormMethod.Post))
-            {
-                @Html.AntiForgeryToken()
-
-                <!-- Account Information -->
-                <div style="margin-bottom:1.5rem;">
-                    <h3 style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:1rem;display:flex;align-items:center;gap:6px;">
-                        <i class="fa-solid fa-circle-info" style="color:var(--blue);font-size:12px;"></i> Account Information
+        <!-- ── ADDRESSES TAB ── -->
+        <div id="acct-tab-addresses" class="acct-tab-panel @(tab == "Addresses" ? "active" : "")">
+            <div class="order-card" style="padding:2rem;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;padding-bottom:1rem;border-bottom:1px solid rgba(210,196,180,0.4);">
+                    <h3 style="font-size:14px;font-weight:700;color:var(--text);margin:0;display:flex;align-items:center;gap:7px;">
+                        <i class="fa-solid fa-location-dot" style="color:var(--blue);"></i> Saved Addresses
                     </h3>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
-                        <div>
-                            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Full Name</label>
-                            <input type="text" name="fullName" value="@(profileUser?.FullName ?? "")"
-                                   required maxlength="100"
-                                   style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;"
-                                   onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'" />
-                        </div>
-                        <div>
-                            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Email Address</label>
-                            <input type="email" name="email" value="@(profileUser?.Email ?? "")"
-                                   required maxlength="200"
-                                   style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;"
-                                   onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'" />
-                        </div>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-                        <div>
-                            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Phone Number</label>
-                            <input type="tel" name="phone" value="@(profileUser?.Phone ?? "")"
-                                   maxlength="11" placeholder="e.g. 09171234567"
-                                   inputmode="numeric" pattern="[0-9]{1,11}"
-                                   onkeypress="return /[0-9]/.test(String.fromCharCode(event.which))"
-                                   title="Phone number must contain only numbers (max 11 digits)"
-                                   style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;"
-                                   onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'" />
-                        </div>
-                        <div>
-                            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">
-                                GCash Number
-                                <span style="background:rgba(0,119,255,.1);color:#0055bb;font-size:9px;font-weight:700;padding:2px 7px;border-radius:50px;margin-left:4px;vertical-align:middle;">for refunds</span>
-                            </label>
-                            <input type="tel" name="gcashNumber" value="@(profileUser?.GCashNumber ?? "")"
-                                   maxlength="20" placeholder="GCash number"
-                                   style="width:100%;padding:10px 14px;border:1.5px solid rgba(0,119,255,.25);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;background:rgba(0,119,255,.02);"
-                                   onfocus="this.style.borderColor='#0077FF'" onblur="this.style.borderColor='rgba(0,119,255,.25)'" />
-                            <small style="font-size:10px;color:var(--text-light);margin-top:4px;display:block;"><i class="fa-solid fa-circle-info"></i> Used to process approved refunds via GCash.</small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Change Password -->
-                <div style="margin-bottom:1.5rem;">
-                    <h3 style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:.4rem;display:flex;align-items:center;gap:6px;">
-                        <i class="fa-solid fa-lock" style="color:var(--blue);font-size:12px;"></i> Change Password
-                    </h3>
-                    <p style="font-size:11px;color:var(--text-light);margin-bottom:1rem;">Leave blank to keep your current password.</p>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
-                        <div>
-                            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Current Password</label>
-                            <div class="password-wrap">
-                                <input type="password" name="currentPassword" id="cur-pw" placeholder="Current password"
-                                       style="width:100%;padding:10px 40px 10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;"
-                                       onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)"" />
-                                <button type="button" class="toggle-pw" onclick="togglePw('cur-pw','cur-pw-ic')"><i id="cur-pw-ic" class="fa-regular fa-eye"></i></button>
-                            </div>
-                        </div>
-                        <div>
-                            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">New Password</label>
-                            <div class="password-wrap">
-                                <input type="password" name="newPassword" id="new-pw" placeholder="New password"
-                                       style="width:100%;padding:10px 40px 10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;"
-                                       onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)"" />
-                                <button type="button" class="toggle-pw" onclick="togglePw('new-pw','new-pw-ic')"><i id="new-pw-ic" class="fa-regular fa-eye"></i></button>
-                            </div>
-                        </div>
-                        <div>
-                            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Confirm New Password</label>
-                            <div class="password-wrap">
-                                <input type="password" name="confirmPassword" id="conf-pw" placeholder="Confirm new password"
-                                       style="width:100%;padding:10px 40px 10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .2s;box-sizing:border-box;"
-                                       onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)"" />
-                                <button type="button" class="toggle-pw" onclick="togglePw('conf-pw','conf-pw-ic')"><i id="conf-pw-ic" class="fa-regular fa-eye"></i></button>
-                            </div>
-                            <span id="pw-match-profile" style="display:none;font-size:11px;color:#e05555;margin-top:4px;">Passwords do not match.</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="display:flex;justify-content:flex-end;padding-top:1rem;border-top:1px solid rgba(210,196,180,0.4);">
-                    <button type="submit" class="btn-primary" id="save-profile-btn" style="padding:10px 28px;font-size:13px;">
-                        <i class="fa-solid fa-floppy-disk"></i> Save Changes
+                    <button type="button" class="btn-primary" style="padding:7px 18px;font-size:12px;" onclick="openAddrModal()">
+                        <i class="fa-solid fa-plus"></i> Add Address
                     </button>
                 </div>
-            }
+
+                @if (!savedAddresses.Any())
+                {
+                    <div style="text-align:center;padding:2.5rem 1rem;color:var(--text-light);">
+                        <i class="fa-solid fa-location-dot" style="font-size:2rem;opacity:.25;display:block;margin-bottom:.75rem;"></i>
+                        <p style="font-size:13px;margin:0;">No saved addresses yet. Add one to speed up checkout.</p>
+                    </div>
+                }
+                else
+                {
+                    foreach (var addr in savedAddresses)
+                    {
+                        <div class="addr-card @(addr.IsDefault ? "is-default" : "")">
+                            <div>
+                                <div class="addr-label">
+                                    @addr.Label
+                                    @if (addr.IsDefault)
+                                    {
+                                        <span style="background:rgba(129,166,198,.15);color:var(--blue-dark);font-size:9px;font-weight:700;padding:2px 8px;border-radius:50px;margin-left:6px;">DEFAULT</span>
+                                    }
+                                </div>
+                                <div class="addr-text">@addr.Address</div>
+                                <div class="addr-phone"><i class="fa-solid fa-phone" style="font-size:9px;"></i> @addr.Phone</div>
+                            </div>
+                            <div class="addr-actions">
+                                <button type="button" class="addr-btn"
+                                        onclick="openAddrModal(@addr.Id, '@Html.Raw(addr.Label.Replace("'","\\\'"))', '@Html.Raw(addr.Address.Replace("'","\\\'"))', '@addr.Phone', @(addr.IsDefault ? "true" : "false"))">
+                                    <i class="fa-solid fa-pen"></i> Edit
+                                </button>
+                                @using (Html.BeginForm("DeleteAddress", "Account", new { id = addr.Id }, FormMethod.Post, new { style = "display:inline;" }))
+                                {
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="addr-btn danger" onclick="return confirm('Delete this address?')">
+                                        <i class="fa-solid fa-trash"></i> Delete
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
         </div>
+
     </div>
 </section>
+
+<!-- ── ADD / EDIT ADDRESS MODAL ── -->
+<div id="addrModal">
+    <div id="addrModalBox">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;">
+            <h3 id="addrModalTitle" style="font-size:15px;font-weight:700;color:var(--text);margin:0;">Add Address</h3>
+            <button type="button" onclick="closeAddrModal()" style="background:none;border:none;font-size:18px;color:var(--text-light);cursor:pointer;"><i class="fa-solid fa-times"></i></button>
+        </div>
+        @using (Html.BeginForm("SaveAddress", "Account", FormMethod.Post, new { id = "addr-form" }))
+        {
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="addr-id" value="0" />
+            <div style="margin-bottom:1rem;">
+                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Label (e.g. Home, Office) <span style="color:red;">*</span></label>
+                <input type="text" name="label" id="addr-label-input" maxlength="50" placeholder="Home"
+                       required
+                       style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;"
+                       onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'" />
+            </div>
+            <div style="margin-bottom:1rem;">
+                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Full Address <span style="color:red;">*</span></label>
+                <textarea name="address" id="addr-address-input" rows="3" maxlength="300"
+                          placeholder="House No., Street, Barangay, City, Province, ZIP"
+                          required
+                          style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;resize:vertical;box-sizing:border-box;"
+                          onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+            </div>
+            <div style="margin-bottom:1rem;">
+                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Phone Number <span style="color:red;">*</span></label>
+                <input type="tel" name="phone" id="addr-phone-input" maxlength="11" placeholder="e.g. 09171234567"
+                       required
+                       inputmode="numeric" pattern="[0-9]{1,11}"
+                       onkeypress="return /[0-9]/.test(String.fromCharCode(event.which))"
+                       oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11)"
+                       title="Phone number must contain only numbers (max 11 digits)"
+                       style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none;box-sizing:border-box;"
+                       onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'" />
+            </div>
+            <div style="margin-bottom:1.3rem;">
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;">
+                    <input type="checkbox" name="isDefault" id="addr-default-input" value="true" style="width:15px;height:15px;" />
+                    Set as default address
+                </label>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:.6rem;">
+                <button type="button" onclick="closeAddrModal()" style="padding:9px 20px;border-radius:50px;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--text-mid);cursor:pointer;font-family:'Poppins',sans-serif;">Cancel</button>
+                <button type="submit" class="btn-primary" style="padding:9px 24px;font-size:13px;"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+            </div>
+        }
+    </div>
+</div>
 
 @section scripts {
     <script src="@Url.Content("~/Scripts/account.js")"></script>
     <script>
+        // Auto-dismiss account toasts
+        (function() {
+            ['acct-toast-success','acct-toast-error'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                setTimeout(function() {
+                    el.style.transition = 'opacity .4s ease';
+                    el.style.opacity = '0';
+                    setTimeout(function() { el.style.display = 'none'; }, 400);
+                }, 3500);
+            });
+        })();
+        // ── Profile tab: password match check ────────────────────────
         (function () {
             var newPw  = document.getElementById('new-pw');
             var confPw = document.getElementById('conf-pw');
@@ -157,5 +340,36 @@
             newPw.addEventListener('input', check);
             confPw.addEventListener('input', check);
         })();
+
+        // ── Account tab switching ─────────────────────────────────────
+        function switchAcctTab(name, btn) {
+            document.querySelectorAll('.acct-tab-panel').forEach(function(p) { p.classList.remove('active'); });
+            document.querySelectorAll('.acct-tab-btn').forEach(function(b) { b.classList.remove('active'); });
+            document.getElementById('acct-tab-' + name).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        // ── Address modal ─────────────────────────────────────────────
+        function openAddrModal(id, label, address, phone, isDefault) {
+            var isEdit = typeof id !== 'undefined';
+            document.getElementById('addrModalTitle').textContent = isEdit ? 'Edit Address' : 'Add Address';
+            document.getElementById('addr-id').value            = isEdit ? id      : 0;
+            document.getElementById('addr-label-input').value   = isEdit ? label   : '';
+            document.getElementById('addr-address-input').value = isEdit ? address : '';
+            document.getElementById('addr-phone-input').value   = isEdit ? phone   : '';
+            document.getElementById('addr-default-input').checked = isEdit ? isDefault : (@savedAddresses.Count == 0 ? true : false);
+            document.getElementById('addrModal').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeAddrModal() {
+            document.getElementById('addrModal').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        document.getElementById('addrModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAddrModal();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeAddrModal();
+        });
     </script>
 }
