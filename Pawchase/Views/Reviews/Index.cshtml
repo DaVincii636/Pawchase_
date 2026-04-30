@@ -100,12 +100,6 @@
                                 <div class="review-name">@r.CustomerName</div>
                                 <div class="review-meta">
                                     @r.DatePosted.ToString("MMM dd, yyyy")
-                                    @if (r.IsVerifiedPurchase)
-                                    {
-                                        <span style="margin-left:5px;background:rgba(46,204,113,.12);color:#1e8449;border:1px solid rgba(46,204,113,.25);font-size:9px;font-weight:700;padding:1px 7px;border-radius:50px;">
-                                            <i class="fa-solid fa-circle-check"></i> Verified
-                                        </span>
-                                    }
                                     @if (r.IsEdited)
                                     {
                                         <span class="review-edited" data-edited-at="@r.LastEditedAt.Value.ToString("o")">Edited</span>
@@ -171,9 +165,6 @@
             <div class="modal-body">
                 <div class="modal-stars" id="modal-stars"></div>
                 <div style="margin-bottom:.4rem;">
-                    <span id="modal-verified-badge" style="display:none;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#1a7a4a;background:rgba(26,122,74,.08);border:1px solid rgba(26,122,74,.2);padding:3px 10px;border-radius:50px;">
-                        <i class="fa-solid fa-circle-check"></i> Verified Purchase
-                    </span>
                 </div>
                 <p class="modal-caption" id="modal-caption"></p>
                 <div class="modal-product" id="modal-product"></div>
