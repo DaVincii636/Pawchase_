@@ -508,7 +508,15 @@
                                 @{
                                 }
                                 <button type="button" class="btn-summary"
-                                        onclick="openOrderSummary('@o.ReferenceNumber','@safeName','@o.Email','@o.OrderDate.ToString("MMM dd, yyyy")','@safeAddress','@o.Total.ToString("N2")','@o.Status',@Html.Raw(itemsJson))">
+                                        data-ref="@o.ReferenceNumber"
+                                        data-customer="@safeName"
+                                        data-email="@o.Email"
+                                        data-date="@o.OrderDate.ToString("MMM dd, yyyy")"
+                                        data-address="@safeAddress"
+                                        data-total="@o.Total.ToString("N2")"
+                                        data-status="@o.Status"
+                                        data-items="@Html.Raw(System.Web.HttpUtility.HtmlEncode(itemsJson))"
+                                        onclick="openOrderSummaryFromBtn(this)">
                                     <i class="fa-solid fa-list-ul"></i> View Summary
                                 </button>
                             </td>
@@ -948,6 +956,20 @@
     function closeNoteModal() { document.getElementById('noteModal').style.display = 'none'; }
 
     // ── Order Summary Modal ────────────────────────────────────────
+    function openOrderSummaryFromBtn(btn) {
+        var items = [];
+        try { items = JSON.parse(btn.getAttribute('data-items') || '[]'); } catch(e) {}
+        openOrderSummary(
+            btn.getAttribute('data-ref'),
+            btn.getAttribute('data-customer'),
+            btn.getAttribute('data-email'),
+            btn.getAttribute('data-date'),
+            btn.getAttribute('data-address'),
+            btn.getAttribute('data-total'),
+            btn.getAttribute('data-status'),
+            items
+        );
+    }
     function openOrderSummary(ref, customer, email, date, address, total, status, items) {
         document.getElementById('summaryRef').textContent = ref;
         document.getElementById('summaryDate').textContent = date;
