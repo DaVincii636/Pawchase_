@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Collections.Generic;
+using System.IO;
 using System.Web;
 using System.Web.Mvc;
 using Pawchase.Models;
@@ -89,6 +90,17 @@ namespace Pawchase.Controllers
             int userId = GetCurrentUserId();
             var resolvedName = GetCurrentUserName();
 
+            string photoUrl = null;
+            if (photo != null && photo.ContentLength > 0)
+            {
+                using (var reader = new BinaryReader(photo.InputStream))
+                {
+                    var bytes = reader.ReadBytes(photo.ContentLength);
+                    var contentType = string.IsNullOrWhiteSpace(photo.ContentType) ? "image/jpeg" : photo.ContentType;
+                    photoUrl = "data:" + contentType + ";base64," + System.Convert.ToBase64String(bytes);
+                }
+            }
+
             var review = new Review
             {
                 Id = MockData.Reviews.Count > 0 ? MockData.Reviews.Max(r => r.Id) + 1 : 1,
@@ -97,9 +109,7 @@ namespace Pawchase.Controllers
                 CustomerName = resolvedName,
                 Stars = stars,
                 Comment = comment,
-                PhotoUrl = photo != null && photo.ContentLength > 0
-                    ? "/Content/images/reviews/upload-placeholder.png"
-                    : null,
+                PhotoUrl = photoUrl,
                 DatePosted = System.DateTime.Now,
                 Likes = 0,
                 Category = GetProductCategory(productId)
@@ -271,11 +281,11 @@ namespace Pawchase.Controllers
         }
 
         private int GetCurrentUserId()
-{
-    var userId = 0;
-    int.TryParse(Session["UserId"]?.ToString(), out userId);
-    return userId;
-}
+        {
+            var userId = 0;
+            int.TryParse(Session["UserId"]?.ToString(), out userId);
+            return userId;
+        }
 
         private string GetCurrentUserName()
         {

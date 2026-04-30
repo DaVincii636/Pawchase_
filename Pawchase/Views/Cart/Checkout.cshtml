@@ -1,10 +1,18 @@
 @model List<Pawchase.Models.CartItem>
+@using Pawchase.Models
 @{
     ViewBag.Title = "Checkout";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var subtotal = Model.Sum(c => c.Subtotal);
     var shipping = subtotal >= 500 ? 0 : 80;
     var total = subtotal + shipping;
+    // Saved addresses for the logged-in user
+    var userId = 0;
+    int.TryParse(Session["UserId"]?.ToString(), out userId);
+    var savedAddresses = MockData.UserAddresses.ContainsKey(userId)
+        ? MockData.UserAddresses[userId]
+        : new List<SavedAddress>();
+    var defaultAddr = savedAddresses.FirstOrDefault(a => a.IsDefault) ?? savedAddresses.FirstOrDefault();
 }
 @section styles {
     <link href="@Url.Content("~/Content/css/cart.css")" rel="stylesheet" />
@@ -132,14 +140,41 @@
                     </div>
                     <div class="form-group">
                         <label><i class="fa-solid fa-phone"></i> Phone Number <span class="required">*</span></label>
-                        <input type="tel" name="phone" placeholder="e.g. 09171234567" required
+                        <input type="tel" name="phone" id="checkout-phone" placeholder="e.g. 09171234567" required
+                               value="@(defaultAddr?.Phone ?? "")"
                                inputmode="numeric" pattern="[0-9]{1,11}" maxlength="11"
                                onkeypress="return /[0-9]/.test(String.fromCharCode(event.which))"
+                               oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11)"
                                title="Phone number must contain only numbers (max 11 digits)" />
                     </div>
+
+                    @if (savedAddresses.Any())
+                    {
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-bookmark"></i> Saved Addresses</label>
+                            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+                                @{ int addrIdx = 0; }
+                                @foreach (var addr in savedAddresses)
+                                {
+                                    <button type="button" class="addr-pill"
+                                            onclick="fillAddress(@addrIdx)"
+                                            style="padding:6px 14px;border-radius:50px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid @(addr.IsDefault ? "var(--blue)" : "var(--border)");background:@(addr.IsDefault ? "rgba(129,166,198,.12)" : "var(--white)");color:@(addr.IsDefault ? "var(--blue-dark)" : "var(--text-mid)");font-family:'Poppins',sans-serif;transition:all .15s;">
+                                        <i class="fa-solid fa-location-dot" style="font-size:10px;margin-right:4px;"></i>@addr.Label
+                                    </button>
+                                    { addrIdx++; }
+                                }
+                            </div>
+                        </div>
+                    }
+
                     <div class="form-group">
                         <label><i class="fa-solid fa-location-dot"></i> Delivery Address <span class="required">*</span></label>
-                        <textarea name="address" rows="3" placeholder="House No., Street, Barangay, City, Province, ZIP" required></textarea>
+                        <textarea name="address" id="checkout-address" rows="3" placeholder="House No., Street, Barangay, City, Province, ZIP" required>@(defaultAddr?.Address ?? "")</textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fa-regular fa-note-sticky"></i> Order Notes <span style="font-size:11px;font-weight:400;color:var(--text-light);">(optional)</span></label>
+                        <textarea name="orderNotes" rows="2" placeholder="Special instructions, preferred delivery time, gate codes, etc." style="resize:vertical;"></textarea>
                     </div>
 
                     <h2 style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border);">
@@ -252,5 +287,24 @@
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') closeConfirmModal();
         });
+
+        var savedAddressesData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(
+            savedAddresses.Select(a => new { address = a.Address, phone = a.Phone ?? "" })
+        ));
+        function fillAddress(index) {
+            var a = savedAddressesData[index];
+            if (!a) return;
+            var addrEl = document.getElementById('checkout-address');
+            var phoneEl = document.getElementById('checkout-phone');
+            if (addrEl) addrEl.value = a.address;
+            if (phoneEl && a.phone) phoneEl.value = a.phone;
+            // Update active pill styling
+            document.querySelectorAll('.addr-pill').forEach(function(btn, i) {
+                var isActive = i === index;
+                btn.style.borderColor  = isActive ? 'var(--blue)'              : 'var(--border)';
+                btn.style.background   = isActive ? 'rgba(129,166,198,.12)'    : 'var(--white)';
+                btn.style.color        = isActive ? 'var(--blue-dark)'         : 'var(--text-mid)';
+            });
+        }
     </script>
 }

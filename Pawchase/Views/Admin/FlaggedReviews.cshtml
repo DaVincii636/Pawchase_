@@ -193,6 +193,12 @@ else
                         @for (int i = 1; i <= 5; i++)
                         { <i class="fa-@(i <= r.Stars ? "solid" : "regular") fa-star"></i> }
                         <span style="color:var(--text-light);font-size:11px;margin-left:4px;">@r.Stars / 5</span>
+                        @if (r.IsVerifiedPurchase)
+                        {
+                            <span style="margin-left:8px;background:rgba(46,204,113,.12);color:#1e8449;border:1px solid rgba(46,204,113,.3);font-size:9px;font-weight:700;padding:2px 8px;border-radius:50px;vertical-align:middle;">
+                                <i class="fa-solid fa-circle-check"></i> Verified Purchase
+                            </span>
+                        }
                     </div>
                     <div class="report-comment">@r.Comment</div>
                     @if (product != null)
@@ -202,6 +208,38 @@ else
                     <span style="margin-left:.4rem;" class="report-product-tag">
                         <i class="fa-solid fa-folder"></i> @r.Category
                     </span>
+
+                    @* Existing seller reply display *@
+                    @if (!string.IsNullOrWhiteSpace(r.SellerReply))
+                    {
+                        <div style="margin-top:10px;background:rgba(129,166,198,.1);border-left:3px solid var(--blue);border-radius:0 6px 6px 0;padding:10px 14px;">
+                            <div style="font-size:10px;font-weight:700;color:var(--blue-dark);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">
+                                <i class="fa-solid fa-store"></i> Seller Reply &bull; @(r.SellerReplyDate?.ToString("MMM dd, yyyy") ?? "")
+                            </div>
+                            <div style="font-size:13px;color:var(--text);line-height:1.55;">@r.SellerReply</div>
+                        </div>
+                    }
+
+                    @* Reply form *@
+                    @using (Html.BeginForm("ReplyToReview", "Admin", FormMethod.Post, new { style = "margin-top:10px;" }))
+                    {
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="reviewId" value="@r.Id" />
+                        <div style="display:flex;gap:8px;align-items:flex-start;">
+                            <textarea name="replyText" rows="2" placeholder="@(string.IsNullOrWhiteSpace(r.SellerReply) ? "Write a seller reply…" : "Edit or clear reply…")"
+                                      style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:'Poppins',sans-serif;resize:vertical;outline:none;">@r.SellerReply</textarea>
+                            <button type="submit" style="padding:9px 16px;border-radius:50px;font-size:12px;font-weight:700;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;border:none;cursor:pointer;font-family:'Poppins',sans-serif;white-space:nowrap;flex-shrink:0;">
+                                <i class="fa-solid fa-reply"></i> @(string.IsNullOrWhiteSpace(r.SellerReply) ? "Reply" : "Update")
+                            </button>
+                        </div>
+                        if (!string.IsNullOrWhiteSpace(r.SellerReply))
+                        {
+                            <button type="submit" name="replyText" value=""
+                                    style="margin-top:5px;font-size:11px;background:none;border:none;color:#e05555;cursor:pointer;font-family:'Poppins',sans-serif;padding:0;">
+                                <i class="fa-solid fa-xmark"></i> Remove reply
+                            </button>
+                        }
+                    }
                 </div>
             </div>
         </div>
