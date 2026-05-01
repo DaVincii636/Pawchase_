@@ -16,13 +16,22 @@
     <link rel="stylesheet" href="~/Content/reviews.css" />
 }
 
-<div class="reviews-hero">
-    <h1>From Our <span>Pack</span> <i class="fa-solid fa-paw" style="font-size:1.6rem;vertical-align:middle"></i></h1>
-    <p>Real reviews from verified PawChase buyers</p>
-    <div class="hero-stats">
-        <div class="stat"><strong>@Model.Count</strong><span>Reviews</span></div>
-        <div class="stat"><strong>@(Model.Any() ? Model.Average(r => r.Stars).ToString("0.0") : "0.0")</strong><span>Avg Rating</span></div>
-        <div class="stat"><strong>@(Model.Any() ? ((int)System.Math.Round((double)Model.Count(r => r.Stars >= 4) * 100 / Model.Count)).ToString() : "0")%</strong><span>Recommend</span></div>
+<div class="pc-hero">
+    <div class="pc-hero-blob pc-hero-blob--1"></div>
+    <div class="pc-hero-blob pc-hero-blob--2"></div>
+    <div class="pc-hero-content">
+        <h1 class="pc-hero-title">From Our <span>Pack</span> <i class="fa-solid fa-paw" style="font-size:1.4rem;vertical-align:middle;margin-left:6px;"></i></h1>
+        <p class="pc-hero-subtitle">Real reviews from verified PawChase buyers</p>
+        <div class="pc-hero-divider">
+            <div class="pc-hero-divider-line"></div>
+            <i class="fa-solid fa-star"></i>
+            <div class="pc-hero-divider-line"></div>
+        </div>
+        <div class="pc-hero-stats">
+            <div class="pc-hero-stat"><strong>@Model.Count</strong><span>Reviews</span></div>
+            <div class="pc-hero-stat"><strong>@(Model.Any() ? Model.Average(r => r.Stars).ToString("0.0") : "0.0")</strong><span>Avg Rating</span></div>
+            <div class="pc-hero-stat"><strong>@(Model.Any() ? ((int)System.Math.Round((double)Model.Count(r => r.Stars >= 4) * 100 / Model.Count)).ToString() : "0")%</strong><span>Recommend</span></div>
+        </div>
     </div>
 </div>
 

@@ -1134,6 +1134,12 @@ namespace Pawchase.Controllers
             return RedirectToAction("Index", "Home");
         }
 
+        // Keeps the admin session alive while the browser tab is open
+        public JsonResult KeepAlive()
+        {
+            return Json(new { alive = IsAdmin }, JsonRequestBehavior.AllowGet);
+        }
+
         public ActionResult Dashboard()
         {
             try

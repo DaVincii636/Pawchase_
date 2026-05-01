@@ -51,18 +51,28 @@
     <link rel="stylesheet" href="~/Content/myreviews.css" />
 }
 
-<div class="my-reviews-header">
-    <h1><i class="fa-solid fa-bookmark" style="color:#FFD77A;margin-right:8px"></i>My Reviews</h1>
-    <p>Personal collection of your posted reviews</p>
-
-    @if (Model.Any())
-    {
-        <div class="my-reviews-stats">
-            <div class="stat-item"><strong>@Model.Count</strong><span>Total Reviews</span></div>
-            <div class="stat-item"><strong>@Model.Average(r => r.Stars).ToString("0.0")</strong><span>Avg Rating</span></div>
-            <div class="stat-item clickable" onclick="openLikedModal()"><strong>@likedReviews.Count</strong><span>Reviews You've Liked</span></div>
+<div class="pc-hero">
+    <div class="pc-hero-blob pc-hero-blob--1"></div>
+    <div class="pc-hero-blob pc-hero-blob--2"></div>
+    <div class="pc-hero-content">
+        <h1 class="pc-hero-title">
+            <i class="fa-solid fa-bookmark" style="color:#FFD77A;margin-right:8px;font-size:1.3rem;vertical-align:middle;"></i>My <span>Reviews</span>
+        </h1>
+        <p class="pc-hero-subtitle">Personal collection of your posted reviews</p>
+        <div class="pc-hero-divider">
+            <div class="pc-hero-divider-line"></div>
+            <i class="fa-solid fa-star"></i>
+            <div class="pc-hero-divider-line"></div>
         </div>
-    }
+        @if (Model.Any())
+        {
+            <div class="pc-hero-stats">
+                <div class="pc-hero-stat"><strong>@Model.Count</strong><span>Total Reviews</span></div>
+                <div class="pc-hero-stat"><strong>@Model.Average(r => r.Stars).ToString("0.0")</strong><span>Avg Rating</span></div>
+                <div class="pc-hero-stat clickable" onclick="openLikedModal()"><strong>@likedReviews.Count</strong><span>Reviews You've Liked</span></div>
+            </div>
+        }
+    </div>
 </div>
 
 @if (TempData["ReviewPosted"] != null)

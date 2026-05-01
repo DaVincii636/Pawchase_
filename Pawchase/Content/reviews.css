@@ -1,23 +1,111 @@
-﻿.reviews-hero {
-    background: linear-gradient(135deg,var(--blue-deeper),var(--blue),var(--lblue));
-    color: #fff;
-    text-align: center;
-    padding: 3rem 2rem;
+﻿/* ===== SHARED HERO (matches About page) ===== */
+.pc-hero {
+    position: relative;
+    width: 100%;
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: linear-gradient(135deg, #1e3a52 0%, #2c5478 50%, #3d6b8c 100%);
 }
 
-    .reviews-hero h1 {
-        font-size: 2rem;
-        font-weight: 800;
+.pc-hero-blob {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.pc-hero-blob--1 {
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(170, 205, 220, 0.18) 0%, transparent 70%);
+    top: -80px;
+    right: 10%;
+}
+
+.pc-hero-blob--2 {
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(243, 227, 208, 0.12) 0%, transparent 70%);
+    bottom: -40px;
+    left: 8%;
+}
+
+.pc-hero-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 1rem 2rem;
+    animation: pcHeroFadeIn 0.75s ease both;
+}
+
+@keyframes pcHeroFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(22px);
     }
 
-        .reviews-hero h1 span {
-            color: #FFD77A;
-        }
-
-    .reviews-hero p {
-        opacity: .85;
-        margin-top: .5rem;
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
+}
+
+.pc-hero-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 0.5rem;
+}
+
+    .pc-hero-title span {
+        color: #a8cce0;
+    }
+
+.pc-hero-subtitle {
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 14px;
+    margin: 0;
+}
+
+.pc-hero-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 1rem;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 0.75rem;
+}
+
+.pc-hero-divider-line {
+    width: 48px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* ===== Reviews Stats inside hero ===== */
+.pc-hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2.5rem;
+    margin-top: 1.2rem;
+}
+
+.pc-hero-stat strong {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+.pc-hero-stat span {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
 
 .hero-stats {
     display: flex;
@@ -755,4 +843,25 @@
     .reviews-grid {
         grid-template-columns: 1fr;
     }
+}
+/* ===== Reviews Hero Stats (inside pc-hero) ===== */
+.pc-hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2.5rem;
+    margin-top: 1.2rem;
+}
+
+.pc-hero-stat strong {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+.pc-hero-stat span {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }

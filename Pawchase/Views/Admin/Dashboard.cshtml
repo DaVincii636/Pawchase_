@@ -168,3 +168,12 @@
         </tbody>
     </table>
 </div>
+
+
+<script>
+    // Ping the server every 5 minutes to keep the admin session alive
+    setInterval(function () {
+        fetch('@Url.Action("KeepAlive", "Admin")', { credentials: 'same-origin' })
+            .catch(function () { /* silently ignore network errors */ });
+    }, 5 * 60 * 1000);
+</script>
