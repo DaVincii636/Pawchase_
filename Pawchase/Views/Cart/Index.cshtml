@@ -82,7 +82,19 @@
         </style>
     }
 
-    <div class="page-hero"><h1>My Cart</h1><p>Review your items before checkout</p></div>
+<div class="pc-hero">
+    <div class="pc-hero-blob pc-hero-blob--1"></div>
+    <div class="pc-hero-blob pc-hero-blob--2"></div>
+    <div class="pc-hero-content">
+        <h1 class="pc-hero-title">My <span>Cart</span></h1>
+        <p class="pc-hero-subtitle">Review your items before checkout</p>
+        <div class="pc-hero-divider">
+            <div class="pc-hero-divider-line"></div>
+            <i class="fa-solid fa-cart-shopping"></i>
+            <div class="pc-hero-divider-line"></div>
+        </div>
+    </div>
+</div>
 
     <section class="cart-section">
         @if (!Model.Any())

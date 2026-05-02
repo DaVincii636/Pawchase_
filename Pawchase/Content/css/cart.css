@@ -2,6 +2,95 @@
    PAWCHASE V2 - cart.css
    ════════════════════════════════════════════ */
 
+/* ===== SHARED HERO ===== */
+.pc-hero {
+    position: relative;
+    width: 100%;
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: linear-gradient(135deg,#1e3a52 0%,#2c5478 50%,#3d6b8c 100%);
+}
+
+.pc-hero-blob {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.pc-hero-blob--1 {
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle,rgba(170,205,220,.18) 0%,transparent 70%);
+    top: -80px;
+    right: 10%;
+}
+
+.pc-hero-blob--2 {
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle,rgba(243,227,208,.12) 0%,transparent 70%);
+    bottom: -40px;
+    left: 8%;
+}
+
+.pc-hero-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 1rem 2rem;
+    animation: pcHeroFadeIn .75s ease both;
+}
+
+@keyframes pcHeroFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(22px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.pc-hero-title {
+    font-family: 'Poppins',sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 .4rem;
+}
+
+    .pc-hero-title span {
+        color: #a8cce0;
+    }
+
+.pc-hero-subtitle {
+    font-family: 'Poppins',sans-serif;
+    color: rgba(255,255,255,.82);
+    font-size: 14px;
+    margin: 0;
+}
+
+.pc-hero-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: .8rem;
+    color: rgba(255,255,255,.35);
+    font-size: .75rem;
+}
+
+.pc-hero-divider-line {
+    width: 48px;
+    height: 1px;
+    background: rgba(255,255,255,.25);
+}
+
 .cart-section { padding: 2.5rem 5%; }
 
 .cart-empty {
