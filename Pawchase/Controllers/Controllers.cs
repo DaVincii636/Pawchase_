@@ -115,6 +115,8 @@ namespace Pawchase.Controllers
                     Password = password
                 };
                 MockData.Users.Add(user);
+                user.Id = DbHelper.AddUser(user);
+                MockData.RefreshUsers();
                 Session["UserId"] = user.Id;
                 Session["UserName"] = user.FullName;
                 Session["UserEmail"] = user.Email;
@@ -229,6 +231,7 @@ namespace Pawchase.Controllers
                 user.Email = email.Trim().ToLower();
                 user.Phone = phone?.Trim();
                 user.GCashNumber = gcashNumber?.Trim();
+                DbHelper.UpdateUser(user);
                 Session["UserName"] = user.FullName;
                 Session["UserEmail"] = user.Email;
 
@@ -605,6 +608,8 @@ namespace Pawchase.Controllers
                 };
 
                 MockData.Orders.Add(order);
+                order.Id = DbHelper.AddOrder(order);
+                MockData.RefreshOrders();
 
                 var p = MockData.Products.FirstOrDefault(x => x.Id == buyNowItem.Product.Id);
                 if (p != null)
@@ -686,6 +691,8 @@ namespace Pawchase.Controllers
                 };
 
                 MockData.Orders.Add(order);
+                order.Id = DbHelper.AddOrder(order);
+                MockData.RefreshOrders();
 
                 foreach (var item in cart)
                 {
@@ -926,6 +933,8 @@ namespace Pawchase.Controllers
                 {
                     order.Status = "Completed";
                     order.IsReceivedByCustomer = true;
+                    DbHelper.MarkOrderReceived(order.Id);
+                    MockData.RefreshOrders();
                 }
                 TempData["Success"] = "Order marked as received!";
                 return RedirectToAction("Track", "Order", new { tab = "Completed" });
@@ -963,6 +972,8 @@ namespace Pawchase.Controllers
 
                 order.Status = "Cancelled";
                 order.CancelReason = cancelReason;
+                DbHelper.UpdateOrderCancel(order.Id, cancelReason);
+                MockData.RefreshOrders();
 
                 // Restore stock
                 if (order.Snapshots != null)
@@ -1019,6 +1030,8 @@ namespace Pawchase.Controllers
                     order.RefundReason = refundReason;
                     order.GCashNumber = gcashNumber.Trim();
                     order.RefundEvidenceUrl = refundEvidenceUrl;
+                    DbHelper.UpdateOrderRefund(order.Id, refundReason, gcashNumber.Trim());
+                    MockData.RefreshOrders();
                 }
 
                 TempData["Success"] = "Your return/refund request has been submitted.";
@@ -1071,10 +1084,12 @@ namespace Pawchase.Controllers
                         o.Snapshots.Any(s => s.ProductId == productId))
                 };
                 MockData.Reviews.Add(review);
+                review.Id = DbHelper.AddReview(review);
+                MockData.RefreshReviews();
 
                 // Mark the order as reviewed so the Rate button is hidden afterward
                 var reviewedOrder = MockData.Orders.FirstOrDefault(o => o.ReferenceNumber == referenceNumber);
-                if (reviewedOrder != null) reviewedOrder.IsReviewed = true;
+                if (reviewedOrder != null) { reviewedOrder.IsReviewed = true; DbHelper.MarkOrderReviewed(reviewedOrder.Id); MockData.RefreshOrders(); }
 
                 // Order stays Completed after rating
                 TempData["Success"] = "Thank you for your review!";
@@ -1240,6 +1255,8 @@ namespace Pawchase.Controllers
                     product.Stock = totalVariantStock;
 
                 MockData.Products.Add(product);
+                product.Id = DbHelper.AddProduct(product);
+                MockData.RefreshProducts();
                 TempData["Success"] = "Product \"" + product.Name + "\" added!";
                 return RedirectToAction("Products");
             }
@@ -1324,6 +1341,8 @@ namespace Pawchase.Controllers
 
                 // If variants have stock set, use the sum; otherwise use the manually entered stock
                 p.Stock = hasVariantStock ? totalVariantStock : Math.Max(0, updated.Stock);
+                DbHelper.UpdateProduct(p);
+                MockData.RefreshProducts();
 
                 TempData["Success"] = "Product \"" + updated.Name + "\" updated!";
                 return RedirectToAction("Products");
@@ -1342,7 +1361,7 @@ namespace Pawchase.Controllers
             {
                 if (!IsAdmin) return RedirectToAction("Login");
                 var p = MockData.Products.FirstOrDefault(x => x.Id == id);
-                if (p != null) { p.IsDeleted = true; TempData["Success"] = "Product \"" + p.Name + "\" deleted."; }
+                if (p != null) { p.IsDeleted = true; DbHelper.SoftDeleteProduct(p.Id); MockData.RefreshProducts(); TempData["Success"] = "Product \"" + p.Name + "\" deleted."; }
                 else TempData["Error"] = "Product not found.";
                 return RedirectToAction("Products");
             }
@@ -1364,6 +1383,8 @@ namespace Pawchase.Controllers
                 if (p != null)
                 {
                     p.Stock = Math.Max(0, stock);
+                    DbHelper.UpdateProductStock(p.Id, p.Stock);
+                    MockData.RefreshProducts();
                     TempData["Success"] = "Stock for \"" + p.Name + "\" updated to " + p.Stock + ".";
                 }
                 return RedirectToAction("Products");
@@ -1419,6 +1440,8 @@ namespace Pawchase.Controllers
                     o.Status = status;
                     if (status == "Refund Approved" || status == "Completed")
                         o.HasRefundRequest = false;
+                    DbHelper.UpdateOrderStatus(o.Id, status);
+                    MockData.RefreshOrders();
                     TempData["Success"] = "Order status updated to \"" + status + "\".";
                 }
                 else TempData["Error"] = "Order not found.";
@@ -1483,6 +1506,8 @@ namespace Pawchase.Controllers
                 if (review != null)
                 {
                     MockData.Reviews.Remove(review);
+                    DbHelper.DeleteReview(review.Id);
+                    MockData.RefreshReviews();
                     TempData["Success"] = "Review #" + id + " has been deleted.";
                 }
                 else TempData["Error"] = "Review not found.";

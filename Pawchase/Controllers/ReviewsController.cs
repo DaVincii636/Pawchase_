@@ -115,6 +115,8 @@ namespace Pawchase.Controllers
                 Category = GetProductCategory(productId)
             };
             MockData.Reviews.Add(review);
+            review.Id = DbHelper.AddReview(review);
+            MockData.RefreshReviews();
             TempData["ReviewPosted"] = true;
 
             if (!string.IsNullOrEmpty(Request.Form["returnTo"]) &&
@@ -135,6 +137,8 @@ namespace Pawchase.Controllers
                 review.Stars = stars;
                 review.Comment = comment;
                 review.LastEditedAt = System.DateTime.Now;
+                DbHelper.UpdateReview(review.Id, stars, comment);
+                MockData.RefreshReviews();
                 TempData["ReviewUpdated"] = true;
                 return RedirectToAction("MyReviews");
             }
@@ -148,6 +152,8 @@ namespace Pawchase.Controllers
             if (review != null && review.UserId == GetCurrentUserId())
             {
                 MockData.Reviews.Remove(review);
+                DbHelper.DeleteReview(review.Id);
+                MockData.RefreshReviews();
                 TempData["ReviewDeleted"] = true;
                 return RedirectToAction("MyReviews");
             }
@@ -209,6 +215,7 @@ namespace Pawchase.Controllers
             {
                 reportedIds.Add(id);
                 review.ReportCount++;
+                DbHelper.UpdateReviewReports(review.Id, review.ReportCount);
                 SaveReportedReviewIds(reportedIds);
 
                 // eunice modified: auto-unlike the review if the user had previously liked it
@@ -260,6 +267,7 @@ namespace Pawchase.Controllers
             };
 
             review.Comments.Add(newComment);
+            newComment.Id = DbHelper.AddReviewComment(newComment);
 
             if (Request.IsAjaxRequest())
             {

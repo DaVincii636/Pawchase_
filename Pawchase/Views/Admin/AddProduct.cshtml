@@ -267,17 +267,24 @@
                     <div class="variants-grid">
                         @for (int vi = 1; vi <= 6; vi++)
                         {
-                            <div class="variant-item">
+                            <div class="variant-item" id="vItem@(vi)">
                                 <input type="file" id="vFile@(vi)" accept="image/*" style="display:none"
                                        onchange="previewVariant(this,@(vi))" />
-                                <div class="variant-img-box"
-                                     onclick="document.getElementById('vFile@(vi)').click()"
-                                     id="vBox@(vi)">
-                                    <img id="imgPreview@(vi)" src="" alt="" />
-                                    <div class="variant-placeholder" id="imgIcon@(vi)">
-                                        <i class="fa-solid fa-plus"></i>
-                                        <span>Add Variant</span>
+                                <div style="position:relative;">
+                                    <div class="variant-img-box"
+                                         onclick="document.getElementById('vFile@(vi)').click()"
+                                         id="vBox@(vi)">
+                                        <img id="imgPreview@(vi)" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;" />
+                                        <div class="variant-placeholder" id="imgIcon@(vi)">
+                                            <i class="fa-solid fa-plus"></i>
+                                            <span>Add Variant</span>
+                                        </div>
                                     </div>
+                                    <button type="button" id="vClear@(vi)"
+                                            onclick="clearVariant(@(vi))"
+                                            style="display:none;position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:#e05555;border:none;color:#fff;cursor:pointer;font-size:10px;line-height:1;z-index:5;">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
                                 </div>
                                 <input type="hidden" id="vPath@(vi)" name="VariantImagePaths" value="" />
                                 <input type="text" id="vLabel@(vi)" name="VariantLabels"
@@ -398,6 +405,16 @@
             reader.readAsDataURL(input.files[0]);
         }
 
+
+        function clearVariant(slot) {
+            document.getElementById('imgPreview' + slot).src = '';
+            document.getElementById('imgPreview' + slot).style.display = 'none';
+            document.getElementById('imgIcon' + slot).style.display = 'flex';
+            document.getElementById('vPath' + slot).value = '';
+            document.getElementById('vLabel' + slot).value = '';
+            document.getElementById('vStock' + slot).value = '';
+            document.getElementById('vClear' + slot).style.display = 'none';
+        }
         function previewVariant(input, slot) {
             if (!input.files || !input.files[0]) return;
             var reader = new FileReader();

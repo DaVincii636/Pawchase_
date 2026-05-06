@@ -304,9 +304,10 @@
                         {
                             var ev = existingVariants.Count >= vi ? existingVariants[vi - 1] : null;
                             var hasImg = ev != null && !string.IsNullOrEmpty(ev.ImageUrl);
-                            <div class="variant-item">
+                            <div class="variant-item" id="evItem@(vi)">
                                 <input type="file" id="evFile@(vi)" accept="image/*" style="display:none"
                                        onchange="previewEditVariant(this,@(vi))" />
+                                <div style="position:relative;">
                                 <label for="evFile@(vi)" style="display:block;cursor:pointer;">
                                     <div class="variant-img-box" id="evBox@(vi)">
                                         <img id="evPreview@(vi)"
@@ -321,6 +322,12 @@
                                         </div>
                                     </div>
                                 </label>
+                                <button type="button" id="evClear@(vi)"
+                                        onclick="clearEditVariant(@(vi))"
+                                        style="display:@(hasImg ? "block" : "none");position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:#e05555;border:none;color:#fff;cursor:pointer;font-size:10px;z-index:5;">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                                </div>
                                 <input type="hidden" id="evPath@(vi)" name="VariantImagePaths"
                                        value="@(ev != null ? ev.ImageUrl : "")" />
                                 <input type="text" id="evLabel@(vi)" name="VariantLabels"
@@ -458,6 +465,16 @@
             reader.readAsDataURL(input.files[0]);
         }
 
+
+        function clearEditVariant(slot) {
+            document.getElementById('evPreview' + slot).src = '';
+            document.getElementById('evPreview' + slot).style.display = 'none';
+            document.getElementById('evIcon' + slot).style.display = 'flex';
+            document.getElementById('evPath' + slot).value = '';
+            document.getElementById('evLabel' + slot).value = '';
+            document.getElementById('evStock' + slot).value = '';
+            document.getElementById('evClear' + slot).style.display = 'none';
+        }
         function previewEditVariant(input, slot) {
             if (!input.files || !input.files[0]) return;
             var reader = new FileReader();
