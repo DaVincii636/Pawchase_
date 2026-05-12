@@ -41,9 +41,11 @@ function updateSummary() {
 
     // Use innerHTML (not textContent) so the ₱ peso entity renders correctly
     if (el('sum-subtotal')) el('sum-subtotal').innerHTML = '&#8369;' + subtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    if (el('sum-shipping')) el('sum-shipping').innerHTML = shipping === 0 && subtotal > 0
-        ? '<span class="free-ship"><i class="fa-solid fa-truck"></i> FREE</span>'
-        : '&#8369;80.00';
+    if (el('sum-shipping')) el('sum-shipping').innerHTML = subtotal === 0
+        ? '&#8369;0.00'
+        : (shipping === 0
+            ? '<span class="free-ship"><i class="fa-solid fa-truck"></i> FREE</span>'
+            : '&#8369;80.00');
     if (el('sum-total')) el('sum-total').innerHTML = '&#8369;' + total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     if (el('sum-count')) el('sum-count').textContent = count + ' item' + (count !== 1 ? 's' : '');
 
@@ -96,9 +98,7 @@ function postSelectedToCheckout(link) {
     }
 
     if (selectedIds.length === 0) {
-        // If none selected, fall back to default behaviour: proceed with all items
-        // by navigating to the Checkout page
-        window.location.href = link ? link.href : 'Checkout';
+        alert('Please select at least one item to checkout.');
         return;
     }
 

@@ -247,12 +247,14 @@
                         }
                     }
 
-                    @* ── RECEIVED hidden GET link ── *@
+                    @* Received hidden POST form *@
                     @if (order.Status == "Out for Delivery")
                     {
-                        <a id="received-link-@order.ReferenceNumber"
-                           href="@Url.Action("MarkReceived","Order",new{referenceNumber=order.ReferenceNumber})"
-                           style="display:none"></a>
+                        using (Html.BeginForm("MarkReceived", "Order", FormMethod.Post, new { id = "received-form-" + order.ReferenceNumber, style = "display:none" }))
+                        {
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="referenceNumber" value="@order.ReferenceNumber" />
+                        }
                     }
 
                     @* ── REFUND hidden POST form ── *@
@@ -772,8 +774,8 @@
         }
         function confirmReceived() {
             if (!_receivedRef) return;
-            var link = document.getElementById('received-link-' + _receivedRef);
-            if (link) window.location.href = link.href;
+            var form = document.getElementById('received-form-' + _receivedRef);
+            if (form) form.submit();
         }
 
         /* ─────────────────────────────────────────────

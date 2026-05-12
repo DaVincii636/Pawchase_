@@ -355,7 +355,6 @@
                            Orders are automatically set to "To Ship" when placed by a customer. *@
                         <option value="In Transit">In Transit</option>
                         <option value="Out for Delivery">Out for Delivery</option>
-                        <option value="Completed">Completed</option>
                         <option value="Cancelled">Cancelled</option>
                     </select>
                     <button type="button" onclick="submitBulk()" class="btn-primary" style="padding:7px 20px;font-size:12px;">
@@ -863,9 +862,9 @@
     // ── Decline refund modal ───────────────────────────────────────
     function openDeclineModal(id, ref, name) {
         document.getElementById('declineModalText').textContent =
-            'Decline ' + name + '\'s refund request for order ' + ref + '? The order will be returned to Completed.';
+            'Decline ' + name + '\'s refund request for order ' + ref + '? The request will be marked as Refund Denied.';
         document.getElementById('declineConfirmLink').href =
-            '@Url.Action("UpdateOrderStatus","Admin")?id=' + id + '&status=Completed';
+            '@Url.Action("UpdateOrderStatus","Admin")?id=' + id + '&status=Refund%20Denied';
         document.getElementById('declineModal').style.display = 'flex';
     }
     function closeDeclineModal() { document.getElementById('declineModal').style.display = 'none'; }

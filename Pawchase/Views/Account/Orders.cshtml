@@ -249,7 +249,7 @@
                             </div>
                             <div class="addr-actions">
                                 <button type="button" class="addr-btn"
-                                        onclick="openAddrModal(@addr.Id, '@Html.Raw(addr.Label.Replace("'","\\\'"))', '@Html.Raw(addr.Address.Replace("'","\\\'"))', '@addr.Phone', @(addr.IsDefault ? "true" : "false"))">
+                                        onclick="openAddrModal(@addr.Id, '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(addr.Label ?? ""))', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(addr.Address ?? ""))', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(addr.Phone ?? ""))', @(addr.IsDefault ? "true" : "false"))">
                                     <i class="fa-solid fa-pen"></i> Edit
                                 </button>
                                 @using (Html.BeginForm("DeleteAddress", "Account", new { id = addr.Id }, FormMethod.Post, new { style = "display:inline;" }))

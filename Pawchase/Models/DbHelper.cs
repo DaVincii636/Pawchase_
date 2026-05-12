@@ -520,7 +520,7 @@ WHERE id=@id", conn))
         {
             var list = new List<SavedAddress>();
             using (var conn = Open())
-            using (var cmd = new MySqlCommand("SELECT * FROM saved_addresses WHERE user_id=@uid", conn)) {
+            using (var cmd = new MySqlCommand("SELECT * FROM saved_addresses WHERE user_id=@uid ORDER BY is_default DESC, id DESC", conn)) {
                 cmd.Parameters.AddWithValue("@uid", userId);
                 using (var r = cmd.ExecuteReader()) {
                     while (r.Read()) list.Add(new SavedAddress { Id = r.GetInt32("id"), UserId = r.GetInt32("user_id"), Label = r.IsDBNull(r.GetOrdinal("label")) ? null : r.GetString("label"), Address = r.GetString("address"), Phone = r.IsDBNull(r.GetOrdinal("phone")) ? null : r.GetString("phone"), IsDefault = r.GetBoolean("is_default") });
@@ -537,11 +537,37 @@ WHERE id=@id", conn))
             }
         }
 
-        public static void DeleteAddress(int id)
+        public static void ClearDefaultAddress(int userId)
         {
             using (var conn = Open())
-            using (var cmd = new MySqlCommand("DELETE FROM saved_addresses WHERE id=@id", conn)) {
-                cmd.Parameters.AddWithValue("@id", id); cmd.ExecuteNonQuery();
+            using (var cmd = new MySqlCommand("UPDATE saved_addresses SET is_default=0 WHERE user_id=@uid", conn)) {
+                cmd.Parameters.AddWithValue("@uid", userId); cmd.ExecuteNonQuery();
+            }
+        }
+
+        public static void UpdateAddress(SavedAddress a)
+        {
+            using (var conn = Open())
+            using (var cmd = new MySqlCommand(@"UPDATE saved_addresses
+SET label=@l, address=@addr, phone=@ph, is_default=@def
+WHERE id=@id AND user_id=@uid", conn)) {
+                cmd.Parameters.AddWithValue("@l", (object)a.Label ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@addr", a.Address);
+                cmd.Parameters.AddWithValue("@ph", (object)a.Phone ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@def", a.IsDefault);
+                cmd.Parameters.AddWithValue("@id", a.Id);
+                cmd.Parameters.AddWithValue("@uid", a.UserId);
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        public static void DeleteAddress(int id, int userId)
+        {
+            using (var conn = Open())
+            using (var cmd = new MySqlCommand("DELETE FROM saved_addresses WHERE id=@id AND user_id=@uid", conn)) {
+                cmd.Parameters.AddWithValue("@id", id);
+                cmd.Parameters.AddWithValue("@uid", userId);
+                cmd.ExecuteNonQuery();
             }
         }
     }

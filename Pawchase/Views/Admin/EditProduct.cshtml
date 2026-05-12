@@ -154,6 +154,29 @@
         transition: border-color .2s;
     }
     .variant-text-input:focus { border-color: var(--blue); }
+    .variant-remove-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        width: 100%;
+        padding: 6px 8px;
+        border: 1.5px solid rgba(224,85,85,.25);
+        border-radius: 6px;
+        background: rgba(224,85,85,.06);
+        color: #c0392b;
+        cursor: pointer;
+        font-size: 10px;
+        font-weight: 700;
+        font-family: 'Poppins', sans-serif;
+        transition: all .18s;
+    }
+
+        .variant-remove-btn:hover {
+            background: #e05555;
+            border-color: #e05555;
+            color: #fff;
+        }
 
     /* ── FORM FIELDS ─────────────────────────────── */
     .form-2col {
@@ -308,37 +331,55 @@
                                 <input type="file" id="evFile@(vi)" accept="image/*" style="display:none"
                                        onchange="previewEditVariant(this,@(vi))" />
                                 <div style="position:relative;">
-                                <label for="evFile@(vi)" style="display:block;cursor:pointer;">
-                                    <div class="variant-img-box" id="evBox@(vi)">
-                                        <img id="evPreview@(vi)"
-                                             src="@(hasImg ? ev.ImageUrl : "")"
-                                             alt=""
-                                             style="@(hasImg ? "" : "display:none;")"
-                                             onerror="this.style.display='none';var ic=document.getElementById('evIcon@(vi)');if(ic)ic.style.display='flex';" />
-                                        <div class="variant-placeholder" id="evIcon@(vi)"
-                                             style="@(hasImg ? "display:none;" : "")">
-                                            <i class="fa-solid fa-plus"></i>
-                                            <span>Add Variant</span>
+                                    <label for="evFile@(vi)" style="display:block;cursor:pointer;">
+                                        <div class="variant-img-box" id="evBox@(vi)">
+                                            <img id="evPreview@(vi)"
+                                                 src="@(hasImg ? ev.ImageUrl : "")"
+                                                 alt=""
+                                                 style="@(hasImg ? "" : "display:none;")"
+                                                 onerror="this.style.display='none';var ic=document.getElementById('evIcon@(vi)');if(ic)ic.style.display='flex';" />
+                                            <div class="variant-placeholder" id="evIcon@(vi)"
+                                                 style="@(hasImg ? "display:none;" : "")">
+                                                <i class="fa-solid fa-plus"></i>
+                                                <span>Add Variant</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                </label>
-                                <button type="button" id="evClear@(vi)"
-                                        onclick="clearEditVariant(@(vi))"
-                                        style="display:@(hasImg ? "block" : "none");position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:#e05555;border:none;color:#fff;cursor:pointer;font-size:10px;z-index:5;">
-                                    <i class="fa-solid fa-xmark"></i>
-                                </button>
+                                    </label>
+                                    <button type="button" id="evClear@(vi)"
+                                            onclick="clearEditVariant(@(vi))"
+                                            style="display:@(hasImg ? "block" : "none");position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:#e05555;border:none;color:#fff;cursor:pointer;font-size:10px;z-index:5;">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
                                 </div>
                                 <input type="hidden" id="evPath@(vi)" name="VariantImagePaths"
                                        value="@(ev != null ? ev.ImageUrl : "")" />
                                 <input type="text" id="evLabel@(vi)" name="VariantLabels"
                                        placeholder="e.g. Red, Blue"
                                        value="@(ev != null ? ev.Label : "")"
+                                       oninput="updateEditVariantRemove(@(vi))"
                                        class="variant-text-input" />
+
                                 <input type="number" id="evStock@(vi)" name="VariantStocks"
                                        placeholder="Stock" min="0"
                                        value="@(ev != null ? ev.Stock.ToString() : "")"
-                                       oninput="syncVariantStock()"
+                                       oninput="updateEditVariantRemove(@(vi)); syncVariantStock()"
                                        class="variant-text-input" />
+                                <button type="button"
+                                        id="evRemove@(vi)"
+                                        class="variant-remove-btn"
+                                        onclick="clearEditVariant(@(vi))"
+                                        style="display:@(
+                                        ev != null &&
+                                        (
+                                            !string.IsNullOrEmpty(ev.ImageUrl) ||
+                                            !string.IsNullOrEmpty(ev.Label) ||
+                                            ev.Stock > 0
+                                        )
+                                        ? "inline-flex"
+                                        : "none"
+                                    );">
+                                    <i class="fa-solid fa-trash"></i> Remove Variant
+                                </button>
                             </div>
                         }
                     </div>
@@ -465,28 +506,61 @@
             reader.readAsDataURL(input.files[0]);
         }
 
+        function updateEditVariantRemove(slot) {
+            var path = document.getElementById('evPath' + slot);
+            var label = document.getElementById('evLabel' + slot);
+            var stock = document.getElementById('evStock' + slot);
+            var remove = document.getElementById('evRemove' + slot);
+
+            if (!remove) return;
+
+            var hasValue =
+                (path && path.value) ||
+                (label && label.value.trim()) ||
+                (stock && stock.value.trim());
+
+            remove.style.display = hasValue ? 'inline-flex' : 'none';
+        }
 
         function clearEditVariant(slot) {
+            var fileInput = document.getElementById('evFile' + slot);
+
             document.getElementById('evPreview' + slot).src = '';
             document.getElementById('evPreview' + slot).style.display = 'none';
             document.getElementById('evIcon' + slot).style.display = 'flex';
             document.getElementById('evPath' + slot).value = '';
             document.getElementById('evLabel' + slot).value = '';
             document.getElementById('evStock' + slot).value = '';
+
+            if (fileInput) fileInput.value = '';
+
             document.getElementById('evClear' + slot).style.display = 'none';
+            document.getElementById('evRemove' + slot).style.display = 'none';
+
+            syncVariantStock();
         }
         function previewEditVariant(input, slot) {
             if (!input.files || !input.files[0]) return;
+
             var reader = new FileReader();
+
             reader.onload = function (e) {
                 var dataUrl = e.target.result;
                 var preview = document.getElementById("evPreview" + slot);
-                var icon    = document.getElementById("evIcon"    + slot);
+                var icon = document.getElementById("evIcon" + slot);
+
                 preview.src = dataUrl;
                 preview.style.display = "block";
+
                 if (icon) icon.style.display = "none";
+
                 document.getElementById("evPath" + slot).value = dataUrl;
+
+                document.getElementById('evClear' + slot).style.display = 'block';
+
+                updateEditVariantRemove(slot);
             };
+
             reader.readAsDataURL(input.files[0]);
         }
 
@@ -520,7 +594,13 @@
             }
         }
         // Run on load so existing variants immediately lock the field
-        document.addEventListener('DOMContentLoaded', syncVariantStock);
+        document.addEventListener('DOMContentLoaded', function () {
+            syncVariantStock();
+
+            for (var i = 1; i <= 6; i++) {
+                updateEditVariantRemove(i);
+            }
+        });
 
                 // ── Save modal ──
         function openSaveModal() {

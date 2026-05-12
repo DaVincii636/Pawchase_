@@ -155,6 +155,28 @@
         transition: border-color .2s;
     }
     .variant-text-input:focus { border-color: var(--blue); }
+    .variant-remove-btn {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        width: 100%;
+        padding: 6px 8px;
+        border: 1.5px solid rgba(224,85,85,.25);
+        border-radius: 6px;
+        background: rgba(224,85,85,.06);
+        color: #c0392b;
+        cursor: pointer;
+        font-size: 10px;
+        font-weight: 700;
+        font-family: 'Poppins', sans-serif;
+        transition: all .18s;
+    }
+    .variant-remove-btn:hover {
+        background: #e05555;
+        border-color: #e05555;
+        color: #fff;
+    }
 
     /* ── FORM FIELDS ─────────────────────────────── */
     .form-2col {
@@ -287,14 +309,19 @@
                                     </button>
                                 </div>
                                 <input type="hidden" id="vPath@(vi)" name="VariantImagePaths" value="" />
-                                <input type="text" id="vLabel@(vi)" name="VariantLabels"
-                                       placeholder="e.g. Red, Blue"
-                                       class="variant-text-input" />
-                                <input type="number" id="vStock@(vi)" name="VariantStocks"
-                                       placeholder="Stock" min="0"
-                                       oninput="syncVariantStock()"
-                                       class="variant-text-input" />
-                            </div>
+                                 <input type="text" id="vLabel@(vi)" name="VariantLabels"
+                                        placeholder="e.g. Red, Blue"
+                                        oninput="updateVariantRemove(@(vi))"
+                                        class="variant-text-input" />
+                                 <input type="number" id="vStock@(vi)" name="VariantStocks"
+                                        placeholder="Stock" min="0"
+                                        oninput="updateVariantRemove(@(vi)); syncVariantStock()"
+                                        class="variant-text-input" />
+                                <button type="button" id="vRemove@(vi)" class="variant-remove-btn"
+                                        onclick="clearVariant(@(vi))">
+                                    <i class="fa-solid fa-trash"></i> Remove Variant
+                                </button>
+                             </div>
                         }
                     </div>
                 </div>
@@ -405,15 +432,31 @@
             reader.readAsDataURL(input.files[0]);
         }
 
+        function updateVariantRemove(slot) {
+            var path = document.getElementById('vPath' + slot);
+            var label = document.getElementById('vLabel' + slot);
+            var stock = document.getElementById('vStock' + slot);
+            var remove = document.getElementById('vRemove' + slot);
+            if (!remove) return;
+            var hasValue = (path && path.value) ||
+                (label && label.value.trim()) ||
+                (stock && stock.value.trim());
+            remove.style.display = hasValue ? 'inline-flex' : 'none';
+        }
+
 
         function clearVariant(slot) {
+            var fileInput = document.getElementById('vFile' + slot);
             document.getElementById('imgPreview' + slot).src = '';
             document.getElementById('imgPreview' + slot).style.display = 'none';
             document.getElementById('imgIcon' + slot).style.display = 'flex';
             document.getElementById('vPath' + slot).value = '';
             document.getElementById('vLabel' + slot).value = '';
             document.getElementById('vStock' + slot).value = '';
+            if (fileInput) fileInput.value = '';
             document.getElementById('vClear' + slot).style.display = 'none';
+            document.getElementById('vRemove' + slot).style.display = 'none';
+            syncVariantStock();
         }
         function previewVariant(input, slot) {
             if (!input.files || !input.files[0]) return;
@@ -426,6 +469,8 @@
                 preview.style.display = "block";
                 if (icon) icon.style.display = "none";
                 document.getElementById("vPath" + slot).value = dataUrl;
+                document.getElementById('vClear' + slot).style.display = 'block';
+                updateVariantRemove(slot);
             };
             reader.readAsDataURL(input.files[0]);
         }
@@ -461,7 +506,10 @@
             }
         }
         // Run on page load in case of browser back-fill
-        document.addEventListener('DOMContentLoaded', syncVariantStock);
+        document.addEventListener('DOMContentLoaded', function () {
+            for (var i = 1; i <= 6; i++) updateVariantRemove(i);
+            syncVariantStock();
+        });
 
         function calcDiscount() {
             var price = parseFloat(document.getElementById("f-price").value);
