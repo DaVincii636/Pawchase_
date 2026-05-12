@@ -1,4 +1,4 @@
-@model List<Pawchase.Models.CartItem>
+﻿@model List<Pawchase.Models.CartItem>
 @using Pawchase.Models
 @{
     ViewBag.Title = "Checkout";
@@ -9,9 +9,7 @@
     // Saved addresses for the logged-in user
     var userId = 0;
     int.TryParse(Session["UserId"]?.ToString(), out userId);
-    var savedAddresses = MockData.UserAddresses.ContainsKey(userId)
-        ? MockData.UserAddresses[userId]
-        : new List<SavedAddress>();
+    var savedAddresses = DbHelper.GetAddressesByUser(userId);
     var defaultAddr = savedAddresses.FirstOrDefault(a => a.IsDefault) ?? savedAddresses.FirstOrDefault();
 }
 @section styles {
@@ -317,3 +315,4 @@
         }
     </script>
 }
+

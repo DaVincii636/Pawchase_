@@ -20,12 +20,6 @@
             <div class="auth-error"><i class="fa-solid fa-circle-exclamation"></i> @ViewBag.Error</div>
         }
 
-        <a href="@Url.Action("GoogleLogin","Account",new{returnUrl})" class="google-btn">
-            <i class="fa-brands fa-google"></i> Sign up with Google
-        </a>
-
-        <div class="auth-divider"><span>or sign up with email</span></div>
-
         <form method="post" action="@Url.Action("Register","Account")">
             @Html.AntiForgeryToken()
             <div class="form-group">

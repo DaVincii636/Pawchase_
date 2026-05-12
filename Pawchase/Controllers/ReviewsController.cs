@@ -114,7 +114,6 @@ namespace Pawchase.Controllers
                 Likes = 0,
                 Category = GetProductCategory(productId)
             };
-            MockData.Reviews.Add(review);
             review.Id = DbHelper.AddReview(review);
             MockData.RefreshReviews();
             TempData["ReviewPosted"] = true;
@@ -151,7 +150,6 @@ namespace Pawchase.Controllers
             var review = MockData.Reviews.FirstOrDefault(r => r.Id == id);
             if (review != null && review.UserId == GetCurrentUserId())
             {
-                MockData.Reviews.Remove(review);
                 DbHelper.DeleteReview(review.Id);
                 MockData.RefreshReviews();
                 TempData["ReviewDeleted"] = true;
@@ -191,6 +189,7 @@ namespace Pawchase.Controllers
                 }
 
                 SaveLikedReviewIds(likedIds);
+                DbHelper.UpdateReviewLikes(review.Id, review.Likes);
                 return Json(new { ok = true, likes = review.Likes, liked = !alreadyLiked });
             }
             return Json(new { ok = false });
@@ -220,13 +219,14 @@ namespace Pawchase.Controllers
 
                 // eunice modified: auto-unlike the review if the user had previously liked it
                 var likedIds = GetLikedReviewIds();
-                if (likedIds.Contains(id))
-                {
-                    likedIds.Remove(id);
-                    if (review.Likes > 0) review.Likes--;
-                    SaveLikedReviewIds(likedIds);
+                    if (likedIds.Contains(id))
+                    {
+                        likedIds.Remove(id);
+                        if (review.Likes > 0) review.Likes--;
+                        SaveLikedReviewIds(likedIds);
+                        DbHelper.UpdateReviewLikes(review.Id, review.Likes);
+                    }
                 }
-            }
 
             return Json(new { ok = true, reportCount = review.ReportCount, reported = true });
         }
@@ -268,6 +268,7 @@ namespace Pawchase.Controllers
 
             review.Comments.Add(newComment);
             newComment.Id = DbHelper.AddReviewComment(newComment);
+            MockData.RefreshReviews();
 
             if (Request.IsAjaxRequest())
             {

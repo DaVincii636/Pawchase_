@@ -11,7 +11,7 @@
     var refundOrders = Model.Where(o => o.HasRefundRequest).ToList();
 
     // All distinct statuses (for the filter dropdown)
-    var allStatuses = new[] { "To Ship", "In Transit", "Out for Delivery", "Completed", "Cancelled", "Return/Refund", "Refund Approved" };
+    var allStatuses = new[] { "To Ship", "In Transit", "Out for Delivery", "Completed", "Cancelled", "Return/Refund", "Refund Approved", "Refund Denied" };
 }
 
 <style>

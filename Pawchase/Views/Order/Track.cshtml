@@ -14,7 +14,10 @@
         {"Cancelled","fa-solid fa-ban"},
         {"Return/Refund","fa-solid fa-rotate-left"}
     };
-    var filtered = tab == "All" ? Model : Model.Where(o => o.Status == tab).ToList();
+    var refundStatuses = new[] { "Return/Refund", "Refund Requested", "Refund Approved", "Refund Denied" };
+    var filtered = tab == "All"
+        ? Model
+        : (tab == "Return/Refund" ? Model.Where(o => refundStatuses.Contains(o.Status)).ToList() : Model.Where(o => o.Status == tab).ToList());
 }
 @section styles {
     <link href="@Url.Content("~/Content/css/account.css")" rel="stylesheet" />
@@ -85,7 +88,7 @@
                                  : order.Status == "Out for Delivery" ? "sp-delivery"
                                  : order.Status == "Completed" ? "sp-done"
                                  : order.Status == "Cancelled" ? "sp-cancel"
-                                 : order.Status == "Return/Refund" ? "sp-refund"
+                                 : refundStatuses.Contains(order.Status) ? "sp-refund"
                                  : "sp-ship";
 
                 var snapList = order.Snapshots != null && order.Snapshots.Any()

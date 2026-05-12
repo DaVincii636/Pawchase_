@@ -107,6 +107,84 @@ namespace Pawchase.Models
 
         // ════════════════════════════ USERS ════════════════════════════
         
+        public static int AddProduct(Product p)
+        {
+            int newId;
+            using (var conn = Open())
+            using (var cmd = new MySqlCommand(@"INSERT INTO products (name, description, price, original_price, category, breed_size, image_url, stock, is_deleted)
+VALUES (@n,@d,@p,@op,@c,@bs,@img,@s,@del); SELECT LAST_INSERT_ID();", conn))
+            {
+                cmd.Parameters.AddWithValue("@n", p.Name);
+                cmd.Parameters.AddWithValue("@d", (object)p.Description ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@p", p.Price);
+                cmd.Parameters.AddWithValue("@op", (object)p.OriginalPrice ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@c", p.Category);
+                cmd.Parameters.AddWithValue("@bs", p.BreedSize);
+                cmd.Parameters.AddWithValue("@img", (object)p.ImageUrl ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@s", p.Stock);
+                cmd.Parameters.AddWithValue("@del", p.IsDeleted);
+                newId = Convert.ToInt32(cmd.ExecuteScalar());
+            }
+            ReplaceProductVariants(newId, p.Variants);
+            return newId;
+        }
+
+        public static void UpdateProduct(Product p)
+        {
+            using (var conn = Open())
+            using (var cmd = new MySqlCommand(@"UPDATE products SET name=@n, description=@d, price=@p, original_price=@op,
+category=@c, breed_size=@bs, image_url=@img, stock=@s, is_deleted=@del WHERE id=@id", conn))
+            {
+                cmd.Parameters.AddWithValue("@n", p.Name);
+                cmd.Parameters.AddWithValue("@d", (object)p.Description ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@p", p.Price);
+                cmd.Parameters.AddWithValue("@op", (object)p.OriginalPrice ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@c", p.Category);
+                cmd.Parameters.AddWithValue("@bs", p.BreedSize);
+                cmd.Parameters.AddWithValue("@img", (object)p.ImageUrl ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@s", p.Stock);
+                cmd.Parameters.AddWithValue("@del", p.IsDeleted);
+                cmd.Parameters.AddWithValue("@id", p.Id);
+                cmd.ExecuteNonQuery();
+            }
+            ReplaceProductVariants(p.Id, p.Variants);
+        }
+
+        public static void SoftDeleteProduct(int id)
+        {
+            using (var conn = Open())
+            using (var cmd = new MySqlCommand("UPDATE products SET is_deleted=1 WHERE id=@id", conn))
+            {
+                cmd.Parameters.AddWithValue("@id", id);
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        private static void ReplaceProductVariants(int productId, IEnumerable<ProductVariant> variants)
+        {
+            using (var conn = Open())
+            {
+                using (var delete = new MySqlCommand("DELETE FROM product_variants WHERE product_id=@pid", conn))
+                {
+                    delete.Parameters.AddWithValue("@pid", productId);
+                    delete.ExecuteNonQuery();
+                }
+
+                foreach (var v in variants ?? Enumerable.Empty<ProductVariant>())
+                {
+                    using (var insert = new MySqlCommand(@"INSERT INTO product_variants (product_id, label, image_url, stock)
+VALUES (@pid,@l,@img,@s)", conn))
+                    {
+                        insert.Parameters.AddWithValue("@pid", productId);
+                        insert.Parameters.AddWithValue("@l", (object)v.Label ?? DBNull.Value);
+                        insert.Parameters.AddWithValue("@img", (object)v.ImageUrl ?? DBNull.Value);
+                        insert.Parameters.AddWithValue("@s", v.Stock);
+                        insert.ExecuteNonQuery();
+                    }
+                }
+            }
+        }
+
         public static List<User> GetAllUsers()
         {
             var list = new List<User>();
@@ -156,6 +234,31 @@ namespace Pawchase.Models
                 cmd.Parameters.AddWithValue("@ph", (object)u.Phone ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@gc", (object)u.GCashNumber ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@id", u.Id);
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        public static void UpdateUserProfile(User u)
+        {
+            using (var conn = Open())
+            using (var cmd = new MySqlCommand("UPDATE users SET full_name=@fn, email=@em, phone=@ph, gcash_number=@gc WHERE id=@id", conn))
+            {
+                cmd.Parameters.AddWithValue("@fn", u.FullName);
+                cmd.Parameters.AddWithValue("@em", u.Email);
+                cmd.Parameters.AddWithValue("@ph", (object)u.Phone ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@gc", (object)u.GCashNumber ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@id", u.Id);
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        public static void UpdateUserPassword(int id, string plainPassword)
+        {
+            using (var conn = Open())
+            using (var cmd = new MySqlCommand("UPDATE users SET password=@pw WHERE id=@id", conn))
+            {
+                cmd.Parameters.AddWithValue("@pw", HashPassword(plainPassword));
+                cmd.Parameters.AddWithValue("@id", id);
                 cmd.ExecuteNonQuery();
             }
         }
@@ -232,6 +335,15 @@ namespace Pawchase.Models
             return newId;
         }
 
+        public static string NextOrderReference()
+        {
+            using (var conn = Open())
+            using (var cmd = new MySqlCommand("SELECT COALESCE(MAX(id), 0) + 1 FROM orders", conn))
+            {
+                return "PWC-" + Convert.ToInt32(cmd.ExecuteScalar()).ToString("D6");
+            }
+        }
+
         private static readonly Dictionary<string, HashSet<string>> ValidTransitions = new Dictionary<string, HashSet<string>> {
             ["To Ship"] = new HashSet<string> { "Out for Delivery", "Cancelled" },
             ["Out for Delivery"] = new HashSet<string> { "Completed", "Return/Refund" },
@@ -258,8 +370,42 @@ namespace Pawchase.Models
         public static void MarkOrderReceived(int id)
         {
             using (var conn = Open())
-            using (var cmd = new MySqlCommand("UPDATE orders SET status='Completed', is_received_by_customer=1 WHERE id=@id AND status IN ('Out for Delivery')", conn)) {
+            using (var cmd = new MySqlCommand("UPDATE orders SET status='Completed', is_received_by_customer=1 WHERE id=@id AND status IN ('Out for Delivery','Completed')", conn)) {
                 cmd.Parameters.AddWithValue("@id", id); cmd.ExecuteNonQuery();
+            }
+        }
+
+        public static void SetOrderStatus(int id, string status)
+        {
+            using (var conn = Open())
+            using (var cmd = new MySqlCommand(@"UPDATE orders SET status=@s,
+has_refund_request=CASE WHEN @s IN ('Refund Approved','Refund Denied','Completed','Cancelled') THEN 0 ELSE has_refund_request END
+WHERE id=@id", conn))
+            {
+                cmd.Parameters.AddWithValue("@s", status);
+                cmd.Parameters.AddWithValue("@id", id);
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        public static void CancelOrder(int id, string reason)
+        {
+            using (var conn = Open())
+            using (var cmd = new MySqlCommand("UPDATE orders SET status='Cancelled', cancel_reason=@r WHERE id=@id AND status='To Ship'", conn))
+            {
+                cmd.Parameters.AddWithValue("@r", (object)reason ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@id", id);
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        public static void MarkOrderReviewed(int id)
+        {
+            using (var conn = Open())
+            using (var cmd = new MySqlCommand("UPDATE orders SET is_reviewed=1 WHERE id=@id", conn))
+            {
+                cmd.Parameters.AddWithValue("@id", id);
+                cmd.ExecuteNonQuery();
             }
         }
 

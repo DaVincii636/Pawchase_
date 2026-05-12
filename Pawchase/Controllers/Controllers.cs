@@ -1,4 +1,4 @@
-using Pawchase.Models;
+﻿using Pawchase.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,7 +29,10 @@ namespace Pawchase.Controllers
                 {
                     ViewBag.Error = "Email and password are required."; ViewBag.ReturnUrl = returnUrl; return View();
                 }
-                var user = MockData.Users.FirstOrDefault(u => u.Email.ToLower() == email.ToLower().Trim() && u.Password == password);
+                var normalizedEmail = email.ToLower().Trim();
+                var user = MockData.Users.FirstOrDefault(u =>
+                    u.Email.ToLower() == normalizedEmail &&
+                    (u.Password == password || DbHelper.VerifyPassword(password, u.Password)));
                 if (user != null)
                 {
                     Session["UserId"] = user.Id; Session["UserName"] = user.FullName; Session["UserEmail"] = user.Email;
@@ -63,28 +66,20 @@ namespace Pawchase.Controllers
                 {
                     ViewBag.Error = "Email already registered."; return View();
                 }
-                var user = new User { Id = MockData.Users.Count + 1, FullName = fullName.Trim(), Email = email.Trim().ToLower(), Password = password };
-                MockData.Users.Add(user);
+                var user = new User
+                {
+                    FullName = fullName.Trim(),
+                    Email = email.Trim().ToLower(),
+                    Password = password,
+                    IsAdmin = false
+                };
+                user.Id = DbHelper.AddUser(user);
+                MockData.RefreshUsers();
                 Session["UserId"] = user.Id; Session["UserName"] = user.FullName; Session["UserEmail"] = user.Email;
                 if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
                 return RedirectToAction("Index", "Home");
             }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Register Error: " + ex.Message); ViewBag.Error = "Registration failed."; return View(); }
-        }
-
-        public ActionResult GoogleLogin(string returnUrl)
-        {
-            try
-            {
-                var email = "googleuser@gmail.com";
-                var user = MockData.Users.FirstOrDefault(u => u.Email == email)
-                          ?? new User { Id = MockData.Users.Count + 1, FullName = "Google User", Email = email, Password = "" };
-                if (!MockData.Users.Contains(user)) MockData.Users.Add(user);
-                Session["UserId"] = user.Id; Session["UserName"] = user.FullName; Session["UserEmail"] = user.Email;
-                if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
-                return RedirectToAction("Index", "Home");
-            }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("GoogleLogin Error: " + ex.Message); return RedirectToAction("Login"); }
         }
 
         public ActionResult Orders(string tab = "All")
@@ -124,12 +119,15 @@ namespace Pawchase.Controllers
                 }
                 if (!string.IsNullOrWhiteSpace(newPassword))
                 {
-                    if (user.Password != currentPassword) { TempData["ProfileError"] = "Current password incorrect."; return RedirectToAction("Orders", new { tab = "Profile" }); }
+                    if (user.Password != currentPassword && !DbHelper.VerifyPassword(currentPassword, user.Password)) { TempData["ProfileError"] = "Current password incorrect."; return RedirectToAction("Orders", new { tab = "Profile" }); }
                     if (newPassword.Length < 6) { TempData["ProfileError"] = "New password must be at least 6 characters."; return RedirectToAction("Orders", new { tab = "Profile" }); }
                     if (newPassword != confirmPassword) { TempData["ProfileError"] = "New passwords do not match."; return RedirectToAction("Orders", new { tab = "Profile" }); }
-                    user.Password = newPassword;
+                    DbHelper.UpdateUserPassword(user.Id, newPassword);
+                    user.Password = DbHelper.HashPassword(newPassword);
                 }
                 user.FullName = fullName.Trim(); user.Email = email.Trim().ToLower(); user.Phone = phone?.Trim(); user.GCashNumber = gcashNumber?.Trim();
+                DbHelper.UpdateUserProfile(user);
+                MockData.RefreshUsers();
                 Session["UserName"] = user.FullName; Session["UserEmail"] = user.Email;
                 TempData["ProfileSuccess"] = "Profile updated."; return RedirectToAction("Orders", new { tab = "Profile" });
             }
@@ -359,8 +357,7 @@ namespace Pawchase.Controllers
                 }).ToList();
                 var order = new Order
                 {
-                    Id = MockData.Orders.Count + 1,
-                    ReferenceNumber = "PWC-" + (MockData.Orders.Count + 1).ToString("D6"),
+                    ReferenceNumber = DbHelper.NextOrderReference(),
                     CustomerName = Session["UserName"].ToString(),
                     Email = Session["UserEmail"].ToString(),
                     Address = address.Trim(),
@@ -371,12 +368,19 @@ namespace Pawchase.Controllers
                     OrderDate = DateTime.Now,
                     Status = "To Ship"
                 };
-                MockData.Orders.Add(order);
+                order.Id = DbHelper.AddOrder(order);
                 foreach (var item in cart)
                 {
                     var p = MockData.Products.FirstOrDefault(x => x.Id == item.Product.Id);
-                    if (p != null) p.Stock = Math.Max(0, p.Stock - item.Quantity);
+                    if (p != null)
+                    {
+                        p.Stock = Math.Max(0, p.Stock - item.Quantity);
+                        DbHelper.UpdateProductStock(p.Id, p.Stock);
+                        if (item.SelectedVariant != null) DbHelper.UpdateVariantStock(p.Id, item.SelectedVariant.Label, Math.Max(0, item.SelectedVariant.Stock - item.Quantity));
+                    }
                 }
+                MockData.RefreshOrders();
+                MockData.RefreshProducts();
                 Session["Cart"] = new List<CartItem>();
                 return RedirectToAction("Confirmation", "Order", new { referenceNumber = order.ReferenceNumber });
             }
@@ -408,8 +412,7 @@ namespace Pawchase.Controllers
                 }).ToList();
                 var order = new Order
                 {
-                    Id = MockData.Orders.Count + 1,
-                    ReferenceNumber = "PWC-" + (MockData.Orders.Count + 1).ToString("D6"),
+                    ReferenceNumber = DbHelper.NextOrderReference(),
                     CustomerName = Session["UserName"].ToString(),
                     Email = Session["UserEmail"].ToString(),
                     Address = address.Trim(),
@@ -420,9 +423,16 @@ namespace Pawchase.Controllers
                     OrderDate = DateTime.Now,
                     Status = "To Ship"
                 };
-                MockData.Orders.Add(order);
+                order.Id = DbHelper.AddOrder(order);
                 var p = MockData.Products.FirstOrDefault(x => x.Id == buyNowItem.Product.Id);
-                if (p != null) p.Stock = Math.Max(0, p.Stock - buyNowItem.Quantity);
+                if (p != null)
+                {
+                    p.Stock = Math.Max(0, p.Stock - buyNowItem.Quantity);
+                    DbHelper.UpdateProductStock(p.Id, p.Stock);
+                    if (buyNowItem.SelectedVariant != null) DbHelper.UpdateVariantStock(p.Id, buyNowItem.SelectedVariant.Label, Math.Max(0, buyNowItem.SelectedVariant.Stock - buyNowItem.Quantity));
+                }
+                MockData.RefreshOrders();
+                MockData.RefreshProducts();
                 Session["BuyNowItem"] = null;
                 return RedirectToAction("Confirmation", "Order", new { referenceNumber = order.ReferenceNumber });
             }
@@ -463,7 +473,11 @@ namespace Pawchase.Controllers
             try
             {
                 var order = MockData.Orders.FirstOrDefault(o => o.ReferenceNumber == referenceNumber);
-                if (order != null) { order.Status = "Completed"; order.IsReceivedByCustomer = true; }
+                if (order != null)
+                {
+                    DbHelper.MarkOrderReceived(order.Id);
+                    MockData.RefreshOrders();
+                }
                 return RedirectToAction("Orders", "Account");
             }
             catch { return RedirectToAction("Orders", "Account"); }
@@ -475,7 +489,11 @@ namespace Pawchase.Controllers
             try
             {
                 var order = MockData.Orders.FirstOrDefault(o => o.ReferenceNumber == referenceNumber);
-                if (order != null && order.Status == "To Ship") { order.Status = "Cancelled"; order.CancelReason = cancelReason; }
+                if (order != null && order.Status == "To Ship")
+                {
+                    DbHelper.CancelOrder(order.Id, cancelReason);
+                    MockData.RefreshOrders();
+                }
                 return RedirectToAction("Orders", "Account");
             }
             catch { return RedirectToAction("Orders", "Account"); }
@@ -487,14 +505,18 @@ namespace Pawchase.Controllers
             try
             {
                 var order = MockData.Orders.FirstOrDefault(o => o.ReferenceNumber == referenceNumber);
-                if (order != null) { order.Status = "Return/Refund"; order.HasRefundRequest = true; order.RefundReason = refundReason; order.GCashNumber = gcashNumber; order.RefundEvidenceUrl = refundEvidenceUrl; }
+                if (order != null)
+                {
+                    DbHelper.RequestRefund(order.Id, refundReason, gcashNumber, refundEvidenceUrl);
+                    MockData.RefreshOrders();
+                }
                 return RedirectToAction("Orders", "Account");
             }
             catch { return RedirectToAction("Orders", "Account"); }
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public ActionResult SubmitReview(int productId, string referenceNumber, int stars, string comment)
+        public ActionResult SubmitReview(int productId, string referenceNumber, int stars, string comment, string photoUrl)
         {
             try
             {
@@ -504,16 +526,20 @@ namespace Pawchase.Controllers
                 if (user == null) return RedirectToAction("Login", "Account");
                 var review = new Review
                 {
-                    Id = MockData.Reviews.Count + 1,
                     ProductId = productId,
                     UserId = userId,
                     CustomerName = user.FullName,
                     Stars = Math.Max(1, Math.Min(5, stars)),
                     Comment = comment?.Trim(),
+                    PhotoUrl = string.IsNullOrWhiteSpace(photoUrl) ? null : photoUrl,
                     DatePosted = DateTime.Now,
                     IsVerifiedPurchase = true
                 };
-                MockData.Reviews.Add(review);
+                review.Id = DbHelper.AddReview(review);
+                var order = MockData.Orders.FirstOrDefault(o => o.ReferenceNumber == referenceNumber);
+                if (order != null) DbHelper.MarkOrderReviewed(order.Id);
+                MockData.RefreshReviews();
+                MockData.RefreshOrders();
                 return RedirectToAction("Orders", "Account");
             }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine("SubmitReview Error: " + ex.Message); return RedirectToAction("Orders", "Account"); }
@@ -614,7 +640,6 @@ namespace Pawchase.Controllers
                 if (product.Price <= 0) { TempData["Error"] = "Price must be greater than zero."; return RedirectToAction("AddProduct"); }
                 if (product.OriginalPrice.HasValue && product.OriginalPrice.Value > 0 && product.OriginalPrice.Value <= product.Price) { TempData["Error"] = "Original Price must be greater than Sale Price."; return RedirectToAction("AddProduct"); }
                 if (product.Stock < 0) { TempData["Error"] = "Stock cannot be negative."; return RedirectToAction("AddProduct"); }
-                product.Id = MockData.Products.Any() ? MockData.Products.Max(p => p.Id) + 1 : 1;
                 if (string.IsNullOrWhiteSpace(product.ImageUrl)) product.ImageUrl = "/Content/images/products/placeholder.png";
                 product.Variants = new List<ProductVariant>();
                 int maxV = Math.Max(VariantImagePaths != null ? VariantImagePaths.Length : 0, Math.Max(VariantLabels != null ? VariantLabels.Length : 0, VariantStocks != null ? VariantStocks.Length : 0));
@@ -631,7 +656,8 @@ namespace Pawchase.Controllers
                     }
                 }
                 if (hasVariantStock) product.Stock = totalVariantStock;
-                MockData.Products.Add(product);
+                product.Id = DbHelper.AddProduct(product);
+                MockData.RefreshProducts();
                 TempData["Success"] = "Product \"" + product.Name + "\" added!";
                 return RedirectToAction("Products");
             }
@@ -679,6 +705,8 @@ namespace Pawchase.Controllers
                     }
                 }
                 p.Stock = hasVariantStock ? totalVariantStock : Math.Max(0, updated.Stock);
+                DbHelper.UpdateProduct(p);
+                MockData.RefreshProducts();
                 TempData["Success"] = "Product \"" + updated.Name + "\" updated!";
                 return RedirectToAction("Products");
             }
@@ -691,7 +719,7 @@ namespace Pawchase.Controllers
             {
                 if (!IsAdmin) return RedirectToAction("Login");
                 var p = MockData.Products.FirstOrDefault(x => x.Id == id);
-                if (p != null) { p.IsDeleted = true; TempData["Success"] = "Product \"" + p.Name + "\" deleted."; }
+                if (p != null) { DbHelper.SoftDeleteProduct(id); MockData.RefreshProducts(); TempData["Success"] = "Product \"" + p.Name + "\" deleted."; }
                 else TempData["Error"] = "Product not found.";
                 return RedirectToAction("Products");
             }
@@ -705,7 +733,7 @@ namespace Pawchase.Controllers
             {
                 if (!IsAdmin) return RedirectToAction("Login");
                 var p = MockData.Products.FirstOrDefault(x => x.Id == id && !x.IsDeleted);
-                if (p != null) { p.Stock = Math.Max(0, stock); TempData["Success"] = "Stock updated."; }
+                if (p != null) { p.Stock = Math.Max(0, stock); DbHelper.UpdateProductStock(id, p.Stock); MockData.RefreshProducts(); TempData["Success"] = "Stock updated."; }
                 return RedirectToAction("Products");
             }
             catch { return RedirectToAction("Products"); }
@@ -727,7 +755,7 @@ namespace Pawchase.Controllers
             {
                 if (!IsAdmin) return RedirectToAction("Login");
                 var review = MockData.Reviews.FirstOrDefault(r => r.Id == id);
-                if (review != null) { review.ReportCount = 0; TempData["Success"] = "Reports dismissed."; }
+                if (review != null) { DbHelper.UpdateReviewReports(id, 0); MockData.RefreshReviews(); TempData["Success"] = "Reports dismissed."; }
                 return RedirectToAction("FlaggedReviews");
             }
             catch { return RedirectToAction("FlaggedReviews"); }
@@ -739,7 +767,7 @@ namespace Pawchase.Controllers
             {
                 if (!IsAdmin) return RedirectToAction("Login");
                 var review = MockData.Reviews.FirstOrDefault(r => r.Id == id);
-                if (review != null) { MockData.Reviews.Remove(review); TempData["Success"] = "Review deleted."; }
+                if (review != null) { DbHelper.DeleteReview(id); MockData.RefreshReviews(); TempData["Success"] = "Review deleted."; }
                 return RedirectToAction("FlaggedReviews");
             }
             catch { return RedirectToAction("FlaggedReviews"); }
@@ -761,14 +789,15 @@ namespace Pawchase.Controllers
             {
                 if (!IsAdmin) return RedirectToAction("Login");
                 orderId = orderId != 0 ? orderId : id;
-                var validStatuses = new[] { "To Ship", "In Transit", "Out for Delivery", "Cancelled", "Return/Refund", "Refund Requested", "Refund Approved", "Completed" };
+                var validStatuses = new[] { "To Ship", "In Transit", "Out for Delivery", "Cancelled", "Return/Refund", "Refund Requested", "Refund Approved", "Refund Denied", "Completed" };
                 if (!validStatuses.Contains(status)) { TempData["Error"] = "Invalid status."; return RedirectToAction("Orders"); }
                 var o = MockData.Orders.FirstOrDefault(x => x.Id == orderId);
                 if (o != null)
                 {
-                    if (o.IsReceivedByCustomer) { TempData["Error"] = "Order already received by customer."; return RedirectToAction("Orders"); }
-                    o.Status = status;
-                    if (status == "Refund Approved" || status == "Completed") o.HasRefundRequest = false;
+                    var isRefundDecision = status == "Refund Approved" || status == "Refund Denied";
+                    if (o.IsReceivedByCustomer && !isRefundDecision) { TempData["Error"] = "Order already received by customer."; return RedirectToAction("Orders"); }
+                    DbHelper.SetOrderStatus(orderId, status);
+                    MockData.RefreshOrders();
                     TempData["Success"] = "Status updated to \"" + status + "\".";
                 }
                 else TempData["Error"] = "Order not found.";
@@ -784,7 +813,7 @@ namespace Pawchase.Controllers
                 if (!IsAdmin) return RedirectToAction("Login");
                 orderId = orderId != 0 ? orderId : id;
                 var o = MockData.Orders.FirstOrDefault(x => x.Id == orderId);
-                if (o != null) { o.HasRefundRequest = false; o.Status = "Completed"; TempData["Success"] = "Refund denied."; }
+                if (o != null) { DbHelper.DenyRefund(orderId, reason); MockData.RefreshOrders(); TempData["Success"] = "Refund denied."; }
                 return RedirectToAction("Orders");
             }
             catch { return RedirectToAction("Orders"); }
@@ -797,7 +826,7 @@ namespace Pawchase.Controllers
             {
                 if (!IsAdmin) return RedirectToAction("Login");
                 var review = MockData.Reviews.FirstOrDefault(r => r.Id == reviewId);
-                if (review != null) { review.SellerReply = replyText; review.SellerReplyDate = DateTime.Now; }
+                if (review != null) { DbHelper.UpdateSellerReply(reviewId, replyText); MockData.RefreshReviews(); }
                 return RedirectToAction("FlaggedReviews");
             }
             catch { return RedirectToAction("FlaggedReviews"); }
@@ -833,3 +862,4 @@ namespace Pawchase.Controllers
         }
     }
 }
+

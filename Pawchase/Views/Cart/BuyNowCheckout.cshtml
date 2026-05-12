@@ -1,4 +1,4 @@
-@model List<Pawchase.Models.CartItem>
+﻿@model List<Pawchase.Models.CartItem>
 @using Pawchase.Models
 @{
     ViewBag.Title = "Buy Now \u2013 Checkout";
@@ -12,15 +12,13 @@
                    : item.Product.ImageUrl;
     var userId = 0;
     int.TryParse(Session["UserId"]?.ToString(), out userId);
-    var savedAddresses = MockData.UserAddresses.ContainsKey(userId)
-        ? MockData.UserAddresses[userId]
-        : new List<SavedAddress>();
+    var savedAddresses = DbHelper.GetAddressesByUser(userId);
     var defaultAddr = savedAddresses.FirstOrDefault(a => a.IsDefault) ?? savedAddresses.FirstOrDefault();
 }
 @section styles {
     <link href="@Url.Content("~/Content/css/cart.css")" rel="stylesheet" />
     <style>
-        /* ── CHECKOUT CONFIRMATION MODAL ── */
+        /* â”€â”€ CHECKOUT CONFIRMATION MODAL â”€â”€ */
         .pc-modal-overlay {
             display: none; position: fixed; inset: 0;
             background: rgba(0,0,0,0.45); z-index: 1000;
@@ -197,7 +195,7 @@
     </div>
 </section>
 
-<!-- ── CHECKOUT CONFIRMATION MODAL ── -->
+<!-- â”€â”€ CHECKOUT CONFIRMATION MODAL â”€â”€ -->
 <div id="confirmOrderModal" class="pc-modal-overlay">
     <div class="pc-modal-box">
         <div class="pc-modal-icon" style="background:rgba(129,166,198,.12);">
@@ -269,3 +267,4 @@
         }
     </script>
 }
+
