@@ -1,4 +1,6 @@
+using System;
 using System.Web.Mvc;
+using System.Web.Optimization;
 using System.Web.Routing;
 
 namespace Pawchase
@@ -8,7 +10,11 @@ namespace Pawchase
         protected void Application_Start()
         {
             AreaRegistration.RegisterAllAreas();
+            FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
             RouteConfig.RegisterRoutes(RouteTable.Routes);
+            
+            // FIXED: Register Bundles for CSS/JS minification
+            BundleConfig.RegisterBundles(BundleTable.Bundles);
         }
     }
 }

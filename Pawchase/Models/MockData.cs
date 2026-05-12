@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 
 namespace Pawchase.Models
@@ -34,16 +35,12 @@ namespace Pawchase.Models
             get { return _reviews ?? (_reviews = DbHelper.GetAllReviews()); }
         }
 
-        // ── In-session saved addresses (not persisted between app restarts) ───────
-        public static Dictionary<int, List<SavedAddress>> UserAddresses =
-            new Dictionary<int, List<SavedAddress>>();
-
         // ── Admin credentials ────────────────────────────────────────────────────
-        public static string AdminEmail = "admin@pawchase.com";
-        public static string AdminPassword = "PawChase@Admin2024";
+        // FIXED: Loaded from Web.config
+        public static string AdminEmail => ConfigurationManager.AppSettings["AdminEmail"] ?? "admin@pawchase.com";
+        public static string AdminPassword => ConfigurationManager.AppSettings["AdminPassword"] ?? "PawChase@Admin2024";
 
         // ── Cache refresh helpers ────────────────────────────────────────────────
-        // Call after any write so the next read pulls fresh data from the DB.
         public static void RefreshProducts() { _products = null; }
         public static void RefreshUsers() { _users = null; }
         public static void RefreshOrders() { _orders = null; }
