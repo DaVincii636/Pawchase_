@@ -998,7 +998,7 @@ namespace Pawchase.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public ActionResult AddProduct(Product product, string[] VariantImagePaths, string[] VariantLabels, int[] VariantStocks, decimal?[] VariantPrices)
+        public ActionResult AddProduct(Product product, string[] VariantImagePaths, string[] VariantLabels, int[] VariantStocks, decimal?[] VariantPrices, string[] AdditionalImagePaths)
         {
             try
             {
@@ -1008,6 +1008,7 @@ namespace Pawchase.Controllers
                 if (product.OriginalPrice.HasValue && product.OriginalPrice.Value > 0 && product.OriginalPrice.Value <= product.Price) { TempData["Error"] = "Original Price must be greater than Sale Price."; return RedirectToAction("AddProduct"); }
                 if (product.Stock < 0) { TempData["Error"] = "Stock cannot be negative."; return RedirectToAction("AddProduct"); }
                 if (string.IsNullOrWhiteSpace(product.ImageUrl)) product.ImageUrl = "/Content/images/products/placeholder.png";
+                product.AdditionalImages = (AdditionalImagePaths ?? new string[0]).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
                 product.Variants = new List<ProductVariant>();
                 int maxV = Math.Max(Math.Max(VariantImagePaths != null ? VariantImagePaths.Length : 0, VariantLabels != null ? VariantLabels.Length : 0), Math.Max(VariantStocks != null ? VariantStocks.Length : 0, VariantPrices != null ? VariantPrices.Length : 0));
                 bool hasVariantStock = false; int totalVariantStock = 0;
@@ -1045,7 +1046,7 @@ namespace Pawchase.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public ActionResult EditProduct(Product updated, string[] VariantImagePaths, string[] VariantLabels, int[] VariantStocks, decimal?[] VariantPrices)
+        public ActionResult EditProduct(Product updated, string[] VariantImagePaths, string[] VariantLabels, int[] VariantStocks, decimal?[] VariantPrices, string[] AdditionalImagePaths)
         {
             try
             {
@@ -1058,6 +1059,7 @@ namespace Pawchase.Controllers
                 p.Name = updated.Name; p.Description = updated.Description; p.Price = updated.Price;
                 p.OriginalPrice = updated.OriginalPrice; p.Category = updated.Category; p.BreedSize = updated.BreedSize;
                 if (!string.IsNullOrWhiteSpace(updated.ImageUrl)) p.ImageUrl = updated.ImageUrl;
+                p.AdditionalImages = (AdditionalImagePaths ?? new string[0]).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
                 p.Variants = new List<ProductVariant>();
                 int maxV = Math.Max(Math.Max(VariantImagePaths != null ? VariantImagePaths.Length : 0, VariantLabels != null ? VariantLabels.Length : 0), Math.Max(VariantStocks != null ? VariantStocks.Length : 0, VariantPrices != null ? VariantPrices.Length : 0));
                 bool hasVariantStock = false; int totalVariantStock = 0;

@@ -284,6 +284,32 @@
                 <input type="hidden" name="ImageUrl" id="imgPath0" value="/Content/images/products/placeholder.png" />
                 <p id="img-filename0" style="font-size:11px;color:var(--text-light);margin-top:2px;margin-bottom:0"></p>
 
+                <!-- Additional Main Images -->
+                <div style="margin-top:14px;">
+                    <label class="variants-label" style="margin-bottom:8px;display:block;">
+                        Additional Images <span>&mdash; optional, up to 4 extra photos for the carousel</span>
+                    </label>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;" id="extraImgsRow">
+                        @for (int ei = 1; ei <= 4; ei++)
+                        {
+                            <div id="extraImgItem@(ei)" style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                                <input type="file" id="extraFile@(ei)" accept="image/*" style="display:none" onchange="previewExtraImg(this,@(ei))" />
+                                <div onclick="document.getElementById('extraFile@(ei)').click()" style="cursor:pointer;position:relative;">
+                                    <div style="width:80px;height:80px;border-radius:10px;border:2px dashed var(--border);background:var(--peach-light,#fdf6f1);display:flex;align-items:center;justify-content:center;overflow:hidden;" id="extraBox@(ei)">
+                                        <img id="extraPreview@(ei)" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;" />
+                                        <i class="fa-regular fa-image" style="font-size:1.5rem;color:var(--text-light);" id="extraIcon@(ei)"></i>
+                                    </div>
+                                    <button type="button" id="extraClear@(ei)" onclick="clearExtraImg(@(ei),event)" style="display:none;position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#e05555;border:none;color:#fff;cursor:pointer;font-size:9px;line-height:1;z-index:5;">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </div>
+                                <input type="hidden" id="extraPath@(ei)" name="AdditionalImagePaths" value="" />
+                                <span style="font-size:10px;color:var(--text-light);">Photo @(ei)</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+
                 <!-- Variants -->
                 <div class="variants-wrap">
                     <label class="variants-label">
@@ -457,6 +483,34 @@
                     document.getElementById("img-filename0").textContent = input.files[0].name;
                 }
             });
+        }
+
+        function previewExtraImg(input, slot) {
+            if (!input.files || !input.files[0]) return;
+            compressImage(input.files[0], 1200, 0.82, function (dataUrl) {
+                var preview = document.getElementById('extraPreview' + slot);
+                var icon    = document.getElementById('extraIcon' + slot);
+                var clearBtn = document.getElementById('extraClear' + slot);
+                var pathInput = document.getElementById('extraPath' + slot);
+                if (preview) { preview.src = dataUrl; preview.style.display = 'block'; }
+                if (icon)    icon.style.display = 'none';
+                if (clearBtn) clearBtn.style.display = 'flex';
+                if (pathInput) pathInput.value = dataUrl;
+            });
+        }
+
+        function clearExtraImg(slot, e) {
+            if (e) e.stopPropagation();
+            var preview  = document.getElementById('extraPreview' + slot);
+            var icon     = document.getElementById('extraIcon' + slot);
+            var clearBtn = document.getElementById('extraClear' + slot);
+            var pathInput = document.getElementById('extraPath' + slot);
+            var fileInput = document.getElementById('extraFile' + slot);
+            if (preview)  { preview.src = ''; preview.style.display = 'none'; }
+            if (icon)     icon.style.display = '';
+            if (clearBtn) clearBtn.style.display = 'none';
+            if (pathInput) pathInput.value = '';
+            if (fileInput) fileInput.value = '';
         }
 
         function variantSlotHasValue(slot) {

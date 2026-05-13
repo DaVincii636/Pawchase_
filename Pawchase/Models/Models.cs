@@ -34,6 +34,8 @@ namespace Pawchase.Models
         public string Category { get; set; }
         public string BreedSize { get; set; }
         public string ImageUrl { get; set; }
+        // Additional main images for the product image carousel (up to 4 extra)
+        public List<string> AdditionalImages { get; set; } = new List<string>();
         public int Stock { get; set; }
         // Soft-delete: hidden from store but orders/cart refs stay intact
         public bool IsDeleted { get; set; } = false;

@@ -42,6 +42,15 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @table AND COLUMN_NAME = @colum
             }
         }
 
+        private static void EnsureAdditionalImagesColumn(MySqlConnection conn)
+        {
+            if (ColumnExists(conn, "products", "additional_images")) return;
+            using (var cmd = new MySqlCommand("ALTER TABLE products ADD COLUMN additional_images TEXT NULL", conn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+        }
+
         // ════════════════════════════ SECURITY & AUTH (NO EXTERNAL DLLs) ════════════════════════════
         
         // Using built-in SHA256 with a simple salt to avoid BCrypt.dll dependency issues
@@ -71,11 +80,13 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @table AND COLUMN_NAME = @colum
             var list = new List<Product>();
             using (var conn = Open())
             {
+                EnsureAdditionalImagesColumn(conn);
                 using (var cmd = new MySqlCommand("SELECT * FROM products", conn))
                 using (var r = cmd.ExecuteReader())
                 {
                     while (r.Read())
                     {
+                        var raw = r.IsDBNull(r.GetOrdinal("additional_images")) ? null : r.GetString("additional_images");
                         list.Add(new Product {
                             Id = r.GetInt32("id"),
                             Name = r.GetString("name"),
@@ -85,6 +96,7 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @table AND COLUMN_NAME = @colum
                             Category = r.GetString("category"),
                             BreedSize = r.GetString("breed_size"),
                             ImageUrl = r.IsDBNull(r.GetOrdinal("image_url")) ? null : r.GetString("image_url"),
+                            AdditionalImages = string.IsNullOrWhiteSpace(raw) ? new List<string>() : new List<string>(raw.Split('|').Where(s => !string.IsNullOrWhiteSpace(s))),
                             Stock = r.GetInt32("stock"),
                             IsDeleted = r.GetBoolean("is_deleted"),
                             Variants = new List<ProductVariant>()
@@ -133,19 +145,23 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @table AND COLUMN_NAME = @colum
         {
             int newId;
             using (var conn = Open())
-            using (var cmd = new MySqlCommand(@"INSERT INTO products (name, description, price, original_price, category, breed_size, image_url, stock, is_deleted)
-VALUES (@n,@d,@p,@op,@c,@bs,@img,@s,@del); SELECT LAST_INSERT_ID();", conn))
             {
-                cmd.Parameters.AddWithValue("@n", p.Name);
-                cmd.Parameters.AddWithValue("@d", (object)p.Description ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@p", p.Price);
-                cmd.Parameters.AddWithValue("@op", (object)p.OriginalPrice ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@c", p.Category);
-                cmd.Parameters.AddWithValue("@bs", p.BreedSize);
-                cmd.Parameters.AddWithValue("@img", (object)p.ImageUrl ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@s", p.Stock);
-                cmd.Parameters.AddWithValue("@del", p.IsDeleted);
-                newId = Convert.ToInt32(cmd.ExecuteScalar());
+                EnsureAdditionalImagesColumn(conn);
+                using (var cmd = new MySqlCommand(@"INSERT INTO products (name, description, price, original_price, category, breed_size, image_url, additional_images, stock, is_deleted)
+VALUES (@n,@d,@p,@op,@c,@bs,@img,@addimgs,@s,@del); SELECT LAST_INSERT_ID();", conn))
+                {
+                    cmd.Parameters.AddWithValue("@n", p.Name);
+                    cmd.Parameters.AddWithValue("@d", (object)p.Description ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@p", p.Price);
+                    cmd.Parameters.AddWithValue("@op", (object)p.OriginalPrice ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@c", p.Category);
+                    cmd.Parameters.AddWithValue("@bs", p.BreedSize);
+                    cmd.Parameters.AddWithValue("@img", (object)p.ImageUrl ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@addimgs", p.AdditionalImages != null && p.AdditionalImages.Any() ? (object)string.Join("|", p.AdditionalImages) : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@s", p.Stock);
+                    cmd.Parameters.AddWithValue("@del", p.IsDeleted);
+                    newId = Convert.ToInt32(cmd.ExecuteScalar());
+                }
             }
             ReplaceProductVariants(newId, p.Variants);
             return newId;
@@ -154,20 +170,24 @@ VALUES (@n,@d,@p,@op,@c,@bs,@img,@s,@del); SELECT LAST_INSERT_ID();", conn))
         public static void UpdateProduct(Product p)
         {
             using (var conn = Open())
-            using (var cmd = new MySqlCommand(@"UPDATE products SET name=@n, description=@d, price=@p, original_price=@op,
-category=@c, breed_size=@bs, image_url=@img, stock=@s, is_deleted=@del WHERE id=@id", conn))
             {
-                cmd.Parameters.AddWithValue("@n", p.Name);
-                cmd.Parameters.AddWithValue("@d", (object)p.Description ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@p", p.Price);
-                cmd.Parameters.AddWithValue("@op", (object)p.OriginalPrice ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@c", p.Category);
-                cmd.Parameters.AddWithValue("@bs", p.BreedSize);
-                cmd.Parameters.AddWithValue("@img", (object)p.ImageUrl ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@s", p.Stock);
-                cmd.Parameters.AddWithValue("@del", p.IsDeleted);
-                cmd.Parameters.AddWithValue("@id", p.Id);
-                cmd.ExecuteNonQuery();
+                EnsureAdditionalImagesColumn(conn);
+                using (var cmd = new MySqlCommand(@"UPDATE products SET name=@n, description=@d, price=@p, original_price=@op,
+category=@c, breed_size=@bs, image_url=@img, additional_images=@addimgs, stock=@s, is_deleted=@del WHERE id=@id", conn))
+                {
+                    cmd.Parameters.AddWithValue("@n", p.Name);
+                    cmd.Parameters.AddWithValue("@d", (object)p.Description ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@p", p.Price);
+                    cmd.Parameters.AddWithValue("@op", (object)p.OriginalPrice ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@c", p.Category);
+                    cmd.Parameters.AddWithValue("@bs", p.BreedSize);
+                    cmd.Parameters.AddWithValue("@img", (object)p.ImageUrl ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@addimgs", p.AdditionalImages != null && p.AdditionalImages.Any() ? (object)string.Join("|", p.AdditionalImages) : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@s", p.Stock);
+                    cmd.Parameters.AddWithValue("@del", p.IsDeleted);
+                    cmd.Parameters.AddWithValue("@id", p.Id);
+                    cmd.ExecuteNonQuery();
+                }
             }
             ReplaceProductVariants(p.Id, p.Variants);
         }

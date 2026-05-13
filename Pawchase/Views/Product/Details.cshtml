@@ -35,10 +35,14 @@
             <div class="img-fallback-lg" style="display:none;"><i class="fa-solid fa-bone"></i></div>
             @if (Model.IsOnSale && disc > 0)
             {<span class="discount-badge" style="position:absolute;top:12px;right:12px;">-@disc%</span>}
-            @if (hasVariants)
+            @{
+                var hasMultipleImages = (Model.AdditionalImages != null && Model.AdditionalImages.Any()) || hasVariants;
+            }
+            @if (hasMultipleImages)
             {
                 <button class="img-nav-btn img-nav-left" id="imgNavLeft" onclick="navigateImage(-1)" title="Previous image">&lt;</button>
                 <button class="img-nav-btn img-nav-right" id="imgNavRight" onclick="navigateImage(1)" title="Next image">&gt;</button>
+                <div class="img-dots" id="imgDots"></div>
             }
         </div>
 
@@ -806,10 +810,20 @@
             var mainSrc = document.getElementById('mainProductImg')
                 ? document.getElementById('mainProductImg').getAttribute('src') : '';
             _allImages = [mainSrc];
+            // Additional main images (non-variant gallery images)
+            @if (Model.AdditionalImages != null && Model.AdditionalImages.Any())
+            {
+                foreach (var ai in Model.AdditionalImages)
+                {
+                    @:_allImages.push('@Html.Raw(ai.Replace("'", "\\'"))');
+                }
+            }
+            // Variant images (appended after main + additional)
             document.querySelectorAll('#variantThumbs .variant-thumb').forEach(function (t) {
                 var img = t.getAttribute('data-img');
                 if (img) _allImages.push(img);
             });
+            renderDots();
             updateNavBtns();
 
             // Restore variant from URL (if any); otherwise no variant is selected by default
@@ -836,21 +850,43 @@
 
         function navigateImage(dir) {
             _currentImgIdx = Math.max(0, Math.min(_allImages.length - 1, _currentImgIdx + dir));
+            switchImage();
+        }
+
+        function renderDots() {
+            var container = document.getElementById('imgDots');
+            if (!container) return;
+            container.innerHTML = '';
+            if (_allImages.length <= 1) { container.style.display = 'none'; return; }
+            container.style.display = 'flex';
+            _allImages.forEach(function (_, i) {
+                var d = document.createElement('span');
+                d.className = 'img-dot' + (i === _currentImgIdx ? ' img-dot-active' : '');
+                d.onclick = function () { _currentImgIdx = i; switchImage(); };
+                container.appendChild(d);
+            });
+        }
+
+        function switchImage() {
             var mainImg = document.getElementById('mainProductImg');
             if (mainImg && _allImages[_currentImgIdx]) {
                 mainImg.style.opacity = '0';
                 mainImg.style.transition = 'opacity .18s';
                 setTimeout(function () { mainImg.src = _allImages[_currentImgIdx]; mainImg.style.opacity = '1'; }, 120);
             }
+            // Sync variant thumb highlight
+            var numAdditional = @(Model.AdditionalImages != null ? Model.AdditionalImages.Count : 0);
+            var variantOffset = 1 + numAdditional;
             var thumbs = document.querySelectorAll('#variantThumbs .variant-thumb');
             thumbs.forEach(function (t) { t.classList.remove('variant-active'); });
-            if (_currentImgIdx > 0 && thumbs[_currentImgIdx - 1]) {
-                thumbs[_currentImgIdx - 1].classList.add('variant-active');
-                selectedVariantLabel = thumbs[_currentImgIdx - 1].getAttribute('data-label') || null;
+            if (_currentImgIdx >= variantOffset && thumbs[_currentImgIdx - variantOffset]) {
+                thumbs[_currentImgIdx - variantOffset].classList.add('variant-active');
+                selectedVariantLabel = thumbs[_currentImgIdx - variantOffset].getAttribute('data-label') || null;
             } else {
                 selectedVariantLabel = null;
             }
             updateDetailPrice(selectedVariantLabel);
+            renderDots();
             updateNavBtns();
         }
 
@@ -865,9 +901,11 @@
         var _origSelectVariant = window.selectVariant;
         window.selectVariant = function (el, imgUrl, label) {
             _origSelectVariant(el, imgUrl, label);
+            var numAdditional = @(Model.AdditionalImages != null ? Model.AdditionalImages.Count : 0);
             var thumbs = Array.from(document.querySelectorAll('#variantThumbs .variant-thumb'));
             var idx = thumbs.indexOf(el);
-            _currentImgIdx = idx >= 0 ? idx + 1 : 0;
+            _currentImgIdx = idx >= 0 ? idx + 1 + numAdditional : 0;
+            renderDots();
             updateNavBtns();
         };
     </script>

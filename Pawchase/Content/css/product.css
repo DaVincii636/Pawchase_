@@ -946,6 +946,39 @@ input[type=range]#rangeMax {
     right: 10px;
 }
 
+/* ── Image carousel dots ──────────────────────────────────────────────── */
+.img-dots {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 6;
+}
+
+.img-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.55);
+    border: 1.5px solid rgba(255,255,255,0.8);
+    cursor: pointer;
+    transition: background .2s, transform .2s;
+    flex-shrink: 0;
+}
+
+.img-dot:hover {
+    background: rgba(255,255,255,0.85);
+    transform: scale(1.2);
+}
+
+.img-dot-active {
+    background: var(--white);
+    transform: scale(1.25);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+}
+
 /* ── Filter panel inner padding (more breathing room) ───────────────────── */
 .filters.open {
     padding: 1.8rem 1.6rem !important;
