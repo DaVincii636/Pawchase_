@@ -30,6 +30,11 @@ namespace Pawchase.Controllers
             return View();
         }
 
+        public ActionResult Contact()
+        {
+            return View();
+        }
+
         // ── Global error pages ────────────────────────────────────────
         public ActionResult Error()
         {
