@@ -187,7 +187,7 @@ function openModal(index) {
 
     if (r.isEdited && r.editedAt) {
         editedEl.textContent = formatRelativeTime(r.editedAt);
-        editedEl.style.display = 'block';
+        editedEl.style.display = 'inline-flex';
         editedEl.setAttribute('data-edited-at', r.editedAt);
     } else {
         editedEl.style.display = 'none';

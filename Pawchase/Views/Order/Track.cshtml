@@ -100,8 +100,9 @@
                             ProductName = i.Product.Name,
                             ProductImageUrl = i.Product.ImageUrl,
                             VariantImageUrl = i.SelectedVariant?.ImageUrl,
+                            VariantLabel = i.SelectedVariant?.Label,
                             Quantity = i.Quantity,
-                            UnitPrice = i.Product.Price
+                            UnitPrice = i.UnitPrice
                         }).ToList()
                         : new List<Pawchase.Models.OrderItemSnapshot>());
 

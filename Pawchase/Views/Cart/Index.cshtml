@@ -146,7 +146,7 @@
                                                     <option value="" @(string.IsNullOrEmpty(vLabel) ? "selected" : "")>-- No variant --</option>
                                                     @foreach (var v in item.Product.Variants)
                                                     {
-                                                        <option value="@v.Label" @(v.Label == vLabel ? "selected" : "")>@v.Label</option>
+                                                        <option value="@v.Label" @(v.Label == vLabel ? "selected" : "")>@v.Label - &#8369;@item.Product.GetVariantPrice(v).ToString("N2")</option>
                                                     }
                                                 </select>
                                             </form>
@@ -160,7 +160,7 @@
                                         }
                                     </div>
                                 </div>
-                                <div class="cart-price">&#8369;@item.Product.Price.ToString("N2")</div>
+                                <div class="cart-price">&#8369;@item.UnitPrice.ToString("N2")</div>
                                 <div class="cart-qty">
                                     <form method="post" action="@Url.Action("UpdateQuantity","Cart")">
                                         @Html.AntiForgeryToken()

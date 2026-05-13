@@ -310,6 +310,37 @@ namespace Pawchase.Controllers
             return true;
         }
 
+        private void RefreshCartForDisplay(List<CartItem> cart)
+        {
+            for (int i = cart.Count - 1; i >= 0; i--)
+            {
+                var item = cart[i];
+                var product = MockData.Products.FirstOrDefault(p => p.Id == item.Product.Id && !p.IsDeleted);
+                if (product == null)
+                {
+                    cart.RemoveAt(i);
+                    continue;
+                }
+
+                var variant = FindVariant(product, item.SelectedVariant?.Label);
+                if (item.SelectedVariant != null && variant == null)
+                {
+                    cart.RemoveAt(i);
+                    continue;
+                }
+
+                item.Product = product;
+                item.SelectedVariant = variant;
+                var available = AvailableStock(product, variant);
+                if (available <= 0)
+                {
+                    cart.RemoveAt(i);
+                    continue;
+                }
+                item.Quantity = Math.Min(item.Quantity, available);
+            }
+        }
+
         private void RemoveOrderedItemsFromCart(List<CartItem> cart, List<CartItem> orderedItems)
         {
             foreach (var ordered in orderedItems)
@@ -330,6 +361,7 @@ namespace Pawchase.Controllers
                 if (!IsLoggedIn) return RedirectToAction("Login", "Account", new { returnUrl = Url.Action("Index", "Cart") });
                 var cart = GetCart();
                 cart.RemoveAll(c => c.Product == null || c.Product.IsDeleted);
+                RefreshCartForDisplay(cart);
                 Session["Cart"] = cart;
                 return View(cart);
             }
@@ -345,6 +377,8 @@ namespace Pawchase.Controllers
                 if (user == null) return RedirectToAction("Login", "Account", new { returnUrl = Url.Action("Checkout", "Cart") });
                 var cart = GetCart();
                 cart.RemoveAll(c => c.Product == null || c.Product.IsDeleted);
+                RefreshCartForDisplay(cart);
+                Session["Cart"] = cart;
                 if (!cart.Any()) { TempData["Error"] = "Your cart is empty."; return RedirectToAction("Index"); }
                 return View(cart);
             }
@@ -523,6 +557,7 @@ namespace Pawchase.Controllers
                     }
                 }
                 if (!selected.Any()) { TempData["Error"] = "No items selected."; return RedirectToAction("Index"); }
+                if (!RefreshAndValidateItems(selected, out var stockError)) { TempData["Error"] = stockError; return RedirectToAction("Index"); }
                 return View("Checkout", selected);
             }
             catch { return RedirectToAction("Index"); }
@@ -550,7 +585,7 @@ namespace Pawchase.Controllers
                     ProductImageUrl = c.Product.ImageUrl,
                     Category = c.Product.Category,
                     BreedSize = c.Product.BreedSize,
-                    UnitPrice = c.Product.Price,
+                    UnitPrice = c.UnitPrice,
                     Quantity = c.Quantity,
                     VariantLabel = c.SelectedVariant?.Label,
                     VariantImageUrl = c.SelectedVariant?.ImageUrl
@@ -610,7 +645,7 @@ namespace Pawchase.Controllers
                     ProductImageUrl = c.Product.ImageUrl,
                     Category = c.Product.Category,
                     BreedSize = c.Product.BreedSize,
-                    UnitPrice = c.Product.Price,
+                    UnitPrice = c.UnitPrice,
                     Quantity = c.Quantity,
                     VariantLabel = c.SelectedVariant?.Label,
                     VariantImageUrl = c.SelectedVariant?.ImageUrl
@@ -963,7 +998,7 @@ namespace Pawchase.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public ActionResult AddProduct(Product product, string[] VariantImagePaths, string[] VariantLabels, int[] VariantStocks)
+        public ActionResult AddProduct(Product product, string[] VariantImagePaths, string[] VariantLabels, int[] VariantStocks, decimal?[] VariantPrices)
         {
             try
             {
@@ -974,16 +1009,17 @@ namespace Pawchase.Controllers
                 if (product.Stock < 0) { TempData["Error"] = "Stock cannot be negative."; return RedirectToAction("AddProduct"); }
                 if (string.IsNullOrWhiteSpace(product.ImageUrl)) product.ImageUrl = "/Content/images/products/placeholder.png";
                 product.Variants = new List<ProductVariant>();
-                int maxV = Math.Max(VariantImagePaths != null ? VariantImagePaths.Length : 0, Math.Max(VariantLabels != null ? VariantLabels.Length : 0, VariantStocks != null ? VariantStocks.Length : 0));
+                int maxV = Math.Max(Math.Max(VariantImagePaths != null ? VariantImagePaths.Length : 0, VariantLabels != null ? VariantLabels.Length : 0), Math.Max(VariantStocks != null ? VariantStocks.Length : 0, VariantPrices != null ? VariantPrices.Length : 0));
                 bool hasVariantStock = false; int totalVariantStock = 0;
                 for (int i = 0; i < maxV; i++)
                 {
                     var img = (VariantImagePaths != null && i < VariantImagePaths.Length) ? VariantImagePaths[i] : null;
                     var label = (VariantLabels != null && i < VariantLabels.Length) ? VariantLabels[i] : null;
                     var stock = (VariantStocks != null && i < VariantStocks.Length) ? VariantStocks[i] : 0;
+                    var price = (VariantPrices != null && i < VariantPrices.Length && VariantPrices[i].HasValue && VariantPrices[i].Value > 0) ? VariantPrices[i] : null;
                     if (!string.IsNullOrWhiteSpace(img) || !string.IsNullOrWhiteSpace(label))
                     {
-                        product.Variants.Add(new ProductVariant { ImageUrl = string.IsNullOrWhiteSpace(img) ? null : img, Label = label, Stock = Math.Max(0, stock) });
+                        product.Variants.Add(new ProductVariant { ImageUrl = string.IsNullOrWhiteSpace(img) ? null : img, Label = label, Stock = Math.Max(0, stock), Price = price });
                         hasVariantStock = true; totalVariantStock += Math.Max(0, stock);
                     }
                 }
@@ -1009,7 +1045,7 @@ namespace Pawchase.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public ActionResult EditProduct(Product updated, string[] VariantImagePaths, string[] VariantLabels, int[] VariantStocks)
+        public ActionResult EditProduct(Product updated, string[] VariantImagePaths, string[] VariantLabels, int[] VariantStocks, decimal?[] VariantPrices)
         {
             try
             {
@@ -1023,16 +1059,17 @@ namespace Pawchase.Controllers
                 p.OriginalPrice = updated.OriginalPrice; p.Category = updated.Category; p.BreedSize = updated.BreedSize;
                 if (!string.IsNullOrWhiteSpace(updated.ImageUrl)) p.ImageUrl = updated.ImageUrl;
                 p.Variants = new List<ProductVariant>();
-                int maxV = Math.Max(VariantImagePaths != null ? VariantImagePaths.Length : 0, Math.Max(VariantLabels != null ? VariantLabels.Length : 0, VariantStocks != null ? VariantStocks.Length : 0));
+                int maxV = Math.Max(Math.Max(VariantImagePaths != null ? VariantImagePaths.Length : 0, VariantLabels != null ? VariantLabels.Length : 0), Math.Max(VariantStocks != null ? VariantStocks.Length : 0, VariantPrices != null ? VariantPrices.Length : 0));
                 bool hasVariantStock = false; int totalVariantStock = 0;
                 for (int i = 0; i < maxV; i++)
                 {
                     var img = (VariantImagePaths != null && i < VariantImagePaths.Length) ? VariantImagePaths[i] : null;
                     var label = (VariantLabels != null && i < VariantLabels.Length) ? VariantLabels[i] : null;
                     var stock = (VariantStocks != null && i < VariantStocks.Length) ? VariantStocks[i] : 0;
+                    var price = (VariantPrices != null && i < VariantPrices.Length && VariantPrices[i].HasValue && VariantPrices[i].Value > 0) ? VariantPrices[i] : null;
                     if (!string.IsNullOrWhiteSpace(img) || !string.IsNullOrWhiteSpace(label))
                     {
-                        p.Variants.Add(new ProductVariant { ImageUrl = string.IsNullOrWhiteSpace(img) ? null : img, Label = label, Stock = Math.Max(0, stock) });
+                        p.Variants.Add(new ProductVariant { ImageUrl = string.IsNullOrWhiteSpace(img) ? null : img, Label = label, Stock = Math.Max(0, stock), Price = price });
                         hasVariantStock = true; totalVariantStock += Math.Max(0, stock);
                     }
                 }
@@ -1186,6 +1223,17 @@ namespace Pawchase.Controllers
         [HttpPost, ValidateAntiForgeryToken]
         public ActionResult PostSellerReply(int reviewId, string replyText)
         {
+            return SaveSellerReply(reviewId, replyText);
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult ReplyToReview(int reviewId, string replyText)
+        {
+            return SaveSellerReply(reviewId, replyText);
+        }
+
+        private ActionResult SaveSellerReply(int reviewId, string replyText)
+        {
             try
             {
                 if (!IsAdmin) return RedirectToAction("Login");
@@ -1226,4 +1274,3 @@ namespace Pawchase.Controllers
         }
     }
 }
-

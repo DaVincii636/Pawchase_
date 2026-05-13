@@ -415,7 +415,7 @@
                                     VariantImageUrl = i.SelectedVariant?.ImageUrl,
                                     VariantLabel    = i.SelectedVariant?.Label,
                                     Quantity   = i.Quantity,
-                                    UnitPrice  = i.Product.Price
+                                    UnitPrice  = i.UnitPrice
                                 }).ToList()
                                 : new List<Pawchase.Models.OrderItemSnapshot>());
 
@@ -695,6 +695,22 @@
 </div>
 
 <!-- ── STATUS UPDATE MODAL ── -->
+<!-- Notice Modal -->
+<div id="orderNoticeModal" class="pc-modal-overlay">
+    <div class="pc-modal-box">
+        <div class="pc-modal-icon" style="background:rgba(129,166,198,.12);">
+            <i class="fa-solid fa-circle-info" style="color:var(--blue);"></i>
+        </div>
+        <div class="pc-modal-title" id="orderNoticeTitle">Action Needed</div>
+        <div class="pc-modal-body" id="orderNoticeText"></div>
+        <div class="pc-modal-btns">
+            <button class="pc-modal-confirm-blue" onclick="closeOrderNoticeModal()">
+                <i class="fa-solid fa-check"></i> OK
+            </button>
+        </div>
+    </div>
+</div>
+
 <div id="statusModal" class="pc-modal-overlay">
     <div class="pc-modal-box">
         <div class="pc-modal-icon" style="background:rgba(129,166,198,.12);">
@@ -792,11 +808,19 @@
         if (master) master.checked = false;
         updateBulkBar();
     }
+    function openOrderNoticeModal(message, title) {
+        document.getElementById('orderNoticeTitle').textContent = title || 'Action Needed';
+        document.getElementById('orderNoticeText').textContent = message || '';
+        document.getElementById('orderNoticeModal').style.display = 'flex';
+    }
+    function closeOrderNoticeModal() {
+        document.getElementById('orderNoticeModal').style.display = 'none';
+    }
     function submitBulk() {
         var status = document.getElementById('bulk-status-select').value;
-        if (!status) { alert('Please choose a status to apply.'); return; }
+        if (!status) { openOrderNoticeModal('Please choose a status to apply.'); return; }
         var count = document.querySelectorAll('.order-chk:checked').length;
-        if (!count) { alert('No orders selected.'); return; }
+        if (!count) { openOrderNoticeModal('No orders selected.'); return; }
         document.getElementById('bulkConfirmText').textContent =
             'Update ' + count + ' order(s) to "' + status + '"?';
         document.getElementById('bulkConfirmModal').style.display = 'flex';
@@ -811,6 +835,9 @@
     document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('bulkConfirmModal').addEventListener('click', function(e) {
             if (e.target === this) closeBulkConfirmModal();
+        });
+        document.getElementById('orderNoticeModal').addEventListener('click', function(e) {
+            if (e.target === this) closeOrderNoticeModal();
         });
     });
 
@@ -829,7 +856,7 @@
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeImageZoom(); closeStatusModal();
-            closeApproveModal(); closeDeclineModal(); closeOrderSummary(); closeBulkConfirmModal();
+            closeApproveModal(); closeDeclineModal(); closeOrderSummary(); closeBulkConfirmModal(); closeOrderNoticeModal();
         }
     });
 

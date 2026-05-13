@@ -110,6 +110,7 @@
         gap: .7rem;
     }
     .variant-item { display: flex; flex-direction: column; gap: 5px; }
+    .variant-item.variant-hidden { display: none; }
     .variant-img-box {
         width: 100%;
         aspect-ratio: 1 / 1;
@@ -154,6 +155,8 @@
         transition: border-color .2s;
     }
     .variant-text-input:focus { border-color: var(--blue); }
+    .variant-price-input { display: none; }
+    .variant-item.variant-active .variant-price-input { display: block; }
     .variant-remove-btn {
         display: inline-flex;
         align-items: center;
@@ -327,7 +330,10 @@
                         {
                             var ev = existingVariants.Count >= vi ? existingVariants[vi - 1] : null;
                             var hasImg = ev != null && !string.IsNullOrEmpty(ev.ImageUrl);
-                            <div class="variant-item" id="evItem@(vi)">
+                            var hasVariant = ev != null && (!string.IsNullOrEmpty(ev.ImageUrl) || !string.IsNullOrEmpty(ev.Label) || ev.Stock > 0 || (ev.Price.HasValue && ev.Price.Value > 0));
+                            var isSlotVisible = vi == 1 || hasVariant || vi <= existingVariants.Count + 1;
+                            var slotClass = "variant-item" + (isSlotVisible ? "" : " variant-hidden") + (hasVariant ? " variant-active" : "");
+                            <div class="@slotClass" id="evItem@(vi)">
                                 <input type="file" id="evFile@(vi)" accept="image/*" style="display:none"
                                        onchange="previewEditVariant(this,@(vi))" />
                                 <div style="position:relative;">
@@ -364,6 +370,11 @@
                                        value="@(ev != null ? ev.Stock.ToString() : "")"
                                        oninput="updateEditVariantRemove(@(vi)); syncVariantStock()"
                                        class="variant-text-input" />
+                                <input type="number" id="evPrice@(vi)" name="VariantPrices"
+                                       placeholder="Variant price (optional)" min="0" step="0.01"
+                                       value="@(ev != null && ev.Price.HasValue ? ev.Price.Value.ToString("0.##") : "")"
+                                       oninput="updateEditVariantRemove(@(vi))"
+                                       class="variant-text-input variant-price-input" />
                                 <button type="button"
                                         id="evRemove@(vi)"
                                         class="variant-remove-btn"
@@ -371,10 +382,11 @@
                                         style="display:@(
                                         ev != null &&
                                         (
-                                            !string.IsNullOrEmpty(ev.ImageUrl) ||
-                                            !string.IsNullOrEmpty(ev.Label) ||
-                                            ev.Stock > 0
-                                        )
+                                             !string.IsNullOrEmpty(ev.ImageUrl) ||
+                                             !string.IsNullOrEmpty(ev.Label) ||
+                                             ev.Stock > 0 ||
+                                             (ev.Price.HasValue && ev.Price.Value > 0)
+                                         )
                                         ? "inline-flex"
                                         : "none"
                                     );">
@@ -506,20 +518,35 @@
             reader.readAsDataURL(input.files[0]);
         }
 
-        function updateEditVariantRemove(slot) {
+        function editVariantSlotHasValue(slot) {
             var path = document.getElementById('evPath' + slot);
             var label = document.getElementById('evLabel' + slot);
             var stock = document.getElementById('evStock' + slot);
+            var price = document.getElementById('evPrice' + slot);
+            return (path && path.value) ||
+                (label && label.value.trim()) ||
+                (stock && stock.value.trim()) ||
+                (price && price.value.trim());
+        }
+
+        function refreshEditVariantSlots() {
+            for (var i = 1; i <= 6; i++) {
+                var item = document.getElementById('evItem' + i);
+                if (!item) continue;
+                var shouldShow = i === 1 || editVariantSlotHasValue(i) || editVariantSlotHasValue(i - 1);
+                item.classList.toggle('variant-hidden', !shouldShow);
+                item.classList.toggle('variant-active', editVariantSlotHasValue(i));
+            }
+        }
+
+        function updateEditVariantRemove(slot) {
             var remove = document.getElementById('evRemove' + slot);
 
             if (!remove) return;
 
-            var hasValue =
-                (path && path.value) ||
-                (label && label.value.trim()) ||
-                (stock && stock.value.trim());
-
+            var hasValue = editVariantSlotHasValue(slot);
             remove.style.display = hasValue ? 'inline-flex' : 'none';
+            refreshEditVariantSlots();
         }
 
         function clearEditVariant(slot) {
@@ -531,12 +558,14 @@
             document.getElementById('evPath' + slot).value = '';
             document.getElementById('evLabel' + slot).value = '';
             document.getElementById('evStock' + slot).value = '';
+            document.getElementById('evPrice' + slot).value = '';
 
             if (fileInput) fileInput.value = '';
 
             document.getElementById('evClear' + slot).style.display = 'none';
             document.getElementById('evRemove' + slot).style.display = 'none';
 
+            refreshEditVariantSlots();
             syncVariantStock();
         }
         function previewEditVariant(input, slot) {
@@ -600,6 +629,7 @@
             for (var i = 1; i <= 6; i++) {
                 updateEditVariantRemove(i);
             }
+            refreshEditVariantSlots();
         });
 
                 // ── Save modal ──

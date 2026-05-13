@@ -69,7 +69,7 @@ function openMyModal(index) {
     const modalEdited = document.getElementById('my-modal-edited');
     if (r.isEdited && r.editedAt) {
         modalEdited.textContent = formatRelativeEditedTime(r.editedAt);
-        modalEdited.style.display = 'block';
+        modalEdited.style.display = 'inline-flex';
         modalEdited.setAttribute('data-edited-at', r.editedAt);
     } else {
         modalEdited.style.display = 'none';

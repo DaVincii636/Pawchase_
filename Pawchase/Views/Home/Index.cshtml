@@ -231,7 +231,7 @@
                             <span class="featured-cat-label">@p.Category &middot; @p.BreedSize</span>
                             <h3>@p.Name</h3>
                             <div class="product-price">
-                                <span class="price">&#8369;@p.Price.ToString("N2")</span>
+                                <span class="price">@(p.HasVariantPriceRange ? "From " : "")&#8369;@p.DisplayPrice.ToString("N2")</span>
                                 @if (isOnSale)
                                 {
                                     <span class="original-price">&#8369;@p.OriginalPrice.Value.ToString("N2")</span>

@@ -277,6 +277,10 @@
     margin-bottom: 8px;
 }
 
+.review-card-header > div:last-child {
+    min-width: 0;
+}
+
 .review-avatar {
     width: 30px;
     height: 30px;
@@ -295,17 +299,26 @@
     font-size: 12px;
     font-weight: 700;
     color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .review-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     font-size: 10px;
     color: var(--text-light);
+    min-width: 0;
+    white-space: nowrap;
 }
 
 .review-edited {
     display: inline-flex;
     align-items: center;
-    margin-left: 6px;
+    flex-shrink: 0;
+    margin-left: 0;
     padding: 1px 6px;
     border-radius: 999px;
     background: rgba(129,166,198,.14);
@@ -483,6 +496,10 @@
     border-bottom: 1px solid var(--border);
 }
 
+.modal-header > div:not(.modal-avatar) {
+    min-width: 0;
+}
+
 .modal-avatar {
     width: 38px;
     height: 38px;
@@ -494,6 +511,7 @@
     color: #fff;
     font-size: 14px;
     font-weight: 700;
+    flex-shrink: 0;
 }
 
 .modal-close {
@@ -506,10 +524,13 @@
 }
 
 .modal-edited {
+    display: inline-flex;
+    align-items: center;
     font-size: 10px;
     color: var(--blue-dark);
     font-weight: 700;
-    margin-top: 2px;
+    margin-top: 0;
+    flex-shrink: 0;
 }
 
 .modal-body {
@@ -796,11 +817,22 @@
 .modal-name-text {
     font-size: 14px;
     font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .modal-date-text {
     font-size: 11px;
     color: var(--text-light);
+}
+
+.modal-date-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    white-space: nowrap;
 }
 
 .modal-comments-title {

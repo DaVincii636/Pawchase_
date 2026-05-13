@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Pawchase.Models
 {
@@ -20,6 +21,7 @@ namespace Pawchase.Models
         public string ImageUrl { get; set; }
         public string Label { get; set; }
         public int Stock { get; set; }
+        public decimal? Price { get; set; }
     }
 
     public class Product
@@ -37,6 +39,26 @@ namespace Pawchase.Models
         public bool IsDeleted { get; set; } = false;
         public bool IsOnSale => OriginalPrice.HasValue && OriginalPrice.Value > Price;
         public List<ProductVariant> Variants { get; set; } = new List<ProductVariant>();
+        public decimal GetVariantPrice(ProductVariant variant)
+        {
+            return variant != null && variant.Price.HasValue && variant.Price.Value > 0 ? variant.Price.Value : Price;
+        }
+        public decimal DisplayPrice
+        {
+            get
+            {
+                if (Variants == null || !Variants.Any()) return Price;
+                return Variants.Select(GetVariantPrice).DefaultIfEmpty(Price).Min();
+            }
+        }
+        public bool HasVariantPriceRange
+        {
+            get
+            {
+                if (Variants == null || !Variants.Any()) return false;
+                return Variants.Select(GetVariantPrice).Distinct().Count() > 1;
+            }
+        }
     }
 
     public class User
@@ -55,8 +77,9 @@ namespace Pawchase.Models
     {
         public Product Product { get; set; }
         public int Quantity { get; set; }
-        public decimal Subtotal => Product.Price * Quantity;
         public ProductVariant SelectedVariant { get; set; }
+        public decimal UnitPrice => Product != null ? Product.GetVariantPrice(SelectedVariant) : 0m;
+        public decimal Subtotal => UnitPrice * Quantity;
     }
 
     // Snapshot of a product at the time an order was placed —

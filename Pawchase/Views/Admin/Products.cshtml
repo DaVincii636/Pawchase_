@@ -321,7 +321,7 @@
                     <td><strong>@p.Name</strong></td>
                     <td>@p.Category</td>
                     <td>@p.BreedSize</td>
-                    <td>&#8369;@p.Price.ToString("N2")</td>
+                    <td>@(p.HasVariantPriceRange ? "From " : "")&#8369;@p.DisplayPrice.ToString("N2")</td>
                     <td>
                         @* Badge class logic:
                            stock = 0  → stock-zero (red badge)

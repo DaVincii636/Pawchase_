@@ -30,22 +30,22 @@ namespace Pawchase.Controllers
                 products = products.Where(p => p.IsOnSale);
 
             if (minPrice.HasValue)
-                products = products.Where(p => p.Price >= minPrice.Value);
+                products = products.Where(p => p.DisplayPrice >= minPrice.Value);
 
             if (maxPrice.HasValue)
-                products = products.Where(p => p.Price <= maxPrice.Value);
+                products = products.Where(p => p.DisplayPrice <= maxPrice.Value);
 
             // Sorting
             switch (sort)
             {
                 case "price_asc":
-                    products = products.OrderBy(p => p.Price);
+                    products = products.OrderBy(p => p.DisplayPrice);
                     break;
                 case "price_desc":
-                    products = products.OrderByDescending(p => p.Price);
+                    products = products.OrderByDescending(p => p.DisplayPrice);
                     break;
                 case "sale":
-                    products = products.OrderByDescending(p => p.IsOnSale).ThenBy(p => p.Price);
+                    products = products.OrderByDescending(p => p.IsOnSale).ThenBy(p => p.DisplayPrice);
                     break;
                 case "name":
                     products = products.OrderBy(p => p.Name);
@@ -71,8 +71,8 @@ namespace Pawchase.Controllers
 
             // Overall price range for the slider bounds
             var allProducts = MockData.Products.Where(p => !p.IsDeleted).ToList();
-            ViewBag.GlobalMin = allProducts.Any() ? (int)allProducts.Min(p => p.Price) : 0;
-            ViewBag.GlobalMax = allProducts.Any() ? (int)allProducts.Max(p => p.Price) + 1 : 2000;
+            ViewBag.GlobalMin = allProducts.Any() ? (int)allProducts.Min(p => p.DisplayPrice) : 0;
+            ViewBag.GlobalMax = allProducts.Any() ? (int)allProducts.Max(p => p.DisplayPrice) + 1 : 2000;
 
             return View(products.ToList());
         }

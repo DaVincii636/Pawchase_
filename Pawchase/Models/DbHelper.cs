@@ -21,6 +21,27 @@ namespace Pawchase.Models
             return conn;
         }
 
+        private static bool ColumnExists(MySqlConnection conn, string tableName, string columnName)
+        {
+            using (var cmd = new MySqlCommand(@"SELECT COUNT(*)
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @table AND COLUMN_NAME = @column", conn))
+            {
+                cmd.Parameters.AddWithValue("@table", tableName);
+                cmd.Parameters.AddWithValue("@column", columnName);
+                return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+            }
+        }
+
+        private static void EnsureProductVariantPriceColumn(MySqlConnection conn)
+        {
+            if (ColumnExists(conn, "product_variants", "price")) return;
+            using (var cmd = new MySqlCommand("ALTER TABLE product_variants ADD COLUMN price DECIMAL(10,2) NULL AFTER stock", conn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+        }
+
         // ════════════════════════════ SECURITY & AUTH (NO EXTERNAL DLLs) ════════════════════════════
         
         // Using built-in SHA256 with a simple salt to avoid BCrypt.dll dependency issues
@@ -70,12 +91,13 @@ namespace Pawchase.Models
                         });
                     }
                 }
+                EnsureProductVariantPriceColumn(conn);
                 using (var cmd2 = new MySqlCommand("SELECT * FROM product_variants", conn))
                 using (var r2 = cmd2.ExecuteReader())
                 {
                     while (r2.Read()) {
                         var p = list.FirstOrDefault(x => x.Id == r2.GetInt32("product_id"));
-                        if (p != null) p.Variants.Add(new ProductVariant { Label = r2.GetString("label"), ImageUrl = r2.IsDBNull(r2.GetOrdinal("image_url")) ? null : r2.GetString("image_url"), Stock = r2.GetInt32("stock") });
+                        if (p != null) p.Variants.Add(new ProductVariant { Label = r2.IsDBNull(r2.GetOrdinal("label")) ? null : r2.GetString("label"), ImageUrl = r2.IsDBNull(r2.GetOrdinal("image_url")) ? null : r2.GetString("image_url"), Stock = r2.GetInt32("stock"), Price = r2.IsDBNull(r2.GetOrdinal("price")) ? (decimal?)null : r2.GetDecimal("price") });
                     }
                 }
             }
@@ -164,6 +186,7 @@ category=@c, breed_size=@bs, image_url=@img, stock=@s, is_deleted=@del WHERE id=
         {
             using (var conn = Open())
             {
+                EnsureProductVariantPriceColumn(conn);
                 using (var delete = new MySqlCommand("DELETE FROM product_variants WHERE product_id=@pid", conn))
                 {
                     delete.Parameters.AddWithValue("@pid", productId);
@@ -172,13 +195,14 @@ category=@c, breed_size=@bs, image_url=@img, stock=@s, is_deleted=@del WHERE id=
 
                 foreach (var v in variants ?? Enumerable.Empty<ProductVariant>())
                 {
-                    using (var insert = new MySqlCommand(@"INSERT INTO product_variants (product_id, label, image_url, stock)
-VALUES (@pid,@l,@img,@s)", conn))
+                    using (var insert = new MySqlCommand(@"INSERT INTO product_variants (product_id, label, image_url, stock, price)
+VALUES (@pid,@l,@img,@s,@price)", conn))
                     {
                         insert.Parameters.AddWithValue("@pid", productId);
                         insert.Parameters.AddWithValue("@l", (object)v.Label ?? DBNull.Value);
                         insert.Parameters.AddWithValue("@img", (object)v.ImageUrl ?? DBNull.Value);
                         insert.Parameters.AddWithValue("@s", v.Stock);
+                        insert.Parameters.AddWithValue("@price", v.Price.HasValue && v.Price.Value > 0 ? (object)v.Price.Value : DBNull.Value);
                         insert.ExecuteNonQuery();
                     }
                 }
@@ -508,9 +532,15 @@ WHERE id=@id", conn))
 
         public static void UpdateSellerReply(int reviewId, string replyText)
         {
+            replyText = string.IsNullOrWhiteSpace(replyText) ? null : replyText.Trim();
             using (var conn = Open())
-            using (var cmd = new MySqlCommand(@"UPDATE reviews SET seller_reply=@r, seller_reply_date=CASE WHEN @r IS NULL THEN NULL ELSE NOW() END WHERE id=@id", conn)) {
-                cmd.Parameters.AddWithValue("@r", (object)replyText ?? DBNull.Value); cmd.Parameters.AddWithValue("@id", reviewId); cmd.ExecuteNonQuery();
+            using (var cmd = new MySqlCommand(@"UPDATE reviews
+SET seller_reply=@r, seller_reply_date=@replyDate
+WHERE id=@id", conn)) {
+                cmd.Parameters.AddWithValue("@r", (object)replyText ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@replyDate", replyText == null ? (object)DBNull.Value : DateTime.Now);
+                cmd.Parameters.AddWithValue("@id", reviewId);
+                cmd.ExecuteNonQuery();
             }
         }
 

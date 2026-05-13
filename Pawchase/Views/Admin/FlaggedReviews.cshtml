@@ -221,7 +221,7 @@ else
                     }
 
                     @* Reply form *@
-                    @using (Html.BeginForm("ReplyToReview", "Admin", FormMethod.Post, new { style = "margin-top:10px;" }))
+                    @using (Html.BeginForm("PostSellerReply", "Admin", FormMethod.Post, new { style = "margin-top:10px;" }))
                     {
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="reviewId" value="@r.Id" />
@@ -235,6 +235,7 @@ else
                         if (!string.IsNullOrWhiteSpace(r.SellerReply))
                         {
                             <button type="submit" name="replyText" value=""
+                                    onclick="this.form.querySelector('textarea[name=replyText]').value='';"
                                     style="margin-top:5px;font-size:11px;background:none;border:none;color:#e05555;cursor:pointer;font-family:'Poppins',sans-serif;padding:0;">
                                 <i class="fa-solid fa-xmark"></i> Remove reply
                             </button>

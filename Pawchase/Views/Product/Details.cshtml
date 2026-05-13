@@ -7,6 +7,8 @@
     var recentlyViewed = ViewBag.RecentlyViewed as List<Pawchase.Models.Product>;
     var disc = Model.IsOnSale ? (int)(((Model.OriginalPrice.Value - Model.Price) / Model.OriginalPrice.Value) * 100) : 0;
     var hasVariants = Model.Variants != null && Model.Variants.Any();
+    var displayPrice = Model.DisplayPrice;
+    var displayPricePrefix = Model.HasVariantPriceRange ? "From " : "";
     double avgRating = ViewBag.AvgRating != null ? (double)ViewBag.AvgRating : 0;
     int reviewCount = ViewBag.ReviewCount != null ? (int)ViewBag.ReviewCount : 0;
 }
@@ -68,7 +70,7 @@
             }
 
             <div class="detail-price">
-                <span class="price-lg">&#8369;@Model.Price.ToString("N2")</span>
+                <span class="price-lg" id="detailPriceValue">@displayPricePrefix&#8369;@displayPrice.ToString("N2")</span>
                 @if (Model.IsOnSale)
                 {
                     <span class="original-price-lg">&#8369;@Model.OriginalPrice.Value.ToString("N2")</span>
@@ -89,7 +91,7 @@
                                  title="@v.Label"
                                  data-img="@v.ImageUrl"
                                  data-label="@v.Label"
-                                 onclick="selectVariant(this, '@v.ImageUrl', '@v.Label')">
+                                  onclick="selectVariant(this, this.getAttribute('data-img'), this.getAttribute('data-label'))">
                                 @if (!string.IsNullOrEmpty(v.ImageUrl))
                                 {
                                     <img src="@v.ImageUrl" alt="@(string.IsNullOrEmpty(v.Label) ? "Variant" : v.Label)"
@@ -163,7 +165,7 @@
                      onerror="this.style.display='none'" />
                 <div>
                     <div style="font-weight:700;font-size:13px;color:var(--text);">@Model.Name</div>
-                    <div style="font-size:14px;font-weight:700;color:var(--blue-dark);margin-top:3px;">&#8369;@Model.Price.ToString("N2")</div>
+                    <div id="cartModalPrice" style="font-size:14px;font-weight:700;color:var(--blue-dark);margin-top:3px;">@displayPricePrefix&#8369;@displayPrice.ToString("N2")</div>
                 </div>
             </div>
 
@@ -306,8 +308,10 @@
                     <div class="modal-avatar" id="modal-avatar"></div>
                     <div>
                         <div class="modal-name-text" id="modal-name"></div>
-                        <div class="modal-date-text" id="modal-date"></div>
-                        <div id="modal-edited" class="modal-edited" style="display:none;"></div>
+                        <div class="modal-date-row">
+                            <span class="modal-date-text" id="modal-date"></span>
+                            <span id="modal-edited" class="modal-edited" style="display:none;"></span>
+                        </div>
                     </div>
                     <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-times"></i></button>
                 </div>
@@ -393,7 +397,7 @@
                             <span class="product-category">@p.Category &middot; @p.BreedSize</span>
                             <h3>@p.Name</h3>
                             <div class="product-price">
-                                <span class="price">&#8369;@p.Price.ToString("N2")</span>
+                                <span class="price">@(p.HasVariantPriceRange ? "From " : "")&#8369;@p.DisplayPrice.ToString("N2")</span>
                                 @if (p.IsOnSale)
                                 {<span class="original-price">&#8369;@p.OriginalPrice.Value.ToString("N2")</span>}
                             </div>
@@ -429,7 +433,7 @@
                             <span class="product-category">@p.Category &middot; @p.BreedSize</span>
                             <h3>@p.Name</h3>
                             <div class="product-price">
-                                <span class="price">&#8369;@p.Price.ToString("N2")</span>
+                                <span class="price">@(p.HasVariantPriceRange ? "From " : "")&#8369;@p.DisplayPrice.ToString("N2")</span>
                                 @if (p.IsOnSale)
                                 {<span class="original-price">&#8369;@p.OriginalPrice.Value.ToString("N2")</span><span class="discount-pct">-@rDisc%</span>}
                             </div>
@@ -492,9 +496,45 @@
         var _totalStock          = @Model.Stock;
         var _variantStocks       = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(
             (Model.Variants ?? new List<Pawchase.Models.ProductVariant>())
-                .ToDictionary(v => v.Label ?? "", v => v.Stock)
+                .GroupBy(v => v.Label ?? "")
+                .ToDictionary(g => g.Key, g => g.First().Stock)
+        ));
+        var _displayPrice        = @(displayPrice.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        var _displayPricePrefix  = '@displayPricePrefix';
+        var _variantPrices       = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(
+            (Model.Variants ?? new List<Pawchase.Models.ProductVariant>())
+                .Where(v => !string.IsNullOrWhiteSpace(v.Label))
+                .GroupBy(v => v.Label)
+                .ToDictionary(g => g.Key, g => Model.GetVariantPrice(g.First()))
         ));
         var _cartModalMode       = 'addtocart'; // 'addtocart' | 'buynow'
+
+        function formatPeso(value) {
+            return '\u20B1' + Number(value || 0).toLocaleString('en-PH', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function priceForVariant(label) {
+            return label && _variantPrices && _variantPrices[label] !== undefined
+                ? Number(_variantPrices[label])
+                : Number(_displayPrice);
+        }
+
+        function updateDetailPrice(label) {
+            var el = document.getElementById('detailPriceValue');
+            if (!el) return;
+            var prefix = label ? '' : _displayPricePrefix;
+            el.textContent = prefix + formatPeso(priceForVariant(label));
+        }
+
+        function updateCartModalPrice(label) {
+            var el = document.getElementById('cartModalPrice');
+            if (!el) return;
+            var prefix = label ? '' : _displayPricePrefix;
+            el.textContent = prefix + formatPeso(priceForVariant(label));
+        }
 
         // ── Stock label updater ────────────────────────────────────────────
         function updateStockLabel(stock) {
@@ -543,6 +583,7 @@
                     ? _variantStocks[selectedVariantLabel] : _totalStock;
                 updateStockLabel(varStock);
             }
+            updateDetailPrice(selectedVariantLabel);
 
             var url = new URL(window.location.href);
             if (selectedVariantLabel) url.searchParams.set('variant', selectedVariantLabel);
@@ -600,6 +641,7 @@
                 var stockLabel = document.getElementById('modalStockLabel');
                 if (stockLabel) stockLabel.textContent = '/ ' + maxStock + ' available';
             }
+            updateCartModalPrice(modalVariantLabel);
         }
 
         // eunice modified: login check — redirects to Login page with returnUrl
@@ -657,6 +699,7 @@
             // Update stock label
             var stockLabel = document.getElementById('modalStockLabel');
             if (stockLabel) stockLabel.textContent = '/ ' + maxStock + ' available';
+            updateCartModalPrice(modalVariantLabel);
 
             // Reset qty
             modalQty = 1;
@@ -782,6 +825,7 @@
             } else {
                 // No variant pre-selected — show main image, no thumb highlighted
                 selectedVariantLabel = null;
+                updateDetailPrice(null);
             }
 
             // Close modal on backdrop click
@@ -806,6 +850,7 @@
             } else {
                 selectedVariantLabel = null;
             }
+            updateDetailPrice(selectedVariantLabel);
             updateNavBtns();
         }
 

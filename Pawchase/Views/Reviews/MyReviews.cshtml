@@ -238,8 +238,10 @@
                 <div class="modal-avatar">@displayInitial</div>
                 <div>
                     <div style="font-size:14px;font-weight:700;">@displayName</div>
-                    <div style="font-size:11px;color:var(--text-light);" id="my-modal-date"></div>
-                    <div id="my-modal-edited" class="modal-edited" style="display:none;"></div>
+                    <div class="modal-date-row">
+                        <span style="font-size:11px;color:var(--text-light);" id="my-modal-date"></span>
+                        <span id="my-modal-edited" class="modal-edited" style="display:none;"></span>
+                    </div>
                 </div>
                 <button class="modal-close" onclick="closeMyModal()"><i class="fa-solid fa-times"></i></button>
             </div>
