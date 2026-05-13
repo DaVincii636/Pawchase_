@@ -251,7 +251,7 @@ function openReportModal(reviewId) {
     // block reporting your own review
     var review = reviews.find(function (r) { return r.id === reviewId; });
     if (review && currentUserId && review.userId === currentUserId) {
-        alert('You cannot report your own review.');
+        openOwnReviewModal();
         return;
     }
     pendingReportReviewId = reviewId;
@@ -266,6 +266,16 @@ function openReportModal(reviewId) {
 function closeReportModal() {
     byId('report-modal-overlay').classList.remove('open');
     pendingReportReviewId = null;
+}
+
+function openOwnReviewModal() {
+    var el = byId('own-review-modal-overlay');
+    if (el) { el.style.display = 'flex'; }
+}
+
+function closeOwnReviewModal() {
+    var el = byId('own-review-modal-overlay');
+    if (el) { el.style.display = 'none'; }
 }
 
 // eunice modified: show/hide the Other input field based on radio selection
