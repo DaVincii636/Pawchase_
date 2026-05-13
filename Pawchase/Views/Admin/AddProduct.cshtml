@@ -422,21 +422,41 @@
 
 @section scripts {
     <script>
-        function previewImg(input, slot) {
-            if (!input.files || !input.files[0]) return;
+        // Resize and compress an image file to a canvas-based JPEG data URL.
+        // maxPx caps the longer dimension; quality is JPEG 0-1.
+        function compressImage(file, maxPx, quality, callback) {
             var reader = new FileReader();
             reader.onload = function (e) {
+                var img = new Image();
+                img.onload = function () {
+                    var w = img.width, h = img.height;
+                    if (w > maxPx || h > maxPx) {
+                        if (w >= h) { h = Math.round(h * maxPx / w); w = maxPx; }
+                        else        { w = Math.round(w * maxPx / h); h = maxPx; }
+                    }
+                    var canvas = document.createElement('canvas');
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    callback(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function previewImg(input, slot) {
+            if (!input.files || !input.files[0]) return;
+            compressImage(input.files[0], 1200, 0.82, function (dataUrl) {
                 var preview = document.getElementById("imgPreview" + slot);
                 var icon    = document.getElementById("imgIcon"    + slot);
-                preview.src = e.target.result;
+                preview.src = dataUrl;
                 preview.style.display = "block";
                 if (icon) icon.style.display = "none";
                 if (slot === 0) {
-                    document.getElementById("imgPath0").value = e.target.result;
+                    document.getElementById("imgPath0").value = dataUrl;
                     document.getElementById("img-filename0").textContent = input.files[0].name;
                 }
-            };
-            reader.readAsDataURL(input.files[0]);
+            });
         }
 
         function variantSlotHasValue(slot) {
@@ -486,9 +506,7 @@
         }
         function previewVariant(input, slot) {
             if (!input.files || !input.files[0]) return;
-            var reader = new FileReader();
-            reader.onload = function (e) {
-                var dataUrl = e.target.result;
+            compressImage(input.files[0], 1200, 0.82, function (dataUrl) {
                 var preview = document.getElementById("imgPreview" + slot);
                 var icon    = document.getElementById("imgIcon"    + slot);
                 preview.src = dataUrl;
@@ -497,8 +515,7 @@
                 document.getElementById("vPath" + slot).value = dataUrl;
                 document.getElementById('vClear' + slot).style.display = 'block';
                 updateVariantRemove(slot);
-            };
-            reader.readAsDataURL(input.files[0]);
+            });
         }
 
 

@@ -503,19 +503,39 @@
 
 @section scripts {
     <script>
-        function previewMainEdit(input) {
-            if (!input.files || !input.files[0]) return;
+        // Resize and compress an image file to a canvas-based JPEG data URL.
+        // maxPx caps the longer dimension; quality is JPEG 0-1.
+        function compressImage(file, maxPx, quality, callback) {
             var reader = new FileReader();
             reader.onload = function (e) {
+                var img = new Image();
+                img.onload = function () {
+                    var w = img.width, h = img.height;
+                    if (w > maxPx || h > maxPx) {
+                        if (w >= h) { h = Math.round(h * maxPx / w); w = maxPx; }
+                        else        { w = Math.round(w * maxPx / h); h = maxPx; }
+                    }
+                    var canvas = document.createElement('canvas');
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    callback(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function previewMainEdit(input) {
+            if (!input.files || !input.files[0]) return;
+            compressImage(input.files[0], 1200, 0.82, function (dataUrl) {
                 var preview = document.getElementById("editImgPreview0");
                 var icon    = document.getElementById("editImgIcon0");
-                preview.src = e.target.result;
+                preview.src = dataUrl;
                 preview.style.display = "block";
                 if (icon) icon.style.display = "none";
-                document.getElementById("editImgPath0").value = e.target.result;
+                document.getElementById("editImgPath0").value = dataUrl;
                 document.getElementById("editImg-filename0").textContent = input.files[0].name;
-            };
-            reader.readAsDataURL(input.files[0]);
+            });
         }
 
         function editVariantSlotHasValue(slot) {
@@ -570,27 +590,16 @@
         }
         function previewEditVariant(input, slot) {
             if (!input.files || !input.files[0]) return;
-
-            var reader = new FileReader();
-
-            reader.onload = function (e) {
-                var dataUrl = e.target.result;
+            compressImage(input.files[0], 1200, 0.82, function (dataUrl) {
                 var preview = document.getElementById("evPreview" + slot);
                 var icon = document.getElementById("evIcon" + slot);
-
                 preview.src = dataUrl;
                 preview.style.display = "block";
-
                 if (icon) icon.style.display = "none";
-
                 document.getElementById("evPath" + slot).value = dataUrl;
-
                 document.getElementById('evClear' + slot).style.display = 'block';
-
                 updateEditVariantRemove(slot);
-            };
-
-            reader.readAsDataURL(input.files[0]);
+            });
         }
 
         // ── Variant stock sync: auto-sum variant stocks → general Stock field ──
