@@ -74,6 +74,43 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @table AND COLUMN_NAME = @colum
             }
         }
 
+        /// <summary>
+        /// Ensures products.image_url and product_variants.image_url are MEDIUMTEXT so they
+        /// can hold base64-encoded images (~750 KB each after compression).  VARCHAR(255) or
+        /// plain TEXT would silently truncate the data and cause images to vanish on save.
+        /// </summary>
+        private static void EnsureImageUrlColumns(MySqlConnection conn)
+        {
+            // products.image_url
+            UpgradeColumnToMediumText(conn, "products", "image_url");
+            // product_variants.image_url
+            UpgradeColumnToMediumText(conn, "product_variants", "image_url");
+        }
+
+        private static void UpgradeColumnToMediumText(MySqlConnection conn, string table, string column)
+        {
+            // Only touch the column when it is narrower than MEDIUMTEXT (i.e. varchar or text).
+            using (var cmd = new MySqlCommand(
+                "SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS " +
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @tbl AND COLUMN_NAME = @col", conn))
+            {
+                cmd.Parameters.AddWithValue("@tbl", table);
+                cmd.Parameters.AddWithValue("@col", column);
+                using (var r = cmd.ExecuteReader())
+                {
+                    if (!r.Read()) return; // column doesn't exist — nothing to do
+                    var dataType = r.GetString(0).ToLowerInvariant();
+                    r.Close();
+                    if (dataType == "mediumtext" || dataType == "longtext") return; // already wide enough
+                    using (var alter = new MySqlCommand(
+                        $"ALTER TABLE `{table}` MODIFY COLUMN `{column}` MEDIUMTEXT NULL", conn))
+                    {
+                        alter.ExecuteNonQuery();
+                    }
+                }
+            }
+        }
+
         // ════════════════════════════ SECURITY & AUTH (NO EXTERNAL DLLs) ════════════════════════════
         
         // Using built-in SHA256 with a simple salt to avoid BCrypt.dll dependency issues
@@ -104,6 +141,7 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @table AND COLUMN_NAME = @colum
             using (var conn = Open())
             {
                 EnsureAdditionalImagesColumn(conn);
+                EnsureImageUrlColumns(conn);
                 using (var cmd = new MySqlCommand("SELECT * FROM products", conn))
                 using (var r = cmd.ExecuteReader())
                 {
@@ -170,6 +208,7 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @table AND COLUMN_NAME = @colum
             using (var conn = Open())
             {
                 EnsureAdditionalImagesColumn(conn);
+                EnsureImageUrlColumns(conn);
                 using (var cmd = new MySqlCommand(@"INSERT INTO products (name, description, price, original_price, category, breed_size, image_url, additional_images, stock, is_deleted)
 VALUES (@n,@d,@p,@op,@c,@bs,@img,@addimgs,@s,@del); SELECT LAST_INSERT_ID();", conn))
                 {
@@ -195,6 +234,7 @@ VALUES (@n,@d,@p,@op,@c,@bs,@img,@addimgs,@s,@del); SELECT LAST_INSERT_ID();", c
             using (var conn = Open())
             {
                 EnsureAdditionalImagesColumn(conn);
+                EnsureImageUrlColumns(conn);
                 using (var cmd = new MySqlCommand(@"UPDATE products SET name=@n, description=@d, price=@p, original_price=@op,
 category=@c, breed_size=@bs, image_url=@img, additional_images=@addimgs, stock=@s, is_deleted=@del WHERE id=@id", conn))
                 {
