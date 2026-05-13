@@ -5,6 +5,7 @@ var reviews = reviewsConfig.reviews || [];
 var openReviewId = reviewsConfig.openReviewId || 0;
 // eunice modified: read login state passed from server
 var isLoggedIn = reviewsConfig.isLoggedIn || false;
+var currentUserId = reviewsConfig.currentUserId || 0;
 
 var activeReview = null;
 var pendingReportReviewId = null;
@@ -247,6 +248,12 @@ function toggleCommentPanel() {
 function openReportModal(reviewId) {
     // eunice modified: require login to report a review
     if (!isLoggedIn) { showLoginRequired(); return; }
+    // block reporting your own review
+    var review = reviews.find(function (r) { return r.id === reviewId; });
+    if (review && currentUserId && review.userId === currentUserId) {
+        alert('You cannot report your own review.');
+        return;
+    }
     pendingReportReviewId = reviewId;
     byId('report-error').textContent = '';
     document.querySelectorAll('input[name="report-reason"]').forEach(function (radio) { radio.checked = false; });

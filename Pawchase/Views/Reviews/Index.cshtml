@@ -301,6 +301,7 @@
 window.reviewsData = {
     // eunice modified: pass login state from server so JS can gate like/comment/report/write
     isLoggedIn: @(Session["UserId"] != null ? "true" : "false"),
+    currentUserId: @(Session["UserId"] != null ? Session["UserId"].ToString() : "0"),
     currentFilters: {
         sortBy: '@(hasSortSelection ? (string)ViewBag.SortBy : "")',
         category: '@(hasCategorySelection ? (string)ViewBag.Category : "")',
@@ -315,6 +316,7 @@ window.reviewsData = {
     reviews: @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(
         Model.Select((r, i) => new {
             id = r.Id,
+            userId = r.UserId,
             name = r.CustomerName,
             stars = r.Stars,
             comment = r.Comment,

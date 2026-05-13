@@ -218,7 +218,7 @@
     background: #fff;
     border: 1px solid rgba(129,166,198,.15);
     border-radius: 16px;
-    overflow: hidden;
+    overflow: visible;
     box-shadow: var(--shadow-card);
     cursor: pointer;
     display: flex;
@@ -238,7 +238,8 @@
     }
 
     .review-card.with-photo {
-        height: 360px;
+        height: auto;
+        min-height: 360px;
     }
 
     .review-card.without-photo {
@@ -277,9 +278,9 @@
     margin-bottom: 8px;
 }
 
-.review-card-header > div:last-child {
-    min-width: 0;
-}
+    .review-card-header > div:last-child {
+        min-width: 0;
+    }
 
 .review-avatar {
     width: 30px;
@@ -347,10 +348,8 @@
 }
 
 .review-card.with-photo .review-caption {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    overflow: visible;
+    display: block;
 }
 
 .review-card.without-photo .review-caption {
@@ -496,9 +495,9 @@
     border-bottom: 1px solid var(--border);
 }
 
-.modal-header > div:not(.modal-avatar) {
-    min-width: 0;
-}
+    .modal-header > div:not(.modal-avatar) {
+        min-width: 0;
+    }
 
 .modal-avatar {
     width: 38px;
