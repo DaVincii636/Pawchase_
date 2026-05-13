@@ -1,8 +1,10 @@
 ﻿using Pawchase.Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Web;
 using System.Web.Mvc;
 using System.Web.Security;
 
@@ -873,6 +875,59 @@ namespace Pawchase.Controllers
     {
         private bool IsAdmin => string.Equals(Session["AdminEmail"]?.ToString(), MockData.AdminEmail, StringComparison.OrdinalIgnoreCase);
         private static readonly string[] ValidAdminStatuses = { "To Ship", "In Transit", "Out for Delivery", "Cancelled", "Return/Refund", "Refund Approved", "Refund Denied", "Completed" };
+        private const int MaxProductImageBytes = 5 * 1024 * 1024;
+        private static readonly HashSet<string> AllowedProductImageExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".jpg", ".jpeg", ".png", ".gif", ".webp"
+        };
+
+        private string SavePostedProductImage(HttpPostedFileBase file)
+        {
+            if (file == null || file.ContentLength <= 0) return null;
+            if (file.ContentLength > MaxProductImageBytes)
+                throw new InvalidOperationException("Each product image must be 5 MB or smaller.");
+
+            var extension = Path.GetExtension(file.FileName);
+            if (string.IsNullOrWhiteSpace(extension) || !AllowedProductImageExtensions.Contains(extension))
+                throw new InvalidOperationException("Product images must be JPG, PNG, GIF, or WEBP files.");
+
+            var uploadDir = Server.MapPath("~/Content/images/products/uploads");
+            Directory.CreateDirectory(uploadDir);
+
+            var fileName = "product_" + DateTime.UtcNow.ToString("yyyyMMddHHmmssfff") + "_" + Guid.NewGuid().ToString("N") + extension.ToLowerInvariant();
+            var fullPath = Path.Combine(uploadDir, fileName);
+            file.SaveAs(fullPath);
+
+            return "/Content/images/products/uploads/" + fileName;
+        }
+
+        private string[] SavePostedProductImageSlots(string fieldPrefix, int count)
+        {
+            var paths = new string[count];
+            for (var i = 1; i <= count; i++)
+            {
+                paths[i - 1] = SavePostedProductImage(Request.Files[fieldPrefix + i]);
+            }
+            return paths;
+        }
+
+        private static string PickImageSlot(string[] postedPaths, string[] uploadedPaths, int index)
+        {
+            var uploaded = uploadedPaths != null && index < uploadedPaths.Length ? uploadedPaths[index] : null;
+            if (!string.IsNullOrWhiteSpace(uploaded)) return uploaded;
+            return postedPaths != null && index < postedPaths.Length ? postedPaths[index] : null;
+        }
+
+        private static List<string> PickImageSlots(string[] postedPaths, string[] uploadedPaths, int count)
+        {
+            var images = new List<string>();
+            for (var i = 0; i < count; i++)
+            {
+                var image = PickImageSlot(postedPaths, uploadedPaths, i);
+                if (!string.IsNullOrWhiteSpace(image)) images.Add(image);
+            }
+            return images;
+        }
 
         private bool CanAdminSetStatus(Order order, string status, out string error)
         {
@@ -1007,14 +1062,18 @@ namespace Pawchase.Controllers
                 if (product.Price <= 0) { TempData["Error"] = "Price must be greater than zero."; return RedirectToAction("AddProduct"); }
                 if (product.OriginalPrice.HasValue && product.OriginalPrice.Value > 0 && product.OriginalPrice.Value <= product.Price) { TempData["Error"] = "Original Price must be greater than Sale Price."; return RedirectToAction("AddProduct"); }
                 if (product.Stock < 0) { TempData["Error"] = "Stock cannot be negative."; return RedirectToAction("AddProduct"); }
+                var mainImageUpload = SavePostedProductImage(Request.Files["MainImageFile"]);
+                var additionalImageUploads = SavePostedProductImageSlots("AdditionalImageFile", 4);
+                var variantImageUploads = SavePostedProductImageSlots("VariantImageFile", 6);
+                if (!string.IsNullOrWhiteSpace(mainImageUpload)) product.ImageUrl = mainImageUpload;
                 if (string.IsNullOrWhiteSpace(product.ImageUrl)) product.ImageUrl = "/Content/images/products/placeholder.png";
-                product.AdditionalImages = (AdditionalImagePaths ?? new string[0]).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                product.AdditionalImages = PickImageSlots(AdditionalImagePaths, additionalImageUploads, 4);
                 product.Variants = new List<ProductVariant>();
-                int maxV = Math.Max(Math.Max(VariantImagePaths != null ? VariantImagePaths.Length : 0, VariantLabels != null ? VariantLabels.Length : 0), Math.Max(VariantStocks != null ? VariantStocks.Length : 0, VariantPrices != null ? VariantPrices.Length : 0));
+                int maxV = Math.Max(Math.Max(Math.Max(VariantImagePaths != null ? VariantImagePaths.Length : 0, VariantLabels != null ? VariantLabels.Length : 0), Math.Max(VariantStocks != null ? VariantStocks.Length : 0, VariantPrices != null ? VariantPrices.Length : 0)), variantImageUploads.Length);
                 bool hasVariantStock = false; int totalVariantStock = 0;
                 for (int i = 0; i < maxV; i++)
                 {
-                    var img = (VariantImagePaths != null && i < VariantImagePaths.Length) ? VariantImagePaths[i] : null;
+                    var img = PickImageSlot(VariantImagePaths, variantImageUploads, i);
                     var label = (VariantLabels != null && i < VariantLabels.Length) ? VariantLabels[i] : null;
                     var stock = (VariantStocks != null && i < VariantStocks.Length) ? VariantStocks[i] : 0;
                     var price = (VariantPrices != null && i < VariantPrices.Length && VariantPrices[i].HasValue && VariantPrices[i].Value > 0) ? VariantPrices[i] : null;
@@ -1030,7 +1089,7 @@ namespace Pawchase.Controllers
                 TempData["Success"] = "Product \"" + product.Name + "\" added!";
                 return RedirectToAction("Products");
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("AddProduct Error: " + ex.Message); TempData["Error"] = "Could not add product."; return RedirectToAction("AddProduct"); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("AddProduct Error: " + ex.Message); TempData["Error"] = ex is InvalidOperationException ? ex.Message : "Could not add product."; return RedirectToAction("AddProduct"); }
         }
 
         public ActionResult EditProduct(int id)
@@ -1056,16 +1115,20 @@ namespace Pawchase.Controllers
                 if (updated.OriginalPrice.HasValue && updated.OriginalPrice.Value > 0 && updated.OriginalPrice.Value <= updated.Price) { TempData["Error"] = "Original Price must be greater than Sale Price."; return RedirectToAction("EditProduct", new { id = updated.Id }); }
                 var p = MockData.Products.FirstOrDefault(x => x.Id == updated.Id);
                 if (p == null) { TempData["Error"] = "Product not found."; return RedirectToAction("Products"); }
+                var mainImageUpload = SavePostedProductImage(Request.Files["MainImageFile"]);
+                var additionalImageUploads = SavePostedProductImageSlots("AdditionalImageFile", 4);
+                var variantImageUploads = SavePostedProductImageSlots("VariantImageFile", 6);
                 p.Name = updated.Name; p.Description = updated.Description; p.Price = updated.Price;
                 p.OriginalPrice = updated.OriginalPrice; p.Category = updated.Category; p.BreedSize = updated.BreedSize;
+                if (!string.IsNullOrWhiteSpace(mainImageUpload)) updated.ImageUrl = mainImageUpload;
                 if (!string.IsNullOrWhiteSpace(updated.ImageUrl)) p.ImageUrl = updated.ImageUrl;
-                p.AdditionalImages = (AdditionalImagePaths ?? new string[0]).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                p.AdditionalImages = PickImageSlots(AdditionalImagePaths, additionalImageUploads, 4);
                 p.Variants = new List<ProductVariant>();
-                int maxV = Math.Max(Math.Max(VariantImagePaths != null ? VariantImagePaths.Length : 0, VariantLabels != null ? VariantLabels.Length : 0), Math.Max(VariantStocks != null ? VariantStocks.Length : 0, VariantPrices != null ? VariantPrices.Length : 0));
+                int maxV = Math.Max(Math.Max(Math.Max(VariantImagePaths != null ? VariantImagePaths.Length : 0, VariantLabels != null ? VariantLabels.Length : 0), Math.Max(VariantStocks != null ? VariantStocks.Length : 0, VariantPrices != null ? VariantPrices.Length : 0)), variantImageUploads.Length);
                 bool hasVariantStock = false; int totalVariantStock = 0;
                 for (int i = 0; i < maxV; i++)
                 {
-                    var img = (VariantImagePaths != null && i < VariantImagePaths.Length) ? VariantImagePaths[i] : null;
+                    var img = PickImageSlot(VariantImagePaths, variantImageUploads, i);
                     var label = (VariantLabels != null && i < VariantLabels.Length) ? VariantLabels[i] : null;
                     var stock = (VariantStocks != null && i < VariantStocks.Length) ? VariantStocks[i] : 0;
                     var price = (VariantPrices != null && i < VariantPrices.Length && VariantPrices[i].HasValue && VariantPrices[i].Value > 0) ? VariantPrices[i] : null;
@@ -1081,7 +1144,7 @@ namespace Pawchase.Controllers
                 TempData["Success"] = "Product \"" + updated.Name + "\" updated!";
                 return RedirectToAction("Products");
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("EditProduct POST Error: " + ex.Message); TempData["Error"] = "Could not update product."; return RedirectToAction("EditProduct", new { id = updated.Id }); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("EditProduct POST Error: " + ex.Message); TempData["Error"] = ex is InvalidOperationException ? ex.Message : "Could not update product."; return RedirectToAction("EditProduct", new { id = updated.Id }); }
         }
 
         public ActionResult DeleteProduct(int id)

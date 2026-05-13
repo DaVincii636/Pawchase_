@@ -275,7 +275,7 @@
     </a>
 </div>
 
-<form id="editProductForm" method="post" action="@Url.Action("EditProduct","Admin")">
+<form id="editProductForm" method="post" action="@Url.Action("EditProduct","Admin")" enctype="multipart/form-data">
     @Html.AntiForgeryToken()
     <input type="hidden" name="Id" value="@Model.Id" />
 
@@ -292,7 +292,7 @@
                 <label class="main-img-label">
                     Main Image <span style="color:#e05555;">*</span>
                 </label>
-                <input type="file" id="editImgFile0" accept="image/*" style="display:none" onchange="previewMainEdit(this)" />
+                <input type="file" id="editImgFile0" name="MainImageFile" accept="image/*" style="display:none" onchange="previewMainEdit(this)" />
                 <label for="editImgFile0" style="display:block;cursor:pointer;">
                     <div class="main-img-box" id="editImgBox0">
                         @if (!string.IsNullOrEmpty(Model.ImageUrl))
@@ -327,7 +327,7 @@
                         {
                             var existingExtra = (Model.AdditionalImages != null && ei - 1 < Model.AdditionalImages.Count) ? Model.AdditionalImages[ei - 1] : null;
                             <div id="extraImgItem@(ei)" style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-                                <input type="file" id="extraFile@(ei)" accept="image/*" style="display:none" onchange="previewExtraImgEdit(this,@(ei))" />
+                                <input type="file" id="extraFile@(ei)" name="AdditionalImageFile@(ei)" accept="image/*" style="display:none" onchange="previewExtraImgEdit(this,@(ei))" />
                                 <div onclick="document.getElementById('extraFile@(ei)').click()" style="cursor:pointer;position:relative;">
                                     <div style="width:80px;height:80px;border-radius:10px;border:2px dashed var(--border);background:var(--peach-light,#fdf6f1);display:flex;align-items:center;justify-content:center;overflow:hidden;" id="extraBox@(ei)">
                                         <img id="extraPreview@(ei)" src="@(existingExtra ?? "")" alt=""
@@ -362,7 +362,7 @@
                             var isSlotVisible = vi == 1 || hasVariant || vi <= existingVariants.Count + 1;
                             var slotClass = "variant-item" + (isSlotVisible ? "" : " variant-hidden") + (hasVariant ? " variant-active" : "");
                             <div class="@slotClass" id="evItem@(vi)">
-                                <input type="file" id="evFile@(vi)" accept="image/*" style="display:none"
+                                <input type="file" id="evFile@(vi)" name="VariantImageFile@(vi)" accept="image/*" style="display:none"
                                        onchange="previewEditVariant(this,@(vi))" />
                                 <div style="position:relative;">
                                     <label for="evFile@(vi)" style="display:block;cursor:pointer;">
@@ -561,7 +561,6 @@
                 preview.src = dataUrl;
                 preview.style.display = "block";
                 if (icon) icon.style.display = "none";
-                document.getElementById("editImgPath0").value = dataUrl;
                 document.getElementById("editImg-filename0").textContent = input.files[0].name;
             });
         }
@@ -572,11 +571,9 @@
                 var preview  = document.getElementById('extraPreview' + slot);
                 var icon     = document.getElementById('extraIcon' + slot);
                 var clearBtn = document.getElementById('extraClear' + slot);
-                var pathInput = document.getElementById('extraPath' + slot);
                 if (preview)  { preview.src = dataUrl; preview.style.display = 'block'; }
                 if (icon)     icon.style.display = 'none';
                 if (clearBtn) { clearBtn.style.display = 'flex'; }
-                if (pathInput) pathInput.value = dataUrl;
             });
         }
 
@@ -595,11 +592,13 @@
         }
 
         function editVariantSlotHasValue(slot) {
+            var file = document.getElementById('evFile' + slot);
             var path = document.getElementById('evPath' + slot);
             var label = document.getElementById('evLabel' + slot);
             var stock = document.getElementById('evStock' + slot);
             var price = document.getElementById('evPrice' + slot);
-            return (path && path.value) ||
+            return (file && file.value) ||
+                (path && path.value) ||
                 (label && label.value.trim()) ||
                 (stock && stock.value.trim()) ||
                 (price && price.value.trim());
@@ -652,7 +651,6 @@
                 preview.src = dataUrl;
                 preview.style.display = "block";
                 if (icon) icon.style.display = "none";
-                document.getElementById("evPath" + slot).value = dataUrl;
                 document.getElementById('evClear' + slot).style.display = 'block';
                 updateEditVariantRemove(slot);
             });

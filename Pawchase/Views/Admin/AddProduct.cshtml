@@ -252,7 +252,7 @@
     </a>
 </div>
 
-<form method="post" action="@Url.Action("AddProduct","Admin")">
+<form method="post" action="@Url.Action("AddProduct","Admin")" enctype="multipart/form-data">
     @Html.AntiForgeryToken()
 
     <div class="ap-grid">
@@ -268,7 +268,7 @@
                 <label class="main-img-label">
                     Main Image <span class="req">*</span>
                 </label>
-                <input type="file" id="imgFile0" accept="image/*" style="display:none" onchange="previewImg(this,0)" />
+                <input type="file" id="imgFile0" name="MainImageFile" accept="image/*" style="display:none" onchange="previewImg(this,0)" />
                 <div onclick="document.getElementById('imgFile0').click()">
                     <div class="main-img-box" id="imgBox0">
                         <img id="imgPreview0" src="" alt="Preview" />
@@ -293,7 +293,7 @@
                         @for (int ei = 1; ei <= 4; ei++)
                         {
                             <div id="extraImgItem@(ei)" style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-                                <input type="file" id="extraFile@(ei)" accept="image/*" style="display:none" onchange="previewExtraImg(this,@(ei))" />
+                                <input type="file" id="extraFile@(ei)" name="AdditionalImageFile@(ei)" accept="image/*" style="display:none" onchange="previewExtraImg(this,@(ei))" />
                                 <div onclick="document.getElementById('extraFile@(ei)').click()" style="cursor:pointer;position:relative;">
                                     <div style="width:80px;height:80px;border-radius:10px;border:2px dashed var(--border);background:var(--peach-light,#fdf6f1);display:flex;align-items:center;justify-content:center;overflow:hidden;" id="extraBox@(ei)">
                                         <img id="extraPreview@(ei)" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;" />
@@ -319,7 +319,7 @@
                         @for (int vi = 1; vi <= 6; vi++)
                         {
                             <div class="variant-item @(vi == 1 ? "" : "variant-hidden")" id="vItem@(vi)">
-                                <input type="file" id="vFile@(vi)" accept="image/*" style="display:none"
+                                <input type="file" id="vFile@(vi)" name="VariantImageFile@(vi)" accept="image/*" style="display:none"
                                        onchange="previewVariant(this,@(vi))" />
                                 <div style="position:relative;">
                                     <div class="variant-img-box"
@@ -479,7 +479,6 @@
                 preview.style.display = "block";
                 if (icon) icon.style.display = "none";
                 if (slot === 0) {
-                    document.getElementById("imgPath0").value = dataUrl;
                     document.getElementById("img-filename0").textContent = input.files[0].name;
                 }
             });
@@ -491,11 +490,9 @@
                 var preview = document.getElementById('extraPreview' + slot);
                 var icon    = document.getElementById('extraIcon' + slot);
                 var clearBtn = document.getElementById('extraClear' + slot);
-                var pathInput = document.getElementById('extraPath' + slot);
                 if (preview) { preview.src = dataUrl; preview.style.display = 'block'; }
                 if (icon)    icon.style.display = 'none';
                 if (clearBtn) clearBtn.style.display = 'flex';
-                if (pathInput) pathInput.value = dataUrl;
             });
         }
 
@@ -514,11 +511,13 @@
         }
 
         function variantSlotHasValue(slot) {
+            var file = document.getElementById('vFile' + slot);
             var path = document.getElementById('vPath' + slot);
             var label = document.getElementById('vLabel' + slot);
             var stock = document.getElementById('vStock' + slot);
             var price = document.getElementById('vPrice' + slot);
-            return (path && path.value) ||
+            return (file && file.value) ||
+                (path && path.value) ||
                 (label && label.value.trim()) ||
                 (stock && stock.value.trim()) ||
                 (price && price.value.trim());
@@ -566,7 +565,6 @@
                 preview.src = dataUrl;
                 preview.style.display = "block";
                 if (icon) icon.style.display = "none";
-                document.getElementById("vPath" + slot).value = dataUrl;
                 document.getElementById('vClear' + slot).style.display = 'block';
                 updateVariantRemove(slot);
             });
